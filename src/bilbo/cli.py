@@ -149,6 +149,7 @@ def _bilbo_banner() -> None:
 
 @app.callback(invoke_without_command=True)
 def _main(ctx: typer.Context) -> None:
+    _bootstrap_if_empty()
     if ctx.invoked_subcommand is None:
         _bilbo_banner()
         _interactive_menu(ctx)
@@ -474,6 +475,58 @@ def drytest(
 
 def _engine():
     return get_engine()
+
+
+_EXAMPLES = Path(__file__).parent.parent.parent / "data" / "examples"
+
+
+def _bootstrap_if_empty() -> None:
+    with Session(_engine()) as session:
+        if list_lipids(session):
+            return
+
+    lipids_dir   = _EXAMPLES / "lipids"
+    mappings_csv = _EXAMPLES / "forcefields" / "charmm36_mapping.csv"
+    presets_dir  = _EXAMPLES / "presets"
+
+    if not lipids_dir.exists():
+        return
+
+    console.print("[dim]Initializing library from bundled example data...[/dim]")
+
+    lip_ext = LipidYAMLExtractor()
+    for f in sorted(lipids_dir.glob("*.yaml")):
+        if f.name.startswith("._"):
+            continue
+        try:
+            result = lip_ext.extract(f)
+            with Session(_engine()) as session:
+                for lip in result:
+                    upsert_lipid(lip, session)
+        except Exception:
+            pass
+
+    if mappings_csv.exists():
+        ff_ext = ForceFieldMappingExtractor()
+        try:
+            result = ff_ext.extract(mappings_csv)
+            with Session(_engine()) as session:
+                for mapping in result:
+                    upsert_forcefield_mapping(mapping, session)
+        except Exception:
+            pass
+
+    preset_ext = PresetYAMLExtractor()
+    for f in sorted(presets_dir.glob("*.yaml")):
+        if f.name.startswith("._"):
+            continue
+        try:
+            result = preset_ext.extract(f)
+            with Session(_engine()) as session:
+                for preset in result:
+                    upsert_preset(preset, session)
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------
