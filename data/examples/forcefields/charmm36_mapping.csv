@@ -1,0 +1,7 @@
+lipid_id,force_field,residue_name,topology_file,status,notes
+POPC,charmm36,POPC,lipid36.itp,validated,example mapping
+POPE,charmm36,POPE,lipid36.itp,validated,example mapping
+POPG,charmm36,POPG,lipid36.itp,validated,example mapping
+POPS,charmm36,POPS,lipid36.itp,validated,example mapping
+CHOL,charmm36,CHOL,lipid36.itp,validated,example mapping
+CL,charmm36,CL,lipid36.itp,validated,example mapping

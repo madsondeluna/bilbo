@@ -1,0 +1,32 @@
+id: DPPE
+name: 1,2-dipalmitoyl-sn-glycero-3-phosphoethanolamine
+lipid_class: glycerophospholipid
+headgroup: PE
+net_charge: 0
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 16
+    unsaturation: 0
+tags:
+- zwitterionic
+- phosphatidylethanolamine
+- saturated
+force_fields:
+  charmm36:
+    lipid_id: DPPE
+    force_field: charmm36
+    residue_name: DPPE
+    topology_file: lipid36.itp
+    status: validated
+    notes: example fixture mapping
+references:
+- id: manual_dppe_example
+  source_type: manual
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+curation_status: validated
+source: example
+notes:
+- Saturated PE found in bacteria and mitochondrial membranes.

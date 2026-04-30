@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.git/
+.DS_Store
+._*
+*.db
+tests/
+builds/
+*.md
+!README.md

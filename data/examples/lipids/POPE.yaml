@@ -1,0 +1,31 @@
+curation_status: validated
+force_fields:
+  charmm36:
+    force_field: charmm36
+    lipid_id: POPE
+    notes: example fixture mapping
+    residue_name: POPE
+    status: validated
+    topology_file: lipid36.itp
+headgroup: PE
+id: POPE
+lipid_class: glycerophospholipid
+name: 1-palmitoyl-2-oleoyl-sn-glycero-3-phosphoethanolamine
+net_charge: 0
+notes:
+- Example entry for tests and CLI smoke runs.
+references:
+- id: manual_pope_example
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+  source_type: manual
+source: example
+tags:
+- zwitterionic
+- phosphatidylethanolamine
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 18
+    unsaturation: 1

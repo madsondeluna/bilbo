@@ -1,0 +1,25 @@
+id: mammalian_pm_asymmetric_default
+description: Generic asymmetric mammalian plasma membrane model
+organism: mammalian generic
+membrane_type: plasma_membrane
+symmetry: asymmetric
+leaflets:
+  upper:
+    POPC: 35
+    CHOL: 35
+    SM: 25
+    POPE: 5
+  lower:
+    POPE: 35
+    POPS: 20
+    POPC: 15
+    PI: 5
+    CHOL: 25
+references:
+  - id: manual_mammalian_pm_example
+    source_type: manual
+    manual_citation: Example asymmetric membrane preset for BILBO tests. Replace with curated source before scientific use.
+warnings:
+  - Generic model. Not cell-type specific.
+  - SM and PI may be intentionally absent from the minimal example library to test audit behavior.
+evidence_level: example

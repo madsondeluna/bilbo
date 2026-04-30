@@ -1,0 +1,31 @@
+curation_status: validated
+force_fields:
+  charmm36:
+    force_field: charmm36
+    lipid_id: POPG
+    notes: example fixture mapping
+    residue_name: POPG
+    status: validated
+    topology_file: lipid36.itp
+headgroup: PG
+id: POPG
+lipid_class: glycerophospholipid
+name: 1-palmitoyl-2-oleoyl-sn-glycero-3-phospho-(1'-rac-glycerol)
+net_charge: -1
+notes:
+- Example entry for tests and CLI smoke runs.
+references:
+- id: manual_popg_example
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+  source_type: manual
+source: example
+tags:
+- anionic
+- phosphatidylglycerol
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 18
+    unsaturation: 1

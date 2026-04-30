@@ -1,0 +1,33 @@
+id: DPPC
+name: 1,2-dipalmitoyl-sn-glycero-3-phosphocholine
+lipid_class: glycerophospholipid
+headgroup: PC
+net_charge: 0
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 16
+    unsaturation: 0
+tags:
+- zwitterionic
+- phosphatidylcholine
+- saturated
+force_fields:
+  charmm36:
+    lipid_id: DPPC
+    force_field: charmm36
+    residue_name: DPPC
+    topology_file: lipid36.itp
+    status: validated
+    notes: example fixture mapping
+references:
+- id: manual_dppc_example
+  source_type: manual
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+curation_status: validated
+source: example
+notes:
+- Major component of mammalian outer plasma membrane leaflet.
+- Enriched in lipid rafts alongside sphingomyelin and cholesterol.

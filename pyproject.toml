@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bilbo-md"
+version = "0.1.0"
+description = "Bilayer Lipid Builder and Organizer"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.0",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+    "sqlmodel>=0.0.19",
+    "requests>=2.31",
+    "numpy>=1.26",
+    "beautifulsoup4>=4.12",
+    "pycryptodome>=3.23.0",
+    "questionary>=2.1.1",
+]
+
+[project.scripts]
+bilbo = "bilbo.cli:app"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bilbo"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+target-version = "py311"
+exclude = ["._*.py", ".___init__.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

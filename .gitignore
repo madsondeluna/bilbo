@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# macOS metadata
+.DS_Store
+._*
+
+# Database
+*.db
+*.sqlite
+
+# Build outputs (user-generated)
+builds/
+memb/
+
+# Large test/scratch PDB files in root
+drytest*.pdb
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+
+# uv
+.python-version

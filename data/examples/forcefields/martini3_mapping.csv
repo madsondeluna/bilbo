@@ -1,0 +1,7 @@
+lipid_id,force_field,residue_name,topology_file,status,notes
+POPC,martini3,POPC,martini_v3_lipids.itp,validated,example mapping
+POPE,martini3,POPE,martini_v3_lipids.itp,validated,example mapping
+POPG,martini3,POPG,martini_v3_lipids.itp,validated,example mapping
+POPS,martini3,POPS,martini_v3_lipids.itp,validated,example mapping
+CHOL,martini3,CHOL,martini_v3_lipids.itp,validated,example mapping
+CL,martini3,CL,martini_v3_lipids.itp,validated,example mapping

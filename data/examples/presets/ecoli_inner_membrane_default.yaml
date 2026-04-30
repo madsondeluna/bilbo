@@ -1,0 +1,21 @@
+id: ecoli_inner_membrane_default
+description: Generic Escherichia coli inner membrane model
+organism: Escherichia coli
+membrane_type: bacterial_inner_membrane
+symmetry: symmetric
+leaflets:
+  upper:
+    POPE: 70
+    POPG: 20
+    CL: 10
+  lower:
+    POPE: 70
+    POPG: 20
+    CL: 10
+references:
+  - id: manual_ecoli_example
+    source_type: manual
+    manual_citation: Example composition for BILBO tests. Replace with curated source before scientific use.
+warnings:
+  - Generic model. Not strain-specific.
+evidence_level: example

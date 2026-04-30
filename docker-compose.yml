@@ -1,0 +1,10 @@
+services:
+  bilbo:
+    build: .
+    image: bilbo-md:latest
+    volumes:
+      - ./data:/app/data
+      - ./builds:/app/builds
+    working_dir: /app
+    entrypoint: ["bilbo"]
+    command: ["--help"]

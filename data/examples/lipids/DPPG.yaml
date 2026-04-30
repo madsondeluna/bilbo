@@ -1,0 +1,32 @@
+id: DPPG
+name: 1,2-dipalmitoyl-sn-glycero-3-phospho-(1'-sn-glycerol)
+lipid_class: glycerophospholipid
+headgroup: PG
+net_charge: -1
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 16
+    unsaturation: 0
+tags:
+- anionic
+- phosphatidylglycerol
+- saturated
+force_fields:
+  charmm36:
+    lipid_id: DPPG
+    force_field: charmm36
+    residue_name: DPPG
+    topology_file: lipid36.itp
+    status: validated
+    notes: example fixture mapping
+references:
+- id: manual_dppg_example
+  source_type: manual
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+curation_status: validated
+source: example
+notes:
+- Common in bacterial and mitochondrial membranes.

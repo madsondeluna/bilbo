@@ -1,0 +1,18 @@
+peptide_id: AMP01
+placement_id: amp01_upper_parallel
+input_structure: data/examples/peptides/AMP01.pdb
+anchor_mode: center_of_mass
+leaflet: upper
+x: 0.0
+y: 0.0
+z: null
+depth: 1.8
+tilt_deg: 0
+rotation_deg: 90
+azimuth_deg: 0
+orientation: parallel
+center_on_membrane: true
+allow_overlap: false
+collision_cutoff: 1.5
+notes:
+  - Example peptide placed parallel to the upper leaflet.

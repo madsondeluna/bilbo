@@ -1,0 +1,15 @@
+id: AMP01
+name: Example antimicrobial peptide (synthetic fixture)
+sequence: ALIKKAILL
+structure_file: data/examples/peptides/AMP01.pdb
+structure_format: pdb
+net_charge: 2
+residue_count: 8
+source: example
+references:
+  - id: manual_amp01_example
+    source_type: manual
+    manual_citation: Synthetic example peptide for BILBO tests. Not a real sequence.
+curation_status: pending_review
+notes:
+  - Synthetic fixture for testing peptide placement. Not a real peptide.

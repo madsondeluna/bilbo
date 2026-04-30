@@ -1,0 +1,21 @@
+; Minimal BILBO topology fixture for testing
+; Not a real Martini 3 force field file
+
+[ moleculetype ]
+; name  nrexcl
+POPC    1
+
+[ moleculetype ]
+POPE    1
+
+[ moleculetype ]
+POPG    1
+
+[ moleculetype ]
+POPS    1
+
+[ moleculetype ]
+CHOL    1
+
+[ moleculetype ]
+CL      1

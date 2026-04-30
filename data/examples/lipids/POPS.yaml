@@ -1,0 +1,31 @@
+curation_status: validated
+force_fields:
+  charmm36:
+    force_field: charmm36
+    lipid_id: POPS
+    notes: example fixture mapping
+    residue_name: POPS
+    status: validated
+    topology_file: lipid36.itp
+headgroup: PS
+id: POPS
+lipid_class: glycerophospholipid
+name: 1-palmitoyl-2-oleoyl-sn-glycero-3-phospho-L-serine
+net_charge: -1
+notes:
+- Example entry for tests and CLI smoke runs.
+references:
+- id: manual_pops_example
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+  source_type: manual
+source: example
+tags:
+- anionic
+- phosphatidylserine
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 18
+    unsaturation: 1

@@ -1,0 +1,37 @@
+curation_status: validated
+force_fields:
+  charmm36:
+    force_field: charmm36
+    lipid_id: CL
+    notes: example fixture mapping
+    residue_name: CL
+    status: validated
+    topology_file: lipid36.itp
+headgroup: CL
+id: CL
+lipid_class: glycerophospholipid
+name: cardiolipin
+net_charge: -2
+notes:
+- Example entry for tests and CLI smoke runs.
+references:
+- id: manual_cl_example
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+  source_type: manual
+source: example
+tags:
+- anionic
+- cardiolipin
+tails:
+  sn1:
+    carbon: 18
+    unsaturation: 2
+  sn2:
+    carbon: 18
+    unsaturation: 2
+  sn3:
+    carbon: 18
+    unsaturation: 2
+  sn4:
+    carbon: 18
+    unsaturation: 2

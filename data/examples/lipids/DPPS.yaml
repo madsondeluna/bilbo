@@ -1,0 +1,33 @@
+id: DPPS
+name: 1,2-dipalmitoyl-sn-glycero-3-phospho-L-serine
+lipid_class: glycerophospholipid
+headgroup: PS
+net_charge: -1
+tails:
+  sn1:
+    carbon: 16
+    unsaturation: 0
+  sn2:
+    carbon: 16
+    unsaturation: 0
+tags:
+- anionic
+- phosphatidylserine
+- saturated
+force_fields:
+  charmm36:
+    lipid_id: DPPS
+    force_field: charmm36
+    residue_name: DPPS
+    topology_file: lipid36.itp
+    status: validated
+    notes: example fixture mapping
+references:
+- id: manual_dpps_example
+  source_type: manual
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+curation_status: validated
+source: example
+notes:
+- PS lipids are enriched in the inner leaflet of the mammalian plasma membrane.
+- Exposure on the outer leaflet is a signal for apoptosis.

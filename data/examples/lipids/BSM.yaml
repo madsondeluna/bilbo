@@ -1,0 +1,33 @@
+id: BSM
+name: N-palmitoyl-D-erythro-sphingosylphosphorylcholine
+lipid_class: sphingolipid
+headgroup: PC
+net_charge: 0
+tails:
+  sphingoid_base:
+    carbon: 18
+    unsaturation: 1
+  n_acyl:
+    carbon: 16
+    unsaturation: 0
+tags:
+- zwitterionic
+- sphingomyelin
+- raft
+force_fields:
+  charmm36:
+    lipid_id: BSM
+    force_field: charmm36
+    residue_name: BSM
+    topology_file: lipid36.itp
+    status: validated
+    notes: example fixture mapping
+references:
+- id: manual_bsm_example
+  source_type: manual
+  manual_citation: Example entry for BILBO test data. Replace before scientific use.
+curation_status: validated
+source: example
+notes:
+- Brain sphingomyelin. Major outer leaflet lipid in mammalian plasma membranes.
+- Co-localizes with cholesterol in lipid raft domains.
