@@ -36,3 +36,6 @@ class BuildReport(BaseModel):
     generated_files: list[str] = []
     peptide_placements: list[PeptidePlacementRecord] = []
     geometry_warnings: list[str] = []
+    bilbo_version: str = ""
+    preset_snapshot: Optional[str] = None
+    template_hashes: dict[str, str] = {}

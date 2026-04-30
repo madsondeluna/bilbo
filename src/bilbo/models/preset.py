@@ -6,6 +6,18 @@ from pydantic import BaseModel, field_validator, model_validator
 
 from bilbo.models.reference import Reference
 
+# Hierarchy of evidence quality with their citation requirements.
+# "example"  : demo/test data; no citation required.
+# "inferred" : derived from review articles or databases; at least one reference required.
+# "curated"  : manually curated from primary literature; requires doi or pmid.
+# "validated": composition matches MD observables (e.g. thickness, APL); requires doi or pmid.
+EVIDENCE_LEVELS: dict[str, dict[str, bool]] = {
+    "example":   {"requires_reference": False, "requires_doi_or_pmid": False},
+    "inferred":  {"requires_reference": True,  "requires_doi_or_pmid": False},
+    "curated":   {"requires_reference": True,  "requires_doi_or_pmid": True},
+    "validated": {"requires_reference": True,  "requires_doi_or_pmid": True},
+}
+
 
 class LeafletComposition(BaseModel):
     lipids: dict[str, float]
@@ -51,6 +63,31 @@ class MembranePreset(BaseModel):
             if abs(total - 100.0) > 0.01:
                 raise ValueError(
                     f"Leaflet '{name}' in preset '{self.id}' must sum to 100, got {total}"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def validate_evidence_level(self) -> "MembranePreset":
+        if self.evidence_level is None:
+            return self
+        if self.evidence_level not in EVIDENCE_LEVELS:
+            allowed = ", ".join(f"'{k}'" for k in EVIDENCE_LEVELS)
+            raise ValueError(
+                f"Preset '{self.id}': evidence_level '{self.evidence_level}' is not valid. "
+                f"Allowed values: {allowed}"
+            )
+        rules = EVIDENCE_LEVELS[self.evidence_level]
+        if rules["requires_reference"] and not self.references:
+            raise ValueError(
+                f"Preset '{self.id}': evidence_level='{self.evidence_level}' "
+                "requires at least one reference."
+            )
+        if rules["requires_doi_or_pmid"]:
+            has_citable = any(r.doi or r.pmid for r in self.references)
+            if not has_citable:
+                raise ValueError(
+                    f"Preset '{self.id}': evidence_level='{self.evidence_level}' "
+                    "requires at least one reference with a doi or pmid."
                 )
         return self
 

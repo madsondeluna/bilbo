@@ -1,5 +1,6 @@
 """BILBO CLI - Bilayer Lipid Builder and Organizer."""
 
+import hashlib
 import json
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
@@ -11,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from sqlmodel import Session
 
+from bilbo.builders.apl_check import check_apl_balance
 from bilbo.builders.composition_expander import expand_composition
 from bilbo.builders.leaflet_layout import LeafletLayout, build_leaflet_layout, save_leaflet_csv
 from bilbo.builders.peptide_placer import place_peptide
@@ -509,8 +511,8 @@ def _bootstrap_if_empty() -> None:
                     for lip in result:
                         upsert_lipid(lip, session)
                     session.commit()
-            except Exception:
-                pass
+            except Exception as exc:
+                console.print(f"[yellow]Bootstrap: skipped {f.name}: {exc}[/yellow]")
 
     if not has_mappings and mappings_csv.exists():
         ff_ext = ForceFieldMappingExtractor()
@@ -520,8 +522,8 @@ def _bootstrap_if_empty() -> None:
                 for mapping in result:
                     upsert_forcefield_mapping(mapping, session)
                 session.commit()
-        except Exception:
-            pass
+        except Exception as exc:
+            console.print(f"[yellow]Bootstrap: skipped {mappings_csv.name}: {exc}[/yellow]")
 
     if not has_presets:
         preset_ext = PresetYAMLExtractor()
@@ -534,8 +536,8 @@ def _bootstrap_if_empty() -> None:
                     for preset in result:
                         upsert_preset(preset, session)
                     session.commit()
-            except Exception:
-                pass
+            except Exception as exc:
+                console.print(f"[yellow]Bootstrap: skipped {f.name}: {exc}[/yellow]")
 
 
 # ---------------------------------------------------------------------------
@@ -1089,8 +1091,8 @@ def membrane_build(
         lipids = list_lipids(session)
 
     lipid_map = {lip.id: lip for lip in lipids}
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
     for lid in p.all_lipid_ids():
         if lid not in lipid_map:
@@ -1108,12 +1110,29 @@ def membrane_build(
             console.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
 
+    warnings.extend(check_apl_balance(p, lipids_per_leaflet))
+    for w in warnings:
+        console.print(f"[yellow]{w}[/yellow]")
+
+    bilbo_ver = _pkg_version("bilbo-md")
+    preset_snapshot = p.model_dump_json()
+
+    _DATA = Path(__file__).parent.parent.parent / "data" / "examples"
+    tmpl_dir = allatom_dir if allatom_dir else _DATA / "charmm_gui"
+    all_lipid_ids = p.all_lipid_ids()
+    lid_set = {lid.upper() for lid in all_lipid_ids}
+    template_hashes: dict[str, str] = {}
+    if tmpl_dir.exists():
+        for pdb in sorted(tmpl_dir.glob("*.pdb")):
+            if not pdb.name.startswith("._") and pdb.stem.upper() in lid_set:
+                template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
+
     expanded = expand_composition(p, lipids_per_leaflet)
     layouts = build_leaflet_layout(expanded, sorting, seed)
 
     output.mkdir(parents=True, exist_ok=True)
 
-    generated_files = []
+    generated_files: list[str] = []
     for leaflet_name, layout in layouts.items():
         csv_path = output / f"{leaflet_name}_leaflet.csv"
         save_leaflet_csv(layout, csv_path)
@@ -1123,11 +1142,6 @@ def membrane_build(
     realized = {ec.leaflet: ec.counts for ec in expanded}
     rounding_errors = {ec.leaflet: ec.rounding_errors for ec in expanded}
 
-    for lid in p.all_lipid_ids():
-        if lid in lipid_map and force_field not in lipid_map[lid].force_fields:
-            warnings.append(f"Lipid '{lid}' has no mapping for force field '{force_field}'.")
-
-    all_lipid_ids = p.all_lipid_ids()
     report = BuildReport(
         preset_id=preset,
         force_field=force_field,
@@ -1141,24 +1155,22 @@ def membrane_build(
         warnings=warnings,
         errors=errors,
         generated_files=generated_files,
+        bilbo_version=bilbo_ver,
+        preset_snapshot=preset_snapshot,
+        template_hashes=template_hashes,
     )
-
-    report_path = output / "build_report.json"
-    report_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
 
     _write_build_outputs(output, layouts, all_lipid_ids, report, ff_dir=ff_dir)
 
-    _DATA = Path(__file__).parent.parent.parent / "data" / "examples"
-    tmpl_dir = allatom_dir if allatom_dir else _DATA / "charmm_gui"
-    pdbs = [p for p in tmpl_dir.glob("*.pdb") if not p.name.startswith("._")] if tmpl_dir.exists() else []
+    pdbs = [pdb for pdb in tmpl_dir.glob("*.pdb") if not pdb.name.startswith("._")] if tmpl_dir.exists() else []
     if pdbs:
         aa_out = output / "preview_allatom.pdb"
         n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out)
-        found = {p.stem.upper() for p in pdbs}
+        found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
         if missing:
-            console.print(f"[yellow]  No template for: {', '.join(missing)} — skipped.[/yellow]")
+            console.print(f"[yellow]  No template for: {', '.join(missing)} -- skipped.[/yellow]")
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
@@ -1265,6 +1277,8 @@ def membrane_compose(
         for e in errors:
             console.print(f"[red]{e}[/red]")
         raise typer.Exit(1)
+
+    warnings.extend(check_apl_balance(preset_obj, lipids_per_leaflet))
     for w in warnings:
         console.print(f"[yellow]{w}[/yellow]")
 
@@ -1274,6 +1288,19 @@ def membrane_compose(
     if symmetry == "asymmetric":
         console.print(f"  [dim]Lower: {', '.join(f'{k} {v:.1f}%' for k, v in lower_comp.items())}[/dim]")
     console.print()
+
+    bilbo_ver = _pkg_version("bilbo-md")
+    preset_snapshot = preset_obj.model_dump_json()
+
+    _DATA = Path(__file__).parent.parent.parent / "data" / "examples"
+    tmpl_dir = allatom_dir if allatom_dir else _DATA / "charmm_gui"
+    all_lipid_ids = preset_obj.all_lipid_ids()
+    lid_set = {lid.upper() for lid in all_lipid_ids}
+    template_hashes: dict[str, str] = {}
+    if tmpl_dir.exists():
+        for pdb in sorted(tmpl_dir.glob("*.pdb")):
+            if not pdb.name.startswith("._") and pdb.stem.upper() in lid_set:
+                template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
 
     expanded = expand_composition(preset_obj, lipids_per_leaflet)
     layouts = build_leaflet_layout(expanded, sorting, seed)
@@ -1290,7 +1317,6 @@ def membrane_compose(
     realized = {ec.leaflet: ec.counts for ec in expanded}
     rounding_errors = {ec.leaflet: ec.rounding_errors for ec in expanded}
 
-    all_lipid_ids = preset_obj.all_lipid_ids()
     report = BuildReport(
         preset_id="_compose_",
         force_field=force_field,
@@ -1304,26 +1330,24 @@ def membrane_compose(
         warnings=warnings,
         errors=[],
         generated_files=generated_files,
+        bilbo_version=bilbo_ver,
+        preset_snapshot=preset_snapshot,
+        template_hashes=template_hashes,
     )
-
-    report_path = output / "build_report.json"
-    report_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
 
     _write_build_outputs(output, layouts, all_lipid_ids, report, ff_dir=ff_dir)
 
-    _DATA = Path(__file__).parent.parent.parent / "data" / "examples"
-    tmpl_dir = allatom_dir if allatom_dir else _DATA / "charmm_gui"
-    pdbs = [p for p in tmpl_dir.glob("*.pdb") if not p.name.startswith("._")]
+    pdbs = [pdb for pdb in tmpl_dir.glob("*.pdb") if not pdb.name.startswith("._")] if tmpl_dir.exists() else []
     if not pdbs:
         console.print(f"[yellow]No all-atom templates found in {tmpl_dir}[/yellow]")
     else:
         aa_out = output / "preview_allatom.pdb"
         n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out)
-        found = {p.stem.upper() for p in pdbs}
+        found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
         if missing:
-            console.print(f"[yellow]  No template for: {', '.join(missing)} — skipped.[/yellow]")
+            console.print(f"[yellow]  No template for: {', '.join(missing)} -- skipped.[/yellow]")
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
@@ -1354,7 +1378,12 @@ def _write_build_outputs(
     write_markdown_report(report, md_path)
     report.generated_files.append("report.md")
 
-    write_manifest(output, report.generated_files)
+    write_manifest(
+        output,
+        report.generated_files,
+        bilbo_version=report.bilbo_version,
+        template_hashes=report.template_hashes or None,
+    )
     output.joinpath("build_report.json").write_text(
         report.model_dump_json(indent=2), encoding="utf-8"
     )

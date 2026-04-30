@@ -105,6 +105,87 @@ def test_valid_source_manifest():
     assert manifest.lipids == []
 
 
+def _preset_base(**kwargs) -> dict:
+    return dict(
+        id="p",
+        leaflets={"upper": {"POPE": 100}, "lower": {"POPE": 100}},
+        **kwargs,
+    )
+
+
+def test_evidence_level_example_needs_no_reference():
+    p = MembranePreset(**_preset_base(evidence_level="example"))
+    assert p.evidence_level == "example"
+
+
+def test_evidence_level_inferred_requires_reference():
+    with pytest.raises(ValidationError, match="requires at least one reference"):
+        MembranePreset(**_preset_base(evidence_level="inferred"))
+
+
+def test_evidence_level_inferred_accepts_manual_citation():
+    p = MembranePreset(**_preset_base(
+        evidence_level="inferred",
+        references=[Reference(id="r1", manual_citation="Some review")],
+    ))
+    assert p.evidence_level == "inferred"
+
+
+def test_evidence_level_curated_requires_doi_or_pmid():
+    with pytest.raises(ValidationError, match="doi or pmid"):
+        MembranePreset(**_preset_base(
+            evidence_level="curated",
+            references=[Reference(id="r1", manual_citation="No DOI here")],
+        ))
+
+
+def test_evidence_level_curated_accepts_doi():
+    p = MembranePreset(**_preset_base(
+        evidence_level="curated",
+        references=[Reference(id="r1", doi="10.1000/test")],
+    ))
+    assert p.evidence_level == "curated"
+
+
+def test_evidence_level_validated_accepts_pmid():
+    p = MembranePreset(**_preset_base(
+        evidence_level="validated",
+        references=[Reference(id="r1", pmid="12345678")],
+    ))
+    assert p.evidence_level == "validated"
+
+
+def test_evidence_level_invalid_value_rejected():
+    with pytest.raises(ValidationError, match="not valid"):
+        MembranePreset(**_preset_base(evidence_level="made_up"))
+
+
+def test_evidence_level_none_always_accepted():
+    p = MembranePreset(**_preset_base())
+    assert p.evidence_level is None
+
+
+def test_build_report_reproducibility_fields():
+    report = BuildReport(
+        preset_id="test",
+        force_field="charmm36",
+        engine="gromacs",
+        lipids_per_leaflet=64,
+        sorting_mode="random",
+        seed=42,
+        desired_composition={"upper": {"POPE": 100}},
+        realized_composition={"upper": {"POPE": 64}},
+        bilbo_version="0.1.0",
+        preset_snapshot='{"id": "test"}',
+        template_hashes={"POPE.pdb": "abc123"},
+    )
+    j = report.model_dump_json()
+    restored = BuildReport.model_validate_json(j)
+    assert restored.bilbo_version == "0.1.0"
+    assert restored.preset_snapshot == '{"id": "test"}'
+    assert restored.template_hashes == {"POPE.pdb": "abc123"}
+
+
 def test_build_report_serialization():
     report = BuildReport(
         preset_id="test",
