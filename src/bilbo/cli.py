@@ -135,15 +135,12 @@ def _bilbo_banner() -> None:
         "[bold red]O[/bold red][white]rganizer[/white]"
     )
 
-    sep_markup = "[dim]" + "─" * len(tagline_plain) + "[/dim]"
-
     console.print()
     for row in (H, To, Ti, Ti, Ti):
         console.print(PAD + row)
     console.print()
     console.print(_c(len(title_plain), title_markup))
     console.print(_c(len(tagline_plain), tagline_markup))
-    console.print(_c(len(tagline_plain), sep_markup))
     console.print()
     for row in (Ti, Ti, Ti, To, H):
         console.print(PAD + row)
