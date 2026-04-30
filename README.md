@@ -67,10 +67,7 @@ Using Docker:
 
 ```bash
 docker build -t bilbo-md .
-docker run --rm \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/builds:/app/builds \
-  bilbo-md bilbo --help
+docker run --rm -v $(pwd)/data:/app/data -v $(pwd)/builds:/app/builds bilbo-md bilbo --help
 ```
 
 Verify the installation:
@@ -312,8 +309,7 @@ bilbo extract topologies data/examples/topologies/
 Parses a locally saved HTML page from the CHARMM-GUI lipid library and extracts lipid names and categories. No network requests are made. All extracted entries are marked `pending_review`.
 
 ```bash
-bilbo extract charmm-gui-archive charmm_gui_library.html \
-  --output-dir data/sources/charmm_gui/
+bilbo extract charmm-gui-archive charmm_gui_library.html --output-dir data/sources/charmm_gui/
 ```
 
 To obtain the HTML file, open the CHARMM-GUI Individual Lipid Molecule Library page in a browser and save it as a complete web page.
@@ -351,14 +347,7 @@ bilbo extract all data/examples/
 Builds a membrane from a registered preset. This is the main build command when you have a curated preset in the library.
 
 ```bash
-bilbo membrane build \
-  --preset ecoli_inner_membrane_default \
-  --force-field charmm36 \
-  --engine gromacs \
-  --lipids-per-leaflet 128 \
-  --sorting random \
-  --seed 42 \
-  --output builds/ecoli_128
+bilbo membrane build --preset ecoli_inner_membrane_default --force-field charmm36 --engine gromacs --lipids-per-leaflet 128 --sorting random --seed 42 --output builds/ecoli_128
 ```
 
 Flags:
@@ -386,20 +375,13 @@ Flags:
 Builds a membrane from a direct lipid composition without requiring a preset in the library. Lipid IDs must still be registered with `bilbo lipid add`.
 
 ```bash
-bilbo membrane compose \
-  --upper POPE:70,POPG:20,CL:10 \
-  --lipids-per-leaflet 64 \
-  --output builds/ecoli_direct
+bilbo membrane compose --upper POPE:70,POPG:20,CL:10 --lipids-per-leaflet 64 --output builds/ecoli_direct
 ```
 
 Asymmetric bilayer:
 
 ```bash
-bilbo membrane compose \
-  --upper POPE:70,POPG:20,CL:10 \
-  --lower POPE:50,POPG:30,CL:20 \
-  --lipids-per-leaflet 64 \
-  --output builds/asymmetric_test
+bilbo membrane compose --upper POPE:70,POPG:20,CL:10 --lower POPE:50,POPG:30,CL:20 --lipids-per-leaflet 64 --output builds/asymmetric_test
 ```
 
 Flags:
@@ -503,15 +485,7 @@ bilbo peptide validate data/examples/peptides/AMP01.yaml
 Computes the rigid-body placement of a peptide on the membrane surface using PCA-based axis alignment. The principal axis of the peptide structure is computed from all atom coordinates and aligned to the target orientation.
 
 ```bash
-bilbo membrane add-peptide builds/ecoli_128 \
-  --peptide data/examples/peptides/AMP01.pdb \
-  --leaflet upper \
-  --orientation parallel \
-  --x 0.0 \
-  --y 0.0 \
-  --depth 1.8 \
-  --rotation-deg 90 \
-  --tilt-deg 0
+bilbo membrane add-peptide builds/ecoli_128 --peptide data/examples/peptides/AMP01.pdb --leaflet upper --orientation parallel --x 0.0 --y 0.0 --depth 1.8 --rotation-deg 90 --tilt-deg 0
 ```
 
 `builds/ecoli_128`: path to an existing build directory containing `build_report.json`. Required argument.
@@ -732,22 +706,13 @@ bilbo preset add data/examples/presets/ecoli_inner_membrane_default.yaml
 Step 4: Check compatibility before building.
 
 ```bash
-bilbo compatibility check \
-  --preset ecoli_inner_membrane_default \
-  --force-field charmm36
+bilbo compatibility check --preset ecoli_inner_membrane_default --force-field charmm36
 ```
 
 Step 5: Build the membrane.
 
 ```bash
-bilbo membrane build \
-  --preset ecoli_inner_membrane_default \
-  --force-field charmm36 \
-  --engine gromacs \
-  --lipids-per-leaflet 128 \
-  --sorting random \
-  --seed 42 \
-  --output builds/ecoli_128
+bilbo membrane build --preset ecoli_inner_membrane_default --force-field charmm36 --engine gromacs --lipids-per-leaflet 128 --sorting random --seed 42 --output builds/ecoli_128
 ```
 
 Step 6: Inspect the result.
@@ -766,12 +731,7 @@ vmd builds/ecoli_128/preview_allatom.pdb -e builds/ecoli_128/view_vmd.tcl
 Step 8 (optional): Place an antimicrobial peptide on the upper leaflet surface.
 
 ```bash
-bilbo membrane add-peptide builds/ecoli_128 \
-  --peptide data/examples/peptides/AMP01.pdb \
-  --leaflet upper \
-  --orientation parallel \
-  --depth 1.8 \
-  --rotation-deg 90
+bilbo membrane add-peptide builds/ecoli_128 --peptide data/examples/peptides/AMP01.pdb --leaflet upper --orientation parallel --depth 1.8 --rotation-deg 90
 ```
 
 Step 9 (optional): Open the complex in PyMOL.
