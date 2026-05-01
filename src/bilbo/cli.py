@@ -242,8 +242,9 @@ def _membrane_menu() -> None:
         return questionary.Choice(label, value=cmd)
 
     choices = [
-        _ch("compose", "build from a direct lipid composition"),
-        _ch("build",   "build from a saved preset"),
+        _ch("build",        "build directly from your own PDB files"),
+        _ch("compose",      "build from a direct lipid composition"),
+        _ch("build-preset", "build from a saved preset"),
         questionary.Separator(),
         questionary.Choice("back", value="back"),
     ]
@@ -261,10 +262,12 @@ def _membrane_menu() -> None:
     if answer is None or answer == "back":
         return
 
-    if answer == "compose":
-        _membrane_compose_wizard()
-    elif answer == "build":
+    if answer == "build":
         _run_bilbo(["membrane", "build", "--help"])
+    elif answer == "compose":
+        _membrane_compose_wizard()
+    elif answer == "build-preset":
+        _run_bilbo(["membrane", "build-preset", "--help"])
 
 
 def _membrane_compose_wizard() -> None:
@@ -450,7 +453,7 @@ def drytest(
             ["preset", "add", str(_PRESET_FILE)], env)
         ok = ok and _drytest_step(runner, "Build membrane",
             f"preset: {PRESET_ID}  |  force-field: {FORCE_FIELD}  |  engine: {ENGINE}  |  lipids-per-leaflet: {LIPIDS_PER_LEAFLET}  |  seed: {SEED}",
-            ["membrane", "build",
+            ["membrane", "build-preset",
              "--preset", PRESET_ID, "--force-field", FORCE_FIELD,
              "--engine", ENGINE, "--lipids-per-leaflet", str(LIPIDS_PER_LEAFLET),
              "--seed", str(SEED), "--output", str(build_dir)], env)
@@ -1070,7 +1073,7 @@ def peptide_validate(path: Path = typer.Argument(...)):
 # Membrane build
 # ---------------------------------------------------------------------------
 
-@membrane_app.command("build")
+@membrane_app.command("build-preset")
 def membrane_build(
     preset: str = typer.Option(..., "--preset"),
     force_field: str = typer.Option(..., "--force-field"),
@@ -1081,8 +1084,10 @@ def membrane_build(
     output: Path = typer.Option(..., "--output"),
     ff_dir: str = typer.Option("charmm36.ff", "--ff-dir", help="GROMACS force-field directory name (e.g. charmm36-jul2022.ff)."),
     allatom_dir: Path = typer.Option(None, "--allatom-dir", help="Directory with CHARMM-GUI PDB templates."),
+    spacing: float = typer.Option(0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."),
+    bilayer_gap: float = typer.Option(6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."),
 ):
-    """Build a membrane preview from a preset."""
+    """Build a membrane preview from a named preset in the local library."""
     with Session(_engine()) as session:
         p = get_preset(preset, session)
         if p is None:
@@ -1128,7 +1133,7 @@ def membrane_build(
                 template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
 
     expanded = expand_composition(p, lipids_per_leaflet)
-    layouts = build_leaflet_layout(expanded, sorting, seed)
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
 
     output.mkdir(parents=True, exist_ok=True)
 
@@ -1165,7 +1170,7 @@ def membrane_build(
     pdbs = [pdb for pdb in tmpl_dir.glob("*.pdb") if not pdb.name.startswith("._")] if tmpl_dir.exists() else []
     if pdbs:
         aa_out = output / "preview_allatom.pdb"
-        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out)
+        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2)
         found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
@@ -1227,6 +1232,8 @@ def membrane_compose(
     output: Path = typer.Option(..., "--output"),
     allatom_dir: Path = typer.Option(None, "--allatom-dir", help="Custom directory for all-atom PDB templates (overrides default data/examples/charmm_gui/)."),
     ff_dir: str = typer.Option("charmm36.ff", "--ff-dir", help="GROMACS force-field directory name (e.g. charmm36-jul2022.ff)."),
+    spacing: float = typer.Option(0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."),
+    bilayer_gap: float = typer.Option(6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."),
 ) -> None:
     """Build a membrane from a direct lipid composition — no preset file required.
 
@@ -1303,7 +1310,7 @@ def membrane_compose(
                 template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
 
     expanded = expand_composition(preset_obj, lipids_per_leaflet)
-    layouts = build_leaflet_layout(expanded, sorting, seed)
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
 
     output.mkdir(parents=True, exist_ok=True)
 
@@ -1342,7 +1349,7 @@ def membrane_compose(
         console.print(f"[yellow]No all-atom templates found in {tmpl_dir}[/yellow]")
     else:
         aa_out = output / "preview_allatom.pdb"
-        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out)
+        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2)
         found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
@@ -1351,6 +1358,203 @@ def membrane_compose(
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
+
+
+def _parse_upper_lower_pdb(
+    specs: list[str],
+    flag: str,
+) -> dict[str, tuple[Path, int]]:
+    """Parse FILE.pdb:COUNT specs into {lipid_id: (path, count)}."""
+    result: dict[str, tuple[Path, int]] = {}
+    for spec in specs:
+        if ":" not in spec:
+            console.print(f"[red]{flag}: expected FILE.pdb:COUNT, got '{spec}'[/red]")
+            raise typer.Exit(1)
+        file_part, count_part = spec.rsplit(":", 1)
+        pdb_path = Path(file_part.strip())
+        try:
+            count = int(count_part.strip())
+        except ValueError:
+            console.print(f"[red]{flag}: count must be an integer, got '{count_part}'[/red]")
+            raise typer.Exit(1)
+        if count <= 0:
+            console.print(f"[red]{flag}: count must be > 0 for '{pdb_path.name}'[/red]")
+            raise typer.Exit(1)
+        lipid_id = pdb_path.stem.upper()
+        result[lipid_id] = (pdb_path, count)
+    return result
+
+
+def _validate_pdb_for_from_pdb(pdb_path: Path, lipid_id: str) -> None:
+    """Raise SystemExit if pdb_path fails basic structural checks."""
+    if not pdb_path.exists():
+        console.print(f"[red]PDB file not found: {pdb_path}[/red]")
+        raise typer.Exit(1)
+    lines = [
+        ln for ln in pdb_path.read_text(encoding="utf-8").splitlines()
+        if ln.startswith(("ATOM", "HETATM"))
+    ]
+    if len(lines) <= 10:
+        console.print(f"[red]{lipid_id}: PDB has {len(lines)} ATOM/HETATM records (minimum 10).[/red]")
+        raise typer.Exit(1)
+    z_vals = [float(ln[46:54]) for ln in lines]
+    z_extent = max(z_vals) - min(z_vals)
+    if not (5.0 <= z_extent <= 60.0):
+        console.print(
+            f"[red]{lipid_id}: PDB z-extent is {z_extent:.1f} A "
+            f"(expected 5–60 A for a single lipid template).[/red]"
+        )
+        raise typer.Exit(1)
+
+
+@membrane_app.command("build")
+def membrane_from_pdb(
+    upper_pdb: list[str] = typer.Option(
+        ...,
+        "--upper-pdb",
+        help="Upper leaflet lipid as FILE.pdb:COUNT. Repeat for multiple species.",
+    ),
+    lower_pdb: list[str] = typer.Option(
+        None,
+        "--lower-pdb",
+        help="Lower leaflet lipid as FILE.pdb:COUNT. Defaults to same as upper (symmetric).",
+    ),
+    seed: int = typer.Option(42, "--seed", help="Random seed for lipid placement."),
+    sorting: str = typer.Option("random", "--sorting", help="Sorting mode: random or domain_enriched."),
+    spacing: float = typer.Option(
+        0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."
+    ),
+    bilayer_gap: float = typer.Option(
+        6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."
+    ),
+    output: Path = typer.Option(..., "--output", help="Output directory."),
+) -> None:
+    """Build a bilayer preview directly from your own PDB files.
+
+    No database access or preset file required. Each PDB is used as a structural
+    template for one lipid species. Lipid IDs are derived from the file stem
+    (uppercase).
+
+    Example:
+
+      bilbo membrane build \\
+        --upper-pdb POPE.pdb:50 --upper-pdb POPG.pdb:14 \\
+        --lower-pdb POPE.pdb:64 \\
+        --seed 42 --spacing 0.7 --bilayer-gap 6.0 \\
+        --output builds/my_membrane
+    """
+    from bilbo.builders.composition_expander import ExpandedComposition
+
+    upper_specs = _parse_upper_lower_pdb(upper_pdb, "--upper-pdb")
+    lower_specs = _parse_upper_lower_pdb(lower_pdb, "--lower-pdb") if lower_pdb else dict(upper_specs)
+
+    for lipid_id, (pdb_path, _) in upper_specs.items():
+        _validate_pdb_for_from_pdb(pdb_path, lipid_id)
+    for lipid_id, (pdb_path, _) in lower_specs.items():
+        if lipid_id not in upper_specs or lower_specs[lipid_id][0] != upper_specs[lipid_id][0]:
+            _validate_pdb_for_from_pdb(pdb_path, lipid_id)
+
+    template_index: dict[str, Path] = {}
+    for lipid_id, (pdb_path, _) in upper_specs.items():
+        template_index[lipid_id] = pdb_path
+    for lipid_id, (pdb_path, _) in lower_specs.items():
+        template_index[lipid_id] = pdb_path
+
+    all_lipid_ids = sorted(template_index.keys())
+
+    template_hashes: dict[str, str] = {
+        f"{lid}.pdb": hashlib.sha256(path.read_bytes()).hexdigest()
+        for lid, path in template_index.items()
+    }
+
+    upper_counts = {lid: cnt for lid, (_, cnt) in upper_specs.items()}
+    lower_counts = {lid: cnt for lid, (_, cnt) in lower_specs.items()}
+    upper_total = sum(upper_counts.values())
+    lower_total = sum(lower_counts.values())
+
+    # APL plausibility check. spacing² (nm² -> Å²) should be within the
+    # physiologically observed range for phospholipid bilayers (~35-80 Å²;
+    # Kucerka et al. Biophys J 2011). Values outside that range indicate a
+    # spacing parameter that will produce physically unreasonable structures.
+    apl_angstrom2 = (spacing * 10.0) ** 2
+    if apl_angstrom2 < 35.0:
+        console.print(
+            f"[yellow]Warning: --spacing {spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
+            "below the physiological minimum (~35 A^2 for phospholipids). "
+            "Lipids will overlap severely.[/yellow]"
+        )
+    elif apl_angstrom2 > 80.0:
+        console.print(
+            f"[yellow]Warning: --spacing {spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
+            "above the physiological maximum (~80 A^2 for phospholipids). "
+            "The bilayer will have unrealistically large inter-lipid gaps.[/yellow]"
+        )
+
+    expanded = [
+        ExpandedComposition(leaflet="upper", counts=upper_counts, rounding_errors={}),
+        ExpandedComposition(leaflet="lower", counts=lower_counts, rounding_errors={}),
+    ]
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
+
+    output.mkdir(parents=True, exist_ok=True)
+    generated_files: list[str] = []
+
+    for leaflet_name, layout in layouts.items():
+        csv_path = output / f"{leaflet_name}_leaflet.csv"
+        save_leaflet_csv(layout, csv_path)
+        generated_files.append(csv_path.name)
+
+    symmetry = "symmetric" if upper_counts == lower_counts else "asymmetric"
+    upper_pct = {lid: cnt / upper_total * 100 for lid, cnt in upper_counts.items()}
+    lower_pct = {lid: cnt / lower_total * 100 for lid, cnt in lower_counts.items()}
+
+    try:
+        bilbo_ver = _pkg_version("bilbo-md")
+    except Exception:
+        bilbo_ver = "dev"
+
+    report = BuildReport(
+        preset_id="_from_pdb_",
+        force_field="none",
+        engine="none",
+        lipids_per_leaflet=upper_total,
+        sorting_mode=sorting,
+        seed=seed,
+        desired_composition={"upper": upper_pct, "lower": lower_pct},
+        realized_composition={"upper": upper_counts, "lower": lower_counts},
+        warnings=[],
+        errors=[],
+        generated_files=generated_files,
+        bilbo_version=bilbo_ver,
+        template_hashes=template_hashes,
+    )
+
+    aa_out = output / "preview_allatom.pdb"
+    n_atoms = write_allatom_preview(
+        layouts,
+        output,
+        aa_out,
+        z_half_gap=bilayer_gap / 2,
+        template_index=template_index,
+    )
+    generated_files.append("preview_allatom.pdb")
+    report.generated_files = generated_files
+
+    console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
+
+    write_manifest(
+        output,
+        generated_files,
+        bilbo_version=bilbo_ver,
+        template_hashes=template_hashes,
+    )
+
+    output.joinpath("build_report.json").write_text(
+        report.model_dump_json(indent=2), encoding="utf-8"
+    )
+
+    console.print(f"[green]Build complete ({symmetry}): {output}[/green]")
+    console.print(f"  upper: {upper_total} lipids  lower: {lower_total} lipids")
 
 
 def _write_build_outputs(
@@ -1395,7 +1599,7 @@ def _print_realized(realized: dict[str, dict[str, int]]) -> None:
         console.print(f"  {leaflet}: {total} lipids")
 
 
-@membrane_app.command("add-peptide")
+@membrane_app.command("place")
 def membrane_add_peptide(
     build_dir: Path = typer.Argument(...),
     peptide: Optional[Path] = typer.Option(None, "--peptide"),
@@ -1445,7 +1649,25 @@ def membrane_add_peptide(
 
     report = BuildReport.model_validate_json(report_path.read_text(encoding="utf-8"))
 
-    placement_result = place_peptide(pp)
+    # Compute actual membrane surface z from the all-atom preview so that
+    # surface placement aligns to the real headgroup positions, not hardcoded defaults.
+    surface_z: dict[str, float] | None = None
+    preview_pdb = build_dir / "preview_allatom.pdb"
+    if preview_pdb.exists():
+        upper_z: list[float] = []
+        lower_z: list[float] = []
+        for ln in preview_pdb.read_text(encoding="utf-8").splitlines():
+            if ln.startswith(("ATOM", "HETATM")) and len(ln) > 54:
+                chain = ln[21]
+                z = float(ln[46:54])
+                if chain == "U":
+                    upper_z.append(z)
+                elif chain == "L":
+                    lower_z.append(z)
+        if upper_z and lower_z:
+            surface_z = {"upper": max(upper_z), "lower": min(lower_z)}
+
+    placement_result = place_peptide(pp, surface_z=surface_z)
 
     ppr = PeptidePlacementRecord(
         peptide_id=pp.peptide_id,
@@ -1491,6 +1713,54 @@ def membrane_add_peptide(
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path_out = out_dir / "build_report.json"
     report_path_out.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+
+    # Build system.pdb: membrane preview + transformed peptide coordinates.
+    membrane_pdb = build_dir / "preview_allatom.pdb"
+    if membrane_pdb.exists() and placement_result.transformed_coords is not None:
+        coords = placement_result.transformed_coords
+        pep_atom_lines = [
+            ln for ln in Path(pp.input_structure).read_text(encoding="utf-8").splitlines()
+            if ln.startswith(("ATOM", "HETATM"))
+        ]
+        # Assign a chain letter not already used in the membrane.
+        existing_placements = len(report.peptide_placements)
+        chain_letters = "PQRSTUVWXYZ"
+        pep_chain = chain_letters[(existing_placements - 1) % len(chain_letters)]
+
+        membrane_lines = [
+            ln for ln in membrane_pdb.read_text(encoding="utf-8").splitlines()
+            if ln.startswith(("REMARK", "CRYST1", "ATOM", "HETATM"))
+        ]
+        pep_out_lines: list[str] = []
+        for i, ln in enumerate(pep_atom_lines):
+            if i >= len(coords):
+                break
+            x, y, z = coords[i]
+            rebuilt = (
+                ln[:21]
+                + pep_chain
+                + ln[22:30]
+                + f"{x:8.3f}{y:8.3f}{z:8.3f}"
+                + (ln[54:] if len(ln) > 54 else "")
+            )
+            pep_out_lines.append(rebuilt)
+
+        serial = 1
+        system_lines: list[str] = []
+        for ln in membrane_lines:
+            if ln.startswith(("ATOM", "HETATM")):
+                system_lines.append(f"{ln[:6]}{serial:5d}{ln[11:]}")
+                serial += 1
+            else:
+                system_lines.append(ln)
+        for ln in pep_out_lines:
+            system_lines.append(f"{ln[:6]}{serial:5d}{ln[11:]}")
+            serial += 1
+        system_lines.append("END")
+
+        system_path = out_dir / "system.pdb"
+        system_path.write_text("\n".join(system_lines) + "\n", encoding="utf-8")
+        console.print(f"[green]System PDB: {system_path} ({serial - 1} atoms)[/green]")
 
     for w in placement_result.warnings:
         console.print(f"[yellow]Warning: {w}[/yellow]")
@@ -1595,9 +1865,9 @@ def export_complex(build_dir: Path = typer.Argument(...)):
     layouts, report = _require_build(build_dir)
     geo_path = build_dir / "geometry_report.json"
     if not geo_path.exists():
-        console.print("[red]No geometry_report.json found. Run 'bilbo membrane add-peptide' first.[/red]")
+        console.print("[red]No geometry_report.json found. Run 'bilbo membrane place' first.[/red]")
         raise typer.Exit(1)
-    console.print("[green]Complex preview files already written by add-peptide.[/green]")
+    console.print("[green]Complex preview files already written by membrane place.[/green]")
 
 
 @export_app.command("allatom-preview")

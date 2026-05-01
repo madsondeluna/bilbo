@@ -38,7 +38,7 @@ def test_membrane_pdb_end_to_end(bilbo_env, tmp_path):
     _run(["preset", "add", str(preset_file)])
 
     _run([
-        "membrane", "build",
+        "membrane", "build-preset",
         "--preset", "ecoli_inner_membrane_default",
         "--force-field", "charmm36",
         "--engine", "gromacs",

@@ -56,7 +56,7 @@ def test_cli_membrane_build_ecoli(lipid_yaml_dir, preset_yaml_dir, forcefield_cs
     runner.invoke(app, ["extract", "mappings", str(forcefield_csv)])
 
     result = runner.invoke(app, [
-        "membrane", "build",
+        "membrane", "build-preset",
         "--preset", "ecoli_inner_membrane_default",
         "--force-field", "charmm36",
         "--engine", "gromacs",
@@ -100,7 +100,7 @@ def test_cli_membrane_add_peptide(lipid_yaml_dir, preset_yaml_dir, forcefield_cs
     runner.invoke(app, ["preset", "add", str(preset_yaml_dir / "ecoli_inner_membrane_default.yaml")])
     runner.invoke(app, ["extract", "mappings", str(forcefield_csv)])
     runner.invoke(app, [
-        "membrane", "build",
+        "membrane", "build-preset",
         "--preset", "ecoli_inner_membrane_default",
         "--force-field", "charmm36",
         "--engine", "gromacs",
@@ -111,7 +111,7 @@ def test_cli_membrane_add_peptide(lipid_yaml_dir, preset_yaml_dir, forcefield_cs
     ])
 
     result = runner.invoke(app, [
-        "membrane", "add-peptide",
+        "membrane", "place",
         str(tmp_path / "build"),
         "--peptide", str(amp01_pdb),
         "--leaflet", "upper",
@@ -131,7 +131,7 @@ def test_cli_export_complex_preview(lipid_yaml_dir, preset_yaml_dir, forcefield_
     runner.invoke(app, ["preset", "add", str(preset_yaml_dir / "ecoli_inner_membrane_default.yaml")])
     runner.invoke(app, ["extract", "mappings", str(forcefield_csv)])
     runner.invoke(app, [
-        "membrane", "build",
+        "membrane", "build-preset",
         "--preset", "ecoli_inner_membrane_default",
         "--force-field", "charmm36",
         "--engine", "gromacs",
@@ -141,7 +141,7 @@ def test_cli_export_complex_preview(lipid_yaml_dir, preset_yaml_dir, forcefield_
         "--output", str(tmp_path / "build"),
     ])
     runner.invoke(app, [
-        "membrane", "add-peptide",
+        "membrane", "place",
         str(tmp_path / "build"),
         "--peptide", str(amp01_pdb),
         "--leaflet", "upper",
@@ -176,7 +176,7 @@ def _run_build(lipid_yaml_dir, preset_yaml_dir, forcefield_csv, tmp_path):
     runner.invoke(app, ["preset", "add", str(preset_yaml_dir / "ecoli_inner_membrane_default.yaml")])
     runner.invoke(app, ["extract", "mappings", str(forcefield_csv)])
     runner.invoke(app, [
-        "membrane", "build",
+        "membrane", "build-preset",
         "--preset", "ecoli_inner_membrane_default",
         "--force-field", "charmm36",
         "--engine", "gromacs",

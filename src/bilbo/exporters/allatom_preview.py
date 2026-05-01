@@ -8,9 +8,11 @@ _CHAIN = {"upper": "U", "lower": "L"}
 
 # Half the inter-leaflet gap (Angstroms). Tails of the upper leaflet end at
 # +_Z_TAIL and tails of the lower leaflet end at -_Z_TAIL, giving a 2*_Z_TAIL
-# gap at the bilayer center. A 6 A gap (3 A each side) prevents atomic clashes
-# in all-atom previews while remaining consistent with D_c values from
-# Nagle & Tristram-Nagle (BBA 2000) and Kucerka et al. (Biophys J 2011).
+# gap at the bilayer center. 6 A total is a clash-avoidance buffer chosen so
+# that tail-terminal atoms of opposing leaflets do not overlap in an
+# unminimized template-tiled structure. It is not derived from experimental
+# bilayer thickness data; the user must run energy minimization before
+# interpreting inter-leaflet distances.
 _Z_TAIL = 3.0
 
 
@@ -35,12 +37,13 @@ def _place_atoms(
     chain: str,
     resseq: int,
     z_tail: float,
+    z_half_gap: float = _Z_TAIL,
 ) -> list[str]:
     """Translate x/y and place lipid relative to bilayer center.
 
     Normalizes z so the tail end (z_tail = template z_min) lands at
-    +_Z_TAIL for the upper leaflet and -_Z_TAIL for the lower leaflet.
-    This guarantees a 2*_Z_TAIL gap at the bilayer center regardless of
+    +z_half_gap for the upper leaflet and -z_half_gap for the lower leaflet.
+    This guarantees a 2*z_half_gap gap at the bilayer center regardless of
     the individual chain length, preventing atomic clashes between leaflets.
     Headgroups extend outward from the bilayer center in both leaflets.
     """
@@ -48,7 +51,7 @@ def _place_atoms(
     for line in atom_lines:
         x = float(line[30:38]) + dx
         y = float(line[38:46]) + dy
-        z_norm = float(line[46:54]) - z_tail + _Z_TAIL
+        z_norm = float(line[46:54]) - z_tail + z_half_gap
         z = z_flip * z_norm
         record = (
             line[:21]
@@ -66,23 +69,25 @@ def write_allatom_preview(
     layouts: dict[str, LeafletLayout],
     templates_dir: Path,
     output_path: Path,
+    z_half_gap: float = _Z_TAIL,
+    template_index: dict[str, Path] | None = None,
 ) -> int:
     """Tile lipid PDB templates across the leaflet grid.
 
     Each template is normalized so its headgroup (maximum z atom) is placed
-    at z = +_Z_HEAD for the upper leaflet and z = -_Z_HEAD for the lower
-    leaflet. Hydrophobic tails point toward z = 0 (bilayer center) in both
-    leaflets, reproducing the correct bilayer geometry.
+    outward from z = 0 (bilayer center). Tails land at ±z_half_gap.
 
+    Pass template_index to bypass the directory scan (used by membrane build).
     Returns total number of ATOM records written.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    template_index: dict[str, Path] = {
-        p.stem.upper(): p
-        for p in sorted(templates_dir.glob("*.pdb"))
-        if not p.name.startswith("._")
-    }
+    if template_index is None:
+        template_index = {
+            p.stem.upper(): p
+            for p in sorted(templates_dir.glob("*.pdb"))
+            if not p.name.startswith("._")
+        }
     template_cache: dict[str, tuple[list[str], float]] = {}
     missing: set[str] = set()
 
@@ -123,16 +128,16 @@ def write_allatom_preview(
             dx = cx - tx0
             dy = cy - ty0
 
-            placed = _place_atoms(tmpl, dx, dy, z_flip, chain, resseq, z_tail)
+            placed = _place_atoms(tmpl, dx, dy, z_flip, chain, resseq, z_tail, z_half_gap)
             all_lines.extend(placed)
             resseq += 1
 
     # Compute box dimensions for CRYST1 record.
-    # X/Y come from the layout grid; Z from actual atom extent plus a 10 A buffer
-    # on each side. Users must add solvent and equilibrate before running MD.
-    ref_layout = layouts.get("upper") or next(iter(layouts.values()))
-    box_x = ref_layout.box_x() * 10.0  # nm -> Angstrom
-    box_y = ref_layout.box_y() * 10.0
+    # X/Y: take the maximum extent across all leaflets so that an asymmetric
+    # build (different lipid counts per leaflet) is fully contained.
+    # Z: actual atom extent plus 10 A buffer on each side.
+    box_x = max(lay.box_x() for lay in layouts.values()) * 10.0  # nm -> Angstrom
+    box_y = max(lay.box_y() for lay in layouts.values()) * 10.0
     if all_lines:
         z_vals = [float(ln[46:54]) for ln in all_lines]
         box_z = (max(z_vals) - min(z_vals)) + 20.0

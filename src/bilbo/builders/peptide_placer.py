@@ -73,7 +73,16 @@ def place_peptide(
     membrane_coords: Optional[np.ndarray] = None,
     structure_file: Optional[str] = None,
     structure_format: Optional[str] = None,
+    surface_z: Optional[dict[str, float]] = None,
 ) -> PlacementResult:
+    """Place a peptide relative to a bilayer.
+
+    surface_z: actual membrane surface z-coordinates in Angstroms, keyed by
+    "upper" (z_max of upper leaflet) and "lower" (z_min of lower leaflet).
+    When provided, the peptide bottom (upper) or top (lower) is aligned with
+    the real membrane surface rather than the hardcoded LEAFLET_Z fallback.
+    depth (nm) pushes the peptide INTO the membrane (positive = deeper).
+    """
     src_file = structure_file or placement.input_structure
     if src_file is None:
         raise ValueError("structure_file or placement.input_structure must be set")
@@ -106,12 +115,23 @@ def place_peptide(
 
     rotated = (rot @ centered.T).T
 
-    target_z_ang = LEAFLET_Z.get(placement.leaflet, 0.0)
     depth_ang = placement.depth * 10.0 if placement.depth else 0.0
-
-    z_offset = target_z_ang + depth_ang
     tx = placement.x * 10.0 if placement.x else 0.0
     ty = placement.y * 10.0 if placement.y else 0.0
+
+    if surface_z is not None and placement.leaflet in ("upper", "lower"):
+        if placement.leaflet == "upper":
+            # Align the bottommost atom with the headgroup surface; depth
+            # pushes into the membrane (positive = deeper, toward z=0).
+            z_bottom = float(rotated[:, 2].min())
+            z_offset = surface_z["upper"] - z_bottom - depth_ang
+        else:
+            # Lower leaflet is mirrored; align topmost atom with headgroup surface.
+            z_top = float(rotated[:, 2].max())
+            z_offset = surface_z["lower"] - z_top + depth_ang
+    else:
+        target_z_ang = LEAFLET_Z.get(placement.leaflet, 0.0)
+        z_offset = target_z_ang + depth_ang
 
     translation = np.array([tx, ty, z_offset])
     final_coords = rotated + translation
