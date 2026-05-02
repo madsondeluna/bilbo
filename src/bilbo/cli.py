@@ -60,6 +60,8 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
+
+
 lipid_app = typer.Typer(help="Lipid library management")
 preset_app = typer.Typer(help="Membrane preset management")
 compat_app = typer.Typer(help="Force field compatibility")
@@ -149,8 +151,26 @@ def _bilbo_banner() -> None:
     console.print()
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        try:
+            ver = _pkg_version("bilbo-md")
+        except Exception:
+            ver = "dev"
+        typer.echo(f"bilbo {ver}")
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
-def _main(ctx: typer.Context) -> None:
+def _main(
+    ctx: typer.Context,
+    version: Optional[bool] = typer.Option(
+        None, "--version", "-v",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
     _bootstrap_if_empty()
     if ctx.invoked_subcommand is None:
         _bilbo_banner()
