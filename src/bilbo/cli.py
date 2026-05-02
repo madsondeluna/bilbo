@@ -163,7 +163,9 @@ def _version_callback(value: bool) -> None:
 
 def _help_callback(ctx: typer.Context, param: typer.CallbackParam, value: bool) -> None:
     if value and not ctx.resilient_parsing:
-        typer.echo(ctx.get_help())
+        lines = ctx.get_help().splitlines()
+        start = next((i for i, ln in enumerate(lines) if ln.strip().startswith("╭")), 0)
+        typer.echo("\n".join(lines[start:]).rstrip())
         raise typer.Exit()
 
 
