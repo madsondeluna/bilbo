@@ -47,6 +47,52 @@ _ION_NAMES: dict[str, tuple[str, str]] = {
     "PO4": ("PO4", "P "),
 }
 
+# Formal charges (e) for common CHARMM36 lipids
+_LIPID_CHARGES: dict[str, int] = {
+    "POPC": 0, "POPE": 0, "POPG": -1, "POPS": -1,
+    "DPPC": 0, "DPPE": 0, "DPPG": -1, "DPPS": -1,
+    "CHOL": 0, "CHL1": 0, "BSM": 0, "SM": 0, "SAPI": -1,
+    "CL": -2, "CARD": -2, "PI": -1, "PA": -1, "PG": -1, "PS": -1,
+}
+
+# Bond length (Å), H-O-H half-angle (deg), has virtual M-site, M-site offset (Å)
+_WATER_GEOM: dict[str, tuple[float, float, bool, float]] = {
+    "tip3p": (0.9572, 52.26,  False, 0.0),
+    "spc":   (1.0000, 54.735, False, 0.0),
+    "spce":  (1.0000, 54.735, False, 0.0),
+    "tip4p": (0.9572, 52.26,  True,  0.15),
+}
+
+_AVOGADRO = 6.02214076e23
+_NM3_TO_L = 1e-24  # 1 nm³ = 1e-24 L
+
+# Formal charges (e) at pH 7 for standard and CHARMM residue names
+_RESIDUE_CHARGES: dict[str, int] = {
+    "ASP": -1, "ASPP": 0,           # Asp deprotonated / protonated
+    "GLU": -1, "GLUP": 0,           # Glu deprotonated / protonated
+    "ARG": 1,
+    "LYS": 1, "LSN": 0,             # Lys protonated / neutral
+    "HIS": 0, "HIE": 0, "HID": 0,  # His neutral forms
+    "HSD": 0, "HSE": 0,             # CHARMM neutral His
+    "HIP": 1, "HSP": 1,             # His doubly protonated (+1)
+}
+
+
+def _calc_peptide_charge(atom_lines: list[str]) -> int:
+    """Sum formal charges of all residues in a PDB atom list (at pH 7)."""
+    seen: set[tuple[str, str]] = set()
+    charge = 0
+    for ln in atom_lines:
+        chain = ln[21] if len(ln) > 21 else " "
+        resseq = ln[22:26] if len(ln) > 26 else "   1"
+        key = (chain, resseq.strip())
+        if key in seen:
+            continue
+        seen.add(key)
+        resname = ln[17:21].strip()
+        charge += _RESIDUE_CHARGES.get(resname, 0)
+    return charge
+
 
 def _atom_lines(pdb_text: str) -> list[str]:
     return [ln for ln in pdb_text.splitlines() if ln.startswith(("ATOM", "HETATM"))]
@@ -102,7 +148,21 @@ def _translate_replica(
     return out, serial
 
 
-_PEP_CHAINS = [c for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" if c not in ("I", "L", "U")]
+_PEP_CHAINS = [c for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" if c not in ("I", "L", "U", "W")]
+
+
+def _parse_coord_list(s: str | None) -> list[float | None]:
+    """Parse comma-separated coordinates, empty strings become None (auto)."""
+    if not s or not s.strip():
+        return []
+    result: list[float | None] = []
+    for part in s.split(","):
+        part = part.strip()
+        try:
+            result.append(float(part) if part else None)
+        except ValueError:
+            result.append(None)
+    return result
 
 
 def _place_peptide_replicas(
@@ -116,8 +176,8 @@ def _place_peptide_replicas(
     box_y: float,
     serial_start: int,
     seed: int,
-    fixed_x: float | None = None,
-    fixed_y: float | None = None,
+    fixed_xs: list[float | None] | None = None,
+    fixed_ys: list[float | None] | None = None,
 ) -> list[str]:
     if not peptide_lines or n_replicas < 1:
         return []
@@ -127,25 +187,15 @@ def _place_peptide_replicas(
     out: list[str] = []
     serial = serial_start
 
-    # Estimate the peptide's XY footprint so stacked replicas don't overlap.
-    xs_pep = [float(ln[30:38]) for ln in peptide_lines if ln.startswith(("ATOM", "HETATM"))]
-    ys_pep = [float(ln[38:46]) for ln in peptide_lines if ln.startswith(("ATOM", "HETATM"))]
-    pep_span_x = (max(xs_pep) - min(xs_pep) + 5.0) if xs_pep else 10.0
-    pep_span_y = (max(ys_pep) - min(ys_pep) + 5.0) if ys_pep else 10.0
-
     for i in range(n_replicas):
         chain = _PEP_CHAINS[i % len(_PEP_CHAINS)]
-        # X: use fixed value if given, otherwise random in box
-        if fixed_x is not None:
-            # Spread multiple replicas linearly from the fixed anchor
-            tx = fixed_x + i * pep_span_x
-        else:
-            tx = rng.uniform(0.0, box_x)
-        # Y: independent of X
-        if fixed_y is not None:
-            ty = fixed_y
-        else:
-            ty = rng.uniform(0.0, box_y)
+
+        x_spec = fixed_xs[i] if (fixed_xs and i < len(fixed_xs)) else None
+        y_spec = fixed_ys[i] if (fixed_ys and i < len(fixed_ys)) else None
+
+        tx = x_spec if x_spec is not None else (box_x / 2.0 if n_replicas == 1 else rng.uniform(0.0, box_x))
+        ty = y_spec if y_spec is not None else (box_y / 2.0 if n_replicas == 1 else rng.uniform(0.0, box_y))
+
         if surface == "lower":
             tz = z_min - z_gap
         elif surface == "both":
@@ -166,7 +216,8 @@ def _make_ion_records(
     count: int,
     surface: str,
     z_offset: float,
-    z_half_gap: float,
+    z_max: float,
+    z_min: float,
     box_x: float,
     box_y: float,
     serial_start: int,
@@ -187,12 +238,13 @@ def _make_ion_records(
     for i in range(count):
         x = rng.uniform(0.0, box_x)
         y = rng.uniform(0.0, box_y)
+        z_jitter = rng.uniform(-1.0, 1.0)
         if surface == "upper":
-            z = z_half_gap + z_offset
+            z = z_max + z_offset + z_jitter
         elif surface == "lower":
-            z = -(z_half_gap + z_offset)
+            z = z_min - z_offset + z_jitter
         else:
-            z = z_half_gap + z_offset if i % 2 == 0 else -(z_half_gap + z_offset)
+            z = z_max + z_offset + z_jitter if i % 2 == 0 else z_min - z_offset + z_jitter
 
         ln = (
             f"HETATM{serial:5d}  {aname}  {rname} I{resseq:4d}    "
@@ -203,6 +255,137 @@ def _make_ion_records(
         resseq += 1
 
     return out
+
+
+def _solvate(
+    existing_lines: list[str],
+    box_x: float,
+    box_y: float,
+    z_max: float,
+    z_min: float,
+    water_layer_a: float,
+    water_model: str,
+    seed: int,
+    serial_start: int,
+    ion_resseq_start: int,
+    n_na: int,
+    n_cl: int,
+    grid_spacing: float = 3.1,
+    clash_radius: float = 2.4,
+) -> tuple[list[str], int, int, int]:
+    """Place water (SOL, chain W) and bulk ions (SOD/CLA, chain I) around the membrane.
+
+    Returns (pdb_lines, n_water_molecules, n_na_placed, n_cl_placed).
+    """
+    geom = _WATER_GEOM.get(water_model.lower(), _WATER_GEOM["tip3p"])
+    bond_len, half_angle_deg, has_msite, msite_dist = geom
+    half_angle = math.radians(half_angle_deg)
+    hxy = bond_len * math.sin(half_angle)   # H lateral offset from O
+    hzz = bond_len * math.cos(half_angle)   # H axial offset from O
+
+    # Build occupied cell set from existing atom positions (3-D spatial hash)
+    cell = clash_radius
+    occupied: set[tuple[int, int, int]] = set()
+    for ln in existing_lines:
+        try:
+            ax, ay, az = float(ln[30:38]), float(ln[38:46]), float(ln[46:54])
+        except (ValueError, IndexError):
+            continue
+        bx, by, bz = int(ax / cell), int(ay / cell), int(az / cell)
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                for dz in range(-1, 2):
+                    occupied.add((bx + dx, by + dy, bz + dz))
+
+    margin = 2.0  # Å gap between membrane surface and first water layer
+    top_z0 = z_max + margin
+    bot_z1 = z_min - margin
+
+    rng = _random.Random(seed + 5000)
+    nx = max(1, int(box_x / grid_spacing))
+    ny = max(1, int(box_y / grid_spacing))
+    nz = max(1, int(water_layer_a / grid_spacing))
+
+    valid: list[tuple[float, float, float, int]] = []  # (x, y, z, slab_dir)
+    for slab_dir, z0 in ((1, top_z0), (-1, bot_z1)):
+        for k in range(nz):
+            zk = z0 + slab_dir * k * grid_spacing
+            for j in range(ny):
+                y = j * grid_spacing + rng.uniform(0.0, grid_spacing * 0.25)
+                for i in range(nx):
+                    x = i * grid_spacing + rng.uniform(0.0, grid_spacing * 0.25)
+                    bx, by, bz = int(x / cell), int(y / cell), int(zk / cell)
+                    if (bx, by, bz) in occupied:
+                        continue
+                    valid.append((x, y, zk, slab_dir))
+                    occupied.add((bx, by, bz))
+
+    rng.shuffle(valid)
+
+    n_na_placed = min(n_na, len(valid))
+    n_cl_placed = min(n_cl, max(0, len(valid) - n_na_placed))
+    n_water = len(valid) - n_na_placed - n_cl_placed
+
+    out: list[str] = []
+    serial = serial_start
+    ion_res = ion_resseq_start
+
+    for x, y, z, _ in valid[:n_na_placed]:
+        out.append(
+            f"HETATM{serial:5d}  NA  SOD I{ion_res:4d}    "
+            f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
+        )
+        serial += 1
+        ion_res += 1
+
+    for x, y, z, _ in valid[n_na_placed:n_na_placed + n_cl_placed]:
+        out.append(
+            f"HETATM{serial:5d}  CL  CLA I{ion_res:4d}    "
+            f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
+        )
+        serial += 1
+        ion_res += 1
+
+    water_res = 1
+    for x, y, z, slab_dir in valid[n_na_placed + n_cl_placed:]:
+        theta = rng.uniform(0.0, 2.0 * math.pi)
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        h1x, h1y = x + hxy * cos_t, y + hxy * sin_t
+        h2x, h2y = x - hxy * cos_t, y - hxy * sin_t
+        hz = z - slab_dir * hzz  # H atoms point toward membrane
+
+        out.append(
+            f"ATOM  {serial:5d}  OW  SOL W{water_res:4d}    "
+            f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
+        )
+        serial += 1
+        out.append(
+            f"ATOM  {serial:5d}  HW1 SOL W{water_res:4d}    "
+            f"{h1x:8.3f}{h1y:8.3f}{hz:8.3f}  1.00  0.00"
+        )
+        serial += 1
+        out.append(
+            f"ATOM  {serial:5d}  HW2 SOL W{water_res:4d}    "
+            f"{h2x:8.3f}{h2y:8.3f}{hz:8.3f}  1.00  0.00"
+        )
+        serial += 1
+        if has_msite:
+            mz = z - slab_dir * msite_dist
+            out.append(
+                f"ATOM  {serial:5d}  MW  SOL W{water_res:4d}    "
+                f"{x:8.3f}{y:8.3f}{mz:8.3f}  1.00  0.00"
+            )
+            serial += 1
+        water_res += 1
+
+    return out, n_water, n_na_placed, n_cl_placed
+
+
+@app.post("/api/peptide_charge")
+async def peptide_charge_endpoint(pdb_file: UploadFile = File(...)) -> JSONResponse:
+    raw = (await pdb_file.read()).decode("utf-8", errors="replace")
+    charge = _calc_peptide_charge(_atom_lines(raw))
+    return JSONResponse({"charge": charge})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -239,6 +422,12 @@ async def build_membrane(
     ion_count: int = Form(0),
     ion_surface: str = Form("both"),
     ion_z_offset: float = Form(0.0),
+    # Solvation
+    solvate: Optional[str] = Form(None),
+    water_model: str = Form("tip3p"),
+    box_z_nm_input: Optional[float] = Form(None),
+    sol_ion_conc_mM: float = Form(150.0),
+    peptide_charge: int = Form(0),
 ) -> JSONResponse:
     from bilbo.builders.apl_check import weighted_spacing as calc_spacing
     from bilbo.builders.composition_expander import ExpandedComposition
@@ -389,29 +578,92 @@ async def build_membrane(
             raw = (await peptide_file.read()).decode("utf-8", errors="replace")
             pep_lines = _atom_lines(raw)
             if pep_lines:
-                try:
-                    fx = float(peptide_x) if peptide_x and peptide_x.strip() else None
-                    fy = float(peptide_y) if peptide_y and peptide_y.strip() else None
-                except ValueError:
-                    fx, fy = None, None
+                fxs = _parse_coord_list(peptide_x)
+                fys = _parse_coord_list(peptide_y)
                 peptide_lines_placed = _place_peptide_replicas(
                     pep_lines, peptide_replicas, peptide_surface,
                     peptide_z_gap, z_max, z_min, box_x, box_y,
                     next_serial, seed,
-                    fixed_x=fx, fixed_y=fy,
+                    fixed_xs=fxs or None,
+                    fixed_ys=fys or None,
                 )
                 next_serial += len(peptide_lines_placed)
 
-        # Coordination ions
+        # Coordination ions: target the phosphate Z level of each leaflet.
+        # Extract mean Z of chain-U and chain-L P atoms; fall back to z_max/z_min.
         ion_lines: list[str] = []
         if ion_type and ion_type.strip() and ion_count > 0:
+            p_upper = [float(ln[46:54]) for ln in membrane_pdb.splitlines()
+                       if ln.startswith(("ATOM", "HETATM"))
+                       and ln[12:16].strip() == "P" and len(ln) > 21 and ln[21] == "U"]
+            p_lower = [float(ln[46:54]) for ln in membrane_pdb.splitlines()
+                       if ln.startswith(("ATOM", "HETATM"))
+                       and ln[12:16].strip() == "P" and len(ln) > 21 and ln[21] == "L"]
+            z_ion_upper = (sum(p_upper) / len(p_upper)) if p_upper else z_max
+            z_ion_lower = (sum(p_lower) / len(p_lower)) if p_lower else z_min
             ion_lines = _make_ion_records(
                 ion_type.strip().upper(), ion_count,
-                ion_surface, ion_z_offset, bilayer_gap / 2.0,
+                ion_surface, ion_z_offset, z_ion_upper, z_ion_lower,
                 box_x, box_y, next_serial, seed,
             )
+            next_serial += len(ion_lines)
 
-        # Assemble final PDB: header + membrane + peptides + ions + END
+        # Solvation: water + bulk ions
+        solvate_enabled = bool(solvate and solvate.strip().lower() in ("true", "1", "yes"))
+        solv_lines: list[str] = []
+        n_water = 0
+        n_sol_na = 0
+        n_sol_cl = 0
+        system_charge = 0
+        charge_after = 0
+        n_na_neutral = 0
+        n_cl_neutral = 0
+        n_pairs = 0
+        water_layer_a = 30.0  # default 3 nm per side
+
+        if solvate_enabled:
+            # Compute water layer thickness from total box Z if provided
+            if box_z_nm_input is not None and box_z_nm_input > 0:
+                mem_thickness = z_max - z_min  # Angstroms
+                requested_layer = (box_z_nm_input * 10.0 - mem_thickness - 4.0) / 2.0
+                if requested_layer < 10.0:
+                    actual_box_z = round((mem_thickness + 4.0 + 2.0 * 10.0) / 10.0, 2)
+                    warnings.append(
+                        f"Box Z {box_z_nm_input} nm is too small for this membrane "
+                        f"({round(mem_thickness/10, 2)} nm thick). "
+                        f"Using {actual_box_z} nm instead (minimum 1 nm water each side)."
+                    )
+                water_layer_a = max(10.0, requested_layer)
+            # else: water_layer_a stays at default 30.0 (3 nm/side)
+
+            lipid_chg = sum(_LIPID_CHARGES.get(lid, 0) * cnt for lid, cnt in upper_counts_dict.items())
+            lipid_chg += sum(_LIPID_CHARGES.get(lid, 0) * cnt for lid, cnt in lower_counts_dict.items())
+            system_charge = lipid_chg + peptide_charge  # charge BEFORE any solvation ions
+
+            n_na_neutral = max(0, -system_charge)  # Na+ needed to neutralize
+            n_cl_neutral = max(0, system_charge)   # Cl- needed to neutralize
+
+            water_vol_nm3 = (box_x / 10.0) * (box_y / 10.0) * (2.0 * water_layer_a / 10.0)
+            n_pairs = round((sol_ion_conc_mM / 1000.0) * water_vol_nm3 * _NM3_TO_L * _AVOGADRO)
+            n_pairs = max(0, n_pairs)
+
+            current_atom_lines = (
+                [ln for ln in membrane_pdb.splitlines() if ln.startswith(("ATOM", "HETATM"))]
+                + peptide_lines_placed
+                + ion_lines
+            )
+            ion_resseq_start = ion_count + 1  # continue after coordination ions
+
+            solv_lines, n_water, n_sol_na, n_sol_cl = _solvate(
+                current_atom_lines, box_x, box_y, z_max, z_min,
+                water_layer_a, water_model, seed, next_serial,
+                ion_resseq_start,
+                n_na=n_na_neutral + n_pairs,
+                n_cl=n_cl_neutral + n_pairs,
+            )
+            charge_after = system_charge + n_sol_na - n_sol_cl
+
+        # Assemble final PDB: header + membrane + peptides + coord-ions + solv + END
         final_lines: list[str] = []
         for ln in membrane_pdb.splitlines():
             if ln.startswith("END"):
@@ -419,10 +671,11 @@ async def build_membrane(
             final_lines.append(ln)
         final_lines.extend(peptide_lines_placed)
         final_lines.extend(ion_lines)
+        final_lines.extend(solv_lines)
         final_lines.append("END")
         final_pdb = "\n".join(final_lines) + "\n"
 
-        n_total_atoms = n_lipid_atoms + len(peptide_lines_placed) + len(ion_lines)
+        n_total_atoms = n_lipid_atoms + len(peptide_lines_placed) + len(ion_lines) + len(solv_lines)
 
         # Compute peptide centroid per replica for reporting
         pep_centroids: list[dict] = []
@@ -448,12 +701,40 @@ async def build_membrane(
                     "z": round(sum(zs_) / len(zs_), 2),
                 })
 
+        # Topology: append solvent/ion molecule counts if solvated
+        if solvate_enabled and topology:
+            wm_itp = {"tip3p": "tip3p", "spc": "spc", "spce": "spce", "tip4p": "tip4p"}.get(
+                water_model.lower(), "tip3p"
+            )
+            topology += f'\n#include "charmm36.ff/{wm_itp}.itp"\n'
+            topology += '#include "charmm36.ff/ions.itp"\n'
+            if n_water > 0:
+                topology += f"\nSOL              {n_water}\n"
+            if n_sol_na > 0:
+                topology += f"SOD              {n_sol_na}\n"
+            if n_sol_cl > 0:
+                topology += f"CLA              {n_sol_cl}\n"
+
+        box_z_nm = round((z_max - z_min) / 10.0, 3)
+        if solvate_enabled:
+            box_z_nm = round((z_max - z_min + 2.0 * (2.0 + water_layer_a)) / 10.0, 3)
+
         return JSONResponse({
             "pdb": final_pdb,
             "n_atoms": n_total_atoms,
             "n_lipid_atoms": n_lipid_atoms,
             "n_peptide_atoms": len(peptide_lines_placed),
             "n_ions": len(ion_lines),
+            "n_water": n_water,
+            "n_sol_na": n_sol_na,
+            "n_sol_cl": n_sol_cl,
+            "charge_before": system_charge,
+            "charge_after": charge_after,
+            "n_na_neutral": n_na_neutral,
+            "n_cl_neutral": n_cl_neutral,
+            "n_pairs": n_pairs,
+            "sol_ion_conc_mM": sol_ion_conc_mM if solvate_enabled else None,
+            "water_model": water_model if solvate_enabled else None,
             "n_lipids": {
                 "upper": sum(upper_counts_dict.values()),
                 "lower": sum(lower_counts_dict.values()),
@@ -462,6 +743,7 @@ async def build_membrane(
             "apl_a2": round(apl_a2, 2),
             "box_x_nm": round(box_x / 10.0, 3),
             "box_y_nm": round(box_y / 10.0, 3),
+            "box_z_nm": box_z_nm,
             "pep_centroids": pep_centroids,
             "warnings": warnings,
             "topology": topology,

@@ -167,6 +167,30 @@
     padding: 6px 10px; margin-bottom: 6px; line-height: 1.5; background: #fffbeb;
     border-radius: 0 4px 4px 0;
   }
+  .md-note {
+    margin-top: 12px; font-size: 0.70rem; color: #555; line-height: 1.7;
+    border-left: 2px solid #cbd5e1; padding: 8px 12px; background: #f8fafc;
+    border-radius: 0 4px 4px 0;
+  }
+  .md-note code { font-family: 'Roboto Mono', monospace; font-size: 0.68rem; color: #0f172a; }
+
+  /* Solvation section */
+  .solv-body { display: none; margin-top: 14px; }
+  .solv-body.visible { display: block; }
+  .solv-report {
+    margin-top: 14px; background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: 4px; padding: 14px 18px; font-size: 0.72rem;
+    line-height: 1.9; font-family: 'Roboto Mono', monospace;
+  }
+  .solv-report .sr-head { font-size: 0.68rem; color: #0369a1; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  .solv-report .sr-row { display: flex; justify-content: space-between; gap: 16px; color: #334155; }
+  .solv-report .sr-key { color: #64748b; }
+  .solv-report .sr-val { color: #0f172a; font-weight: 500; }
+  .solv-report .sr-charge-ok  { color: #059669; font-weight: bold; }
+  .solv-report .sr-charge-neg { color: #dc2626; font-weight: bold; }
+  .solv-report .sr-sep { border-top: 1px solid #bae6fd; margin: 6px 0; }
+  .replica-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .replica-row-label { grid-column: 1 / -1; font-size: 0.68rem; color: #aaa; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
 
   /* Divider */
   .divider { border: none; border-top: 1px solid #f0f0f0; margin: 28px 0; }
@@ -226,7 +250,7 @@
       <div class="params-grid">
         <div class="param-field">
           <label>Replicas</label>
-          <input type="number" id="peptideReplicas" value="1" min="1" max="200">
+          <input type="number" id="peptideReplicas" value="1" min="1" max="200" oninput="updateReplicaPositionFields()">
         </div>
         <div class="param-field">
           <label>Surface</label>
@@ -240,50 +264,68 @@
           <label>Z gap from surface (Å)</label>
           <input type="number" id="peptideZGap" value="5.0" step="0.5" min="0">
         </div>
+      </div>
+      <div class="replica-grid" id="replicaPositionFields">
         <div class="param-field">
           <label>X center (Å)</label>
-          <input type="number" id="peptideX" placeholder="auto" step="0.5">
+          <input type="number" id="pep_x_0" placeholder="auto" step="0.5">
         </div>
         <div class="param-field">
           <label>Y center (Å)</label>
-          <input type="number" id="peptideY" placeholder="auto" step="0.5">
+          <input type="number" id="pep_y_0" placeholder="auto" step="0.5">
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Coordination ions (optional) -->
+  <!-- Solvation -->
   <div class="section">
-    <div class="section-label">Coordination ions (optional)</div>
-    <div class="params-grid">
-      <div class="param-field">
-        <label>Ion type</label>
-        <select id="ionType">
-          <option value="">None</option>
-          <option value="CA">Ca&#178;&#8314;</option>
-          <option value="MG">Mg&#178;&#8314;</option>
-          <option value="NA">Na&#8314;</option>
-          <option value="K">K&#8314;</option>
-          <option value="CL">Cl&#8315;</option>
-          <option value="ZN">Zn&#178;&#8314;</option>
-          <option value="PO4">PO&#8324;&#179;&#8315;</option>
-        </select>
-      </div>
-      <div class="param-field">
-        <label>Count</label>
-        <input type="number" id="ionCount" value="0" min="0" max="10000">
-      </div>
-      <div class="param-field">
-        <label>Surface</label>
-        <select id="ionSurface">
-          <option value="both">Both</option>
-          <option value="upper">Upper</option>
-          <option value="lower">Lower</option>
-        </select>
-      </div>
-      <div class="param-field">
-        <label>Z from bilayer center (Å)</label>
-        <input type="number" id="ionZOffset" value="0.0" step="0.5">
+    <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; margin:0 0 8px 0;">
+      <input type="checkbox" id="counterIonCheck" onchange="updateIonCount()" disabled>
+      <label for="counterIonCheck" style="font-size:0.82rem; color:#555; white-space:nowrap; cursor:pointer;">
+        Counter-ions at headgroup
+      </label>
+      <select id="ionType" onchange="updateIonCount()"
+        style="font-size:0.78rem; padding:2px 4px; border:1px solid #ccc; border-radius:3px;">
+        <option value="NA">Na&#8314;</option>
+        <option value="CA">Ca&#178;&#8314;</option>
+        <option value="MG">Mg&#178;&#8314;</option>
+        <option value="K">K&#8314;</option>
+      </select>
+      <input type="number" id="ionCount" value="0" min="0" max="10000" readonly
+        style="width:48px; font-size:0.78rem; padding:2px 4px; border:1px solid #ddd;
+               border-radius:3px; background:#f8fafc; color:#555; text-align:center;"
+        title="Auto-calculated from anionic lipid count.">
+      <span style="font-size:0.72rem; color:#888; white-space:nowrap;" id="ionCountLabel"></span>
+    </div>
+    <div class="toggle-row" style="margin:0 0 0 0;">
+      <input type="checkbox" id="solvateCheck" onchange="document.getElementById('solvBody').classList.toggle('visible', this.checked)">
+      <label class="toggle-label" for="solvateCheck" style="font-size:0.82rem; color:#555; font-weight:normal;">Solvate (add water + ions)</label>
+    </div>
+    <div class="solv-body" id="solvBody">
+      <div class="params-grid" style="margin-top:14px;">
+        <div class="param-field">
+          <label>Water model</label>
+          <select id="waterModel">
+            <option value="tip3p">TIP3P</option>
+            <option value="spc">SPC</option>
+            <option value="spce">SPC/E</option>
+            <option value="tip4p">TIP4P</option>
+          </select>
+        </div>
+        <div class="param-field">
+          <label>Box Z (nm)</label>
+          <input type="number" id="boxZNm" placeholder="auto" step="1.0" min="5.0"
+            title="Total simulation box height (nm). Must exceed membrane thickness. Leave blank to default to 3 nm water layer each side.">
+        </div>
+        <div class="param-field">
+          <label>[NaCl] (mM)</label>
+          <input type="number" id="solIonConc" value="150" step="10" min="0">
+        </div>
+        <div class="param-field">
+          <label>Peptide net charge (e, auto)</label>
+          <input type="number" id="peptideNetCharge" value="0" step="1" title="Auto-filled when peptide is uploaded. Override if needed.">
+        </div>
       </div>
     </div>
   </div>
@@ -296,15 +338,15 @@
     <div class="params-grid">
       <div class="param-field">
         <label>Seed</label>
-        <input type="number" id="seed" value="42" min="0">
+        <input type="number" id="seed" value="42" min="0" title="Random seed: controls lipid arrangement. Same seed = same structure. Change to get a different valid configuration.">
       </div>
       <div class="param-field">
         <label>Spacing (nm)</label>
         <input type="number" id="spacing" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
       </div>
       <div class="param-field">
-        <label>Box side (nm)</label>
-        <input type="number" id="boxSide" placeholder="auto" step="0.5" min="1.0">
+        <label>Box XY (nm)</label>
+        <input type="number" id="boxSide" placeholder="auto" step="0.5" min="1.0" title="Lateral box dimensions (X = Y). Overrides spacing.">
       </div>
       <div class="param-field">
         <label>Bilayer gap (Å)</label>
@@ -391,6 +433,70 @@ function _refreshAllLibSelects() {
   });
 }
 
+// ── Coordination ion auto-count ────────────────────────────────────────────────
+const _ION_CHARGES = { CA: 2, MG: 2, ZN: 2, NA: 1, K: 1, CL: -1, PO4: -3 };
+const _LIPID_CHARGES_JS = {
+  POPC: 0, POPE: 0, POPG: -1, POPS: -1,
+  DPPC: 0, DPPE: 0, DPPG: -1, DPPS: -1,
+  CHOL: 0, CHL1: 0, BSM: 0, SM: 0, SAPI: -1,
+  CL: -2, CARD: -2, PI: -1, PA: -1, PG: -1, PS: -1,
+};
+
+function _getLipidName(leaflet, idx) {
+  const lib = document.getElementById(`${leaflet}_lib_${idx}`);
+  if (lib && lib.value) return lib.value.toUpperCase();
+  const lbl = document.getElementById(`${leaflet}_label_${idx}`);
+  if (lbl && lbl.classList.contains('has-file'))
+    return lbl.textContent.replace(/\.pdb$/i, '').trim().toUpperCase();
+  return null;
+}
+
+function updateIonCount() {
+  const checkEl  = document.getElementById('counterIonCheck');
+  const ionType  = document.getElementById('ionType').value;
+  const ionEl    = document.getElementById('ionCount');
+  const labelEl  = document.getElementById('ionCountLabel');
+
+  const isSymm  = document.getElementById('symCheck')?.checked;
+  const leaflets = isSymm ? ['upper'] : ['upper', 'lower'];
+  const mult     = isSymm ? 2 : 1;
+  const ionCharge = _ION_CHARGES[ionType] ?? 1;
+
+  let totalCharge = 0;
+  let anionicLipidCount = 0;
+  for (const lf of leaflets) {
+    const n = lipidFiles[lf].length;
+    for (let i = 0; i < n; i++) {
+      const name = _getLipidName(lf, i);
+      if (!name) continue;
+      const lCharge = _LIPID_CHARGES_JS[name] ?? 0;
+      const count   = parseInt(document.getElementById(`${lf}_count_${i}`)?.value) || 0;
+      totalCharge  += lCharge * count * mult;
+      if (lCharge < 0) anionicLipidCount += count * mult;
+    }
+  }
+
+  let n = 0;
+  if (ionCharge > 0 && totalCharge < 0)
+    n = Math.ceil(-totalCharge / ionCharge);
+  else if (ionCharge < 0 && totalCharge > 0)
+    n = Math.ceil(totalCharge / -ionCharge);
+
+  if (checkEl) {
+    if (n === 0) { checkEl.checked = false; checkEl.disabled = true; }
+    else checkEl.disabled = false;
+  }
+
+  if (!checkEl?.checked) {
+    ionEl.value = 0;
+    if (labelEl) labelEl.textContent = anionicLipidCount > 0 ? `(${anionicLipidCount} anionic lipids)` : '(no anionic lipids)';
+    return;
+  }
+
+  ionEl.value = n;
+  if (labelEl) labelEl.textContent = anionicLipidCount > 0 ? `(${anionicLipidCount} anionic lipids)` : '(no anionic lipids)';
+}
+
 function addLipidEntry(leaflet) {
   const list = document.getElementById(leaflet + 'List');
   const idx = lipidFiles[leaflet].length;
@@ -408,7 +514,7 @@ function addLipidEntry(leaflet) {
       No file — click to upload .pdb
     </span>
     <select class="lib-select" id="${leaflet}_lib_${idx}" onchange="selectFromLibrary('${leaflet}', ${idx})">${_libOptions()}</select>
-    <input type="number" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids">
+    <input type="number" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids" onchange="updateIonCount()">
     <button class="remove-btn" onclick="removeLipidEntry('${leaflet}', ${idx})" title="Remove">×</button>
   `;
   list.appendChild(entry);
@@ -428,6 +534,7 @@ async function selectFromLibrary(leaflet, idx) {
     label.textContent = `${lipidId}.pdb`;
     label.classList.add('has-file');
     sel.classList.add('has-selection');
+    updateIonCount();
   } catch (e) {
     sel.value = '';
     alert(`Failed to load ${lipidId} from library.`);
@@ -443,6 +550,7 @@ function handleLipidFile(event, leaflet, idx) {
   label.classList.add('has-file');
   const sel = document.getElementById(`${leaflet}_lib_${idx}`);
   if (sel) { sel.value = ''; sel.classList.remove('has-selection'); }
+  updateIonCount();
 }
 
 function removeLipidEntry(leaflet, idx) {
@@ -457,8 +565,40 @@ function toggleSymmetric() {
   document.getElementById('lowerSection').style.display = checked ? 'none' : 'block';
 }
 
+// ── Replica position fields (per-replica X/Y) ─────────────────────────────────
+function updateReplicaPositionFields() {
+  const n = parseInt(document.getElementById('peptideReplicas').value) || 1;
+  const container = document.getElementById('replicaPositionFields');
+  if (!container) return;
+  if (n === 1) {
+    container.innerHTML = `
+      <div class="param-field">
+        <label>X center (Å)</label>
+        <input type="number" id="pep_x_0" placeholder="center" step="0.5">
+      </div>
+      <div class="param-field">
+        <label>Y center (Å)</label>
+        <input type="number" id="pep_y_0" placeholder="center" step="0.5">
+      </div>`;
+  } else {
+    let html = `<div class="replica-row-label">Replica positions (Å) — blank = random</div>`;
+    for (let i = 0; i < n; i++) {
+      html += `
+        <div class="param-field">
+          <label>Rep. ${i + 1} X</label>
+          <input type="number" id="pep_x_${i}" placeholder="auto" step="0.5">
+        </div>
+        <div class="param-field">
+          <label>Rep. ${i + 1} Y</label>
+          <input type="number" id="pep_y_${i}" placeholder="auto" step="0.5">
+        </div>`;
+    }
+    container.innerHTML = html;
+  }
+}
+
 // ── Peptide upload ─────────────────────────────────────────────────────────────
-function handlePeptideUpload(event) {
+async function handlePeptideUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
   peptideFile = file;
@@ -466,6 +606,18 @@ function handlePeptideUpload(event) {
   label.textContent = file.name;
   label.style.color = '#1a1a1a';
   document.getElementById('peptideOptions').style.display = 'block';
+
+  // Auto-calculate net charge from residue composition
+  try {
+    const fd = new FormData();
+    fd.append('pdb_file', file);
+    const r = await fetch('/api/peptide_charge', { method: 'POST', body: fd });
+    if (r.ok) {
+      const d = await r.json();
+      const chargeField = document.getElementById('peptideNetCharge');
+      if (chargeField) chargeField.value = d.charge;
+    }
+  } catch (_) {}
 }
 
 function clearPeptide() {
@@ -577,13 +729,6 @@ async function runBuild() {
   btn.disabled = true;
   document.getElementById('results').innerHTML = '';
 
-  // Debug: log what is being sent for peptide X/Y
-  if (peptideFile) {
-    const _px = document.getElementById('peptideX')?.value;
-    const _py = document.getElementById('peptideY')?.value;
-    console.log('[BILBO] peptide_x sent:', _px !== '' ? _px : '(not sent, using random)');
-    console.log('[BILBO] peptide_y sent:', _py !== '' ? _py : '(not sent, using random)');
-  }
 
   const fd = new FormData();
   upperEntries.forEach(e => fd.append('upper_files', e.file));
@@ -604,23 +749,39 @@ async function runBuild() {
   fd.append('sorting', document.getElementById('sorting').value);
 
   if (peptideFile) {
+    const nRep = parseInt(document.getElementById('peptideReplicas').value) || 1;
     fd.append('peptide_file', peptideFile);
-    fd.append('peptide_replicas', document.getElementById('peptideReplicas').value);
+    fd.append('peptide_replicas', nRep);
     fd.append('peptide_surface', document.getElementById('peptideSurface').value);
     fd.append('peptide_z_gap', document.getElementById('peptideZGap').value);
-    const pxVal = document.getElementById('peptideX').value;
-    const pyVal = document.getElementById('peptideY').value;
-    if (pxVal !== '') fd.append('peptide_x', pxVal);
-    if (pyVal !== '') fd.append('peptide_y', pyVal);
+    const pxVals = [], pyVals = [];
+    for (let i = 0; i < nRep; i++) {
+      pxVals.push(document.getElementById(`pep_x_${i}`)?.value ?? '');
+      pyVals.push(document.getElementById(`pep_y_${i}`)?.value ?? '');
+    }
+    const pxStr = pxVals.join(',');
+    const pyStr = pyVals.join(',');
+    if (pxStr.replace(/,/g, '').trim()) fd.append('peptide_x', pxStr);
+    if (pyStr.replace(/,/g, '').trim()) fd.append('peptide_y', pyStr);
   }
 
-  const ionTypeVal = document.getElementById('ionType').value;
+  if (document.getElementById('solvateCheck').checked) {
+    fd.append('solvate', 'true');
+    fd.append('water_model', document.getElementById('waterModel').value);
+    const boxZNmVal = document.getElementById('boxZNm').value;
+    if (boxZNmVal) fd.append('box_z_nm_input', boxZNmVal);
+    fd.append('sol_ion_conc_mM', document.getElementById('solIonConc').value);
+    fd.append('peptide_charge', document.getElementById('peptideNetCharge').value);
+  }
+
+  const counterChecked = document.getElementById('counterIonCheck')?.checked;
+  const ionTypeVal  = document.getElementById('ionType').value;
   const ionCountVal = parseInt(document.getElementById('ionCount').value) || 0;
-  if (ionTypeVal && ionCountVal > 0) {
+  if (counterChecked && ionTypeVal && ionCountVal > 0) {
     fd.append('ion_type', ionTypeVal);
     fd.append('ion_count', ionCountVal);
-    fd.append('ion_surface', document.getElementById('ionSurface').value);
-    fd.append('ion_z_offset', document.getElementById('ionZOffset').value);
+    fd.append('ion_surface', 'both');
+    fd.append('ion_z_offset', '0');
   }
 
   try {
@@ -643,6 +804,43 @@ async function runBuild() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ── Solvation charge report (GROMACS-style) ───────────────────────────────────
+function _fmtCharge(q) {
+  if (q === 0) return '<span class="sr-charge-ok">0 e</span>';
+  const s = q > 0 ? '+' : '';
+  return `<span class="sr-charge-neg">${s}${q} e</span>`;
+}
+
+function _renderSolvReport(data) {
+  const cb = data.charge_before ?? 0;
+  const ca = data.charge_after ?? 0;
+  const nNaN = data.n_na_neutral ?? 0;
+  const nClN = data.n_cl_neutral ?? 0;
+  const nP  = data.n_pairs ?? 0;
+  const conc = data.sol_ion_conc_mM != null ? `${data.sol_ion_conc_mM} mM` : '0 mM';
+  const wm  = data.water_model?.toUpperCase() ?? 'SOL';
+
+  const arrow = cb === ca
+    ? _fmtCharge(ca)
+    : `${_fmtCharge(cb)} → ${_fmtCharge(ca)}`;
+
+  const naDetail = nNaN > 0 && nP > 0 ? ` (${nNaN} neutral + ${nP} pairs)`
+                : nNaN > 0 ? ` (neutralization)`
+                : nP > 0   ? ` (${nP} pairs)` : '';
+  const clDetail = nClN > 0 && nP > 0 ? ` (${nClN} neutral + ${nP} pairs)`
+                 : nClN > 0 ? ` (neutralization)`
+                 : nP > 0   ? ` (${nP} pairs)` : '';
+
+  return `
+    <div class="solv-report">
+      <div class="sr-row"><span class="sr-key">Charge</span><span class="sr-val">${arrow}</span></div>
+      <div class="sr-row"><span class="sr-key">Water</span><span class="sr-val">${data.n_water.toLocaleString()} SOL (${wm})</span></div>
+      <div class="sr-row"><span class="sr-key">Na⁺ (SOD)</span><span class="sr-val">${data.n_sol_na}${naDetail}</span></div>
+      <div class="sr-row"><span class="sr-key">Cl⁻ (CLA)</span><span class="sr-val">${data.n_sol_cl}${clDetail}</span></div>
+      <div class="sr-row"><span class="sr-key">[NaCl]</span><span class="sr-val">${conc}</span></div>
+    </div>`;
 }
 
 // ── Results rendering ──────────────────────────────────────────────────────────
@@ -679,11 +877,15 @@ function renderResults(data) {
         </div>` : ''}
         ${data.n_ions > 0 ? `<div class="stat">
           <div class="stat-val">${data.n_ions}</div>
-          <div class="stat-label">Ions</div>
+          <div class="stat-label">Coord. ions</div>
+        </div>` : ''}
+        ${data.n_water > 0 ? `<div class="stat">
+          <div class="stat-val">${data.n_water.toLocaleString()}</div>
+          <div class="stat-label">SOL (${data.water_model?.toUpperCase()})</div>
         </div>` : ''}
         <div class="stat">
-          <div class="stat-val" style="font-size:1rem;">${data.box_x_nm} × ${data.box_y_nm}</div>
-          <div class="stat-label">Box X × Y (nm)</div>
+          <div class="stat-val" style="font-size:0.88rem;">${data.box_x_nm} × ${data.box_y_nm}${data.box_z_nm ? ' × ' + data.box_z_nm : ''}</div>
+          <div class="stat-label">Box X × Y${data.box_z_nm ? ' × Z' : ''} (nm)</div>
         </div>
       </div>
       ${(data.pep_centroids && data.pep_centroids.length > 0) ? `
@@ -694,6 +896,7 @@ function renderResults(data) {
           ).join('<br>')}
           <span style="color:#aaa; font-size:0.68rem;"> &nbsp; (box: 0–${Math.round(data.box_x_nm*10)} × 0–${Math.round(data.box_y_nm*10)} Å)</span>
         </div>` : ''}
+      ${data.n_water > 0 ? _renderSolvReport(data) : ''}
       ${warns ? '<div class="warn-list">' + warns + '</div>' : ''}
     </div>
 
@@ -717,6 +920,15 @@ function renderResults(data) {
       </button>` : ''}
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
+    ${data.topology ? `<div class="md-note">
+      <strong>To run MD in GROMACS:</strong> convert the PDB with <code>gmx editconf</code>, then energy-minimize and equilibrate.<br>
+      The <code>topol.top</code> references individual <code>charmm36.ff/LIPID.itp</code> files.
+      The standard GROMACS installation includes <code>charmm36.ff</code> for proteins and nucleic acids only —
+      lipid parameters are maintained separately by the MacKerell lab and are <strong>not</strong> included.
+      Obtain them from <code>mackerell.umaryland.edu/charmm_ff_params.html</code> or extract <code>charmm36.ff/</code>
+      from a CHARMM-GUI GROMACS export, and place it in your working directory.<br>
+      MDP files (em, nvt, npt, md) are not provided and must be prepared by the user.
+    </div>` : ''}
     <pre class="log-panel" id="buildLogPanel"></pre>
   `;
 
@@ -764,9 +976,15 @@ function _renderLegend() {
     .join('');
   const pepEntry = '<div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Peptide</div>';
   const ionEntry = '<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Ion</div>';
+  const waterEntry = '<div class="legend-item"><div class="legend-dot" style="background:#93c5fd"></div>Water (OW)</div>';
+  const solNaEntry = '<div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Na⁺ (SOD)</div>';
+  const solClEntry = '<div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>Cl⁻ (CLA)</div>';
   el.innerHTML = items
     + (currentBuildData?.n_peptide_atoms > 0 ? pepEntry : '')
-    + (currentBuildData?.n_ions > 0 ? ionEntry : '');
+    + (currentBuildData?.n_ions > 0 ? ionEntry : '')
+    + (currentBuildData?.n_water > 0 ? waterEntry : '')
+    + (currentBuildData?.n_sol_na > 0 ? solNaEntry : '')
+    + (currentBuildData?.n_sol_cl > 0 ? solClEntry : '');
 }
 
 function initViewer(pdb) {
@@ -825,6 +1043,10 @@ function _applyLipidStyle(mode) {
   // Ions: always spheres regardless of mode
   viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: '#f59e0b', scale: 0.6 } });
 
+  // Water: show only OW atoms as tiny pale-blue spheres
+  viewer.setStyle({ chain: 'W', model: 0 }, {});  // hide HW/MW by default
+  viewer.setStyle({ chain: 'W', atom: 'OW', model: 0 }, { sphere: { color: '#93c5fd', scale: 0.12 } });
+
   if (mode === 'surface') {
     viewer.addSurface('VDW', { opacity: 0.45, color: col0 }, { chain: 'U', model: 0 });
     viewer.addSurface('VDW', { opacity: 0.45, color: col1 }, { chain: 'L', model: 0 });
@@ -882,6 +1104,7 @@ function formatBuildLog(data) {
   log += `Dimensions\n`;
   log += `  Box X: ${data.box_x_nm ?? 'n/a'} nm\n`;
   log += `  Box Y: ${data.box_y_nm ?? 'n/a'} nm\n`;
+  log += `  Box Z: ${data.box_z_nm ?? 'n/a'} nm\n`;
   log += `  Spacing: ${data.spacing_nm} nm\n`;
   log += `  APL: ${data.apl_a2} Ang^2\n`;
   log += `  Bilayer gap: ${document.getElementById('bilayerGap')?.value ?? 'n/a'} A\n\n`;
@@ -889,7 +1112,36 @@ function formatBuildLog(data) {
   log += `  Total: ${data.n_atoms}\n`;
   log += `  Lipid: ${data.n_lipid_atoms}\n`;
   log += `  Peptide: ${data.n_peptide_atoms}\n`;
-  log += `  Ions: ${data.n_ions}\n\n`;
+  log += `  Coord. ions: ${data.n_ions}\n`;
+  if (data.n_water > 0) {
+    log += '\n';
+    log += `Solvation\n`;
+    log += `${'─'.repeat(40)}\n`;
+    log += `  Water model:   ${data.water_model?.toUpperCase()}\n`;
+    log += `  SOL molecules: ${data.n_water}\n`;
+    log += `\n`;
+    const cb = data.charge_before ?? 0;
+    const ca = data.charge_after ?? 0;
+    const sign = (q) => (q > 0 ? '+' : '') + q;
+    log += `  System charge (before ions):  ${sign(cb)} e\n`;
+    log += `\n`;
+    if ((data.n_na_neutral ?? 0) > 0) {
+      log += `  Neutralization:  +${data.n_na_neutral} Na+ (SOD)\n`;
+    } else if ((data.n_cl_neutral ?? 0) > 0) {
+      log += `  Neutralization:  +${data.n_cl_neutral} Cl- (CLA)\n`;
+    } else {
+      log += `  Neutralization:  none (system neutral)\n`;
+    }
+    if ((data.n_pairs ?? 0) > 0) {
+      log += `  [NaCl] = ${data.sol_ion_conc_mM} mM:  +${data.n_pairs} Na+ + ${data.n_pairs} Cl-\n`;
+    }
+    log += `\n`;
+    log += `  Total Na+ added (SOD): ${data.n_sol_na}\n`;
+    log += `  Total Cl- added (CLA): ${data.n_sol_cl}\n`;
+    log += `  System charge (after ions):   ${sign(ca)} e\n`;
+    log += `${'─'.repeat(40)}\n`;
+  }
+  log += '\n';
   if (data.n_peptide_atoms > 0) {
     log += `Peptide\n`;
     log += `  Replicas: ${document.getElementById('peptideReplicas')?.value ?? 'n/a'}\n`;
@@ -900,7 +1152,7 @@ function formatBuildLog(data) {
     log += `Ions\n`;
     log += `  Type: ${document.getElementById('ionType')?.value ?? 'n/a'}\n`;
     log += `  Count: ${data.n_ions}\n`;
-    log += `  Surface: ${document.getElementById('ionSurface')?.value ?? 'n/a'}\n\n`;
+    log += `  Surface: both (headgroup level)\n\n`;
   }
   if (data.warnings && data.warnings.length > 0) {
     log += `Warnings\n`;
@@ -927,8 +1179,14 @@ function clearAll(resetStatus = true) {
   document.getElementById('upperList').innerHTML = '';
   document.getElementById('lowerList').innerHTML = '';
   clearPeptide();
-  document.getElementById('ionType').value = '';
+  document.getElementById('ionType').value = 'NA';
   document.getElementById('ionCount').value = 0;
+  const cc = document.getElementById('counterIonCheck');
+  if (cc) { cc.checked = false; cc.disabled = true; }
+  const ilbl = document.getElementById('ionCountLabel');
+  if (ilbl) ilbl.textContent = '';
+  const sc = document.getElementById('solvateCheck');
+  if (sc) { sc.checked = false; document.getElementById('solvBody').classList.remove('visible'); }
   document.getElementById('results').innerHTML = '';
   currentPdb = null;
   currentTopology = null;
