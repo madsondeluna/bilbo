@@ -8,14 +8,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
+COPY web/ ./web/
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e ".[web]"
 
 COPY data/ ./data/
 
-VOLUME ["/app/builds", "/app/data"]
+ENV BILBO_DB_PATH=/tmp/bilbo.db
+ENV PORT=8000
 
-ENV BILBO_DB_PATH=/app/builds/.bilbo/bilbo.db
+EXPOSE 8000
 
-ENTRYPOINT ["bilbo"]
-CMD ["--help"]
+CMD ["sh", "-c", "uvicorn web.app:app --host 0.0.0.0 --port ${PORT}"]

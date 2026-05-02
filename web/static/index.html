@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BILBO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+<style>
+  html { font-size: 17px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Roboto Mono', monospace; background: #ffffff; color: #1a1a1a; min-height: 100vh; padding: 48px 24px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  .title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  h1 { font-size: 1.4rem; font-weight: normal; letter-spacing: 0.1em; color: #0f0f0f; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; flex-shrink: 0; transition: background 0.4s; cursor: default; }
+  .status-dot.online  { background: #059669; }
+  .status-dot.offline { background: #dc2626; }
+  .sub { font-size: 0.78rem; color: #888; margin-bottom: 16px; }
+  .notice { font-size: 0.75rem; color: #999; border-left: 2px solid #ddd; padding: 8px 12px; margin-bottom: 32px; line-height: 1.6; }
+  .notice a { color: #555; text-decoration: underline; }
+  .notice a:hover { color: #111; }
+  .notice code { background: #f0f0f0; color: #444; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
+
+  /* Section labels */
+  .section-label { font-size: 0.75rem; color: #999; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+  .section { margin-bottom: 24px; }
+
+  /* Lipid entry rows */
+  .lipid-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .lipid-entry { display: flex; gap: 8px; align-items: center; }
+  .lipid-entry .file-label {
+    flex: 1; background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 4px;
+    padding: 10px 14px; font-size: 0.82rem; color: #999; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lipid-entry .file-label.has-file { color: #1a1a1a; }
+  .lipid-entry input[type="file"] { display: none; }
+  .lipid-entry input[type="number"] {
+    width: 80px; background: #f7f7f7; border: 1px solid #e0e0e0; color: #1a1a1a;
+    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; padding: 10px 10px;
+    border-radius: 4px; outline: none; text-align: center;
+  }
+  .lipid-entry input[type="number"]:focus { border-color: #bbb; }
+  .remove-btn {
+    background: none; border: none; color: #ccc; font-size: 1.1rem; cursor: pointer;
+    padding: 4px 6px; line-height: 1; border-radius: 4px; font-family: inherit;
+  }
+  .remove-btn:hover { color: #dc2626; background: #fff5f5; }
+
+  .add-btn {
+    background: none; border: 1px dashed #ddd; color: #aaa;
+    font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 8px 16px;
+    border-radius: 4px; cursor: pointer; letter-spacing: 0.05em; width: 100%;
+  }
+  .add-btn:hover { border-color: #bbb; color: #555; }
+
+  /* Symmetric toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+  .toggle-row input[type="checkbox"] { accent-color: #1a1a1a; width: 14px; height: 14px; cursor: pointer; }
+  .toggle-label { font-size: 0.78rem; color: #888; cursor: pointer; }
+
+  /* Parameters grid */
+  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .param-field { display: flex; flex-direction: column; gap: 6px; }
+  .param-field label { font-size: 0.72rem; color: #999; letter-spacing: 0.06em; text-transform: uppercase; }
+  .param-field input, .param-field select {
+    background: #f7f7f7; border: 1px solid #e0e0e0; color: #1a1a1a;
+    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; padding: 10px 12px;
+    border-radius: 4px; outline: none;
+  }
+  .param-field input:focus, .param-field select:focus { border-color: #bbb; }
+  .param-field input::placeholder { color: #bbb; }
+
+  /* Upload single file (protein) */
+  .file-upload-row { display: flex; gap: 8px; align-items: center; }
+  .upload-label {
+    flex: 1; background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 4px;
+    padding: 10px 14px; font-size: 0.82rem; color: #999; cursor: pointer;
+  }
+  .upload-label.has-file { color: #1a1a1a; }
+
+  /* Buttons */
+  button {
+    background: #1a1a1a; color: #ffffff; border: none; padding: 10px 28px;
+    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; cursor: pointer;
+    border-radius: 4px; font-weight: bold; letter-spacing: 0.05em;
+  }
+  button:hover { background: #333; }
+  button:disabled { background: #ccc; color: #888; cursor: not-allowed; }
+  .btn-clear { background: #dc2626; }
+  .btn-clear:hover { background: #b91c1c; }
+  .btn-example { background: #2563eb; font-weight: normal; }
+  .btn-example:hover { background: #1d4ed8; }
+  .btn-upload { background: #555555; font-weight: normal; }
+  .btn-upload:hover { background: #444444; }
+  .btn-download { background: #059669; font-weight: normal; padding: 10px 20px; }
+  .btn-download:hover { background: #047857; }
+
+  .action-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+
+  /* Status */
+  #status { font-size: 0.78rem; color: #999; margin-top: 14px; min-height: 18px; }
+  #status.error { color: #dc2626; }
+  #status.running { color: #2563eb; }
+  #status.done { color: #059669; }
+
+  /* Results */
+  #results { margin-top: 24px; }
+  .summary-card {
+    background: #f7f7f7; border: 1px solid #e8e8e8; border-radius: 4px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; }
+  .stat { text-align: center; }
+  .stat-val { font-size: 1.5rem; color: #0f0f0f; }
+  .stat-label { font-size: 0.68rem; color: #aaa; margin-top: 2px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .viewer-wrap {
+    border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden;
+    height: 500px; margin-bottom: 16px; position: relative; background: #fafafa;
+  }
+  #viewer { width: 100%; height: 100%; }
+  .viewer-controls {
+    position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
+  }
+  .viewer-btn {
+    background: rgba(255,255,255,0.92); border: 1px solid #e0e0e0; color: #555;
+    font-family: 'Roboto Mono', monospace; font-size: 0.7rem; padding: 5px 10px;
+    border-radius: 4px; cursor: pointer; letter-spacing: 0.04em; font-weight: normal;
+  }
+  .viewer-btn:hover { background: #fff; color: #111; border-color: #bbb; }
+  .viewer-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .dl-row { display: flex; gap: 8px; }
+
+  .warn-list { margin-top: 12px; }
+  .warn-item {
+    font-size: 0.73rem; color: #92400e; border-left: 2px solid #fcd34d;
+    padding: 6px 10px; margin-bottom: 6px; line-height: 1.5; background: #fffbeb;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid #f0f0f0; margin: 28px 0; }
+
+  /* Footer */
+  footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e8e8e8; font-size: 0.63rem; color: #aaa; line-height: 1.8; }
+  footer a { color: #999; text-decoration: underline; }
+  footer a:hover { color: #333; }
+  .feedback-link { color: #999; text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; font-size: inherit; font-weight: normal; padding: 0; letter-spacing: normal; }
+  .feedback-link:hover { color: #333; background: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="title-row">
+    <h1>BILBO</h1>
+    <span class="status-dot" id="statusDot" title="Checking server..."></span>
+  </div>
+  <p class="sub">Bilayer Lipid Builder and Organizer. Upload lipid PDB templates to generate all-atom membrane previews with GROMACS topology.</p>
+  <p class="notice">
+    For full parameter control, use the <a href="https://github.com/madsondeluna/bilbo" target="_blank">CLI version</a>:
+    <code>uv run bilbo membrane build --upper-pdb POPE.pdb:50 --output ./build</code>
+  </p>
+
+  <!-- Upper leaflet -->
+  <div class="section">
+    <div class="section-label">Upper leaflet</div>
+    <div class="lipid-list" id="upperList"></div>
+    <button class="add-btn" onclick="addLipidEntry('upper')">+ add lipid</button>
+  </div>
+
+  <!-- Symmetric toggle -->
+  <div class="toggle-row">
+    <input type="checkbox" id="symCheck" checked onchange="toggleSymmetric()">
+    <label class="toggle-label" for="symCheck">Mirror upper leaflet to lower (symmetric bilayer)</label>
+  </div>
+
+  <!-- Lower leaflet (hidden when symmetric) -->
+  <div class="section" id="lowerSection" style="display:none;">
+    <div class="section-label">Lower leaflet</div>
+    <div class="lipid-list" id="lowerList"></div>
+    <button class="add-btn" onclick="addLipidEntry('lower')">+ add lipid</button>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Protein (optional) -->
+  <div class="section">
+    <div class="section-label">Protein / peptide (optional)</div>
+    <div class="file-upload-row">
+      <input type="file" id="proteinInput" accept=".pdb" onchange="handleProteinUpload(event)">
+      <span class="upload-label" id="proteinLabel" onclick="document.getElementById('proteinInput').click()">No file selected — click to upload a .pdb</span>
+      <button class="btn-upload" onclick="document.getElementById('proteinInput').click()">Upload .pdb</button>
+      <button class="btn-clear" style="padding:10px 14px; font-weight:normal;" onclick="clearProtein()" id="proteinClear" style="display:none;">×</button>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Parameters -->
+  <div class="section">
+    <div class="section-label">Parameters</div>
+    <div class="params-grid">
+      <div class="param-field">
+        <label>Seed</label>
+        <input type="number" id="seed" value="42" min="0">
+      </div>
+      <div class="param-field">
+        <label>Spacing (nm)</label>
+        <input type="number" id="spacing" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
+      </div>
+      <div class="param-field">
+        <label>Bilayer gap (Å)</label>
+        <input type="number" id="bilayerGap" value="6.0" step="0.5" min="0">
+      </div>
+      <div class="param-field">
+        <label>Sorting</label>
+        <select id="sorting">
+          <option value="random">Random</option>
+          <option value="domain_enriched">Domain enriched</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="action-row">
+    <button id="buildBtn" onclick="runBuild()">Build</button>
+    <button class="btn-clear" onclick="clearAll()">Clear</button>
+    <button class="btn-example" onclick="loadExample()">Load example</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <footer>
+    <p>
+      BILBO — Bilayer Lipid Builder and Organizer.
+      Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
+    </p>
+    <p style="margin-top:8px;">
+      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a>
+      &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
+    </p>
+  </footer>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const lipidFiles = { upper: [], lower: [] };
+let proteinFile = null;
+let viewer = null;
+let currentPdb = null;
+let currentTopology = null;
+let viewMode = 'stick';
+
+// ── Server health check ────────────────────────────────────────────────────────
+(async () => {
+  const dot = document.getElementById('statusDot');
+  try {
+    const r = await fetch('/health');
+    dot.className = 'status-dot ' + (r.ok ? 'online' : 'offline');
+  } catch {
+    dot.className = 'status-dot offline';
+  }
+})();
+
+// ── Lipid entry management ─────────────────────────────────────────────────────
+function addLipidEntry(leaflet) {
+  const list = document.getElementById(leaflet + 'List');
+  const idx = lipidFiles[leaflet].length;
+  lipidFiles[leaflet].push(null);
+
+  const entry = document.createElement('div');
+  entry.className = 'lipid-entry';
+  entry.dataset.idx = idx;
+  entry.dataset.leaflet = leaflet;
+
+  const fileId = `${leaflet}_file_${idx}`;
+  entry.innerHTML = `
+    <input type="file" id="${fileId}" accept=".pdb" onchange="handleLipidFile(event, '${leaflet}', ${idx})">
+    <span class="file-label" id="${leaflet}_label_${idx}" onclick="document.getElementById('${fileId}').click()">
+      No file — click to upload .pdb
+    </span>
+    <input type="number" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids">
+    <button class="remove-btn" onclick="removeLipidEntry('${leaflet}', ${idx})" title="Remove">×</button>
+  `;
+  list.appendChild(entry);
+}
+
+function handleLipidFile(event, leaflet, idx) {
+  const file = event.target.files[0];
+  if (!file) return;
+  lipidFiles[leaflet][idx] = file;
+  const label = document.getElementById(`${leaflet}_label_${idx}`);
+  label.textContent = file.name;
+  label.classList.add('has-file');
+}
+
+function removeLipidEntry(leaflet, idx) {
+  lipidFiles[leaflet][idx] = null;
+  const list = document.getElementById(leaflet + 'List');
+  const entry = list.querySelector(`[data-idx="${idx}"][data-leaflet="${leaflet}"]`);
+  if (entry) entry.remove();
+}
+
+function toggleSymmetric() {
+  const checked = document.getElementById('symCheck').checked;
+  document.getElementById('lowerSection').style.display = checked ? 'none' : 'block';
+}
+
+// ── Protein upload ─────────────────────────────────────────────────────────────
+function handleProteinUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  proteinFile = file;
+  const label = document.getElementById('proteinLabel');
+  label.textContent = file.name;
+  label.classList.add('has-file');
+  document.getElementById('proteinClear').style.display = 'inline-block';
+}
+
+function clearProtein() {
+  proteinFile = null;
+  document.getElementById('proteinInput').value = '';
+  const label = document.getElementById('proteinLabel');
+  label.textContent = 'No file selected — click to upload a .pdb';
+  label.classList.remove('has-file');
+  document.getElementById('proteinClear').style.display = 'none';
+}
+
+// ── Example loader ─────────────────────────────────────────────────────────────
+async function loadExample() {
+  // Generate a minimal single-lipid example PDB in memory (POPE-like, 5 atoms)
+  const popePdb = `ATOM      1  P   POPE A   1       0.000   0.000  20.000  1.00  0.00           P
+ATOM      2  N   POPE A   1       0.000   0.000  14.000  1.00  0.00           N
+ATOM      3  C   POPE A   1       0.000   0.000   8.000  1.00  0.00           C
+ATOM      4  C   POPE A   1       0.000   0.000   2.000  1.00  0.00           C
+ATOM      5  C   POPE A   1       0.000   0.000  -4.000  1.00  0.00           C
+END
+`;
+  const popgPdb = `ATOM      1  P   POPG A   1       1.000   0.000  20.000  1.00  0.00           P
+ATOM      2  N   POPG A   1       1.000   0.000  14.000  1.00  0.00           N
+ATOM      3  C   POPG A   1       1.000   0.000   8.000  1.00  0.00           C
+ATOM      4  C   POPG A   1       1.000   0.000   2.000  1.00  0.00           C
+ATOM      5  C   POPG A   1       1.000   0.000  -4.000  1.00  0.00           C
+END
+`;
+
+  const toFile = (content, name) => new File([content], name, { type: 'text/plain' });
+  const popeFile = toFile(popePdb, 'POPE.pdb');
+  const popgFile = toFile(popgPdb, 'POPG.pdb');
+
+  // Clear existing and add two lipid entries
+  clearAll(false);
+  addLipidEntry('upper');
+  addLipidEntry('upper');
+
+  lipidFiles.upper[0] = popeFile;
+  const l0 = document.getElementById('upper_label_0');
+  if (l0) { l0.textContent = 'POPE.pdb'; l0.classList.add('has-file'); }
+  const c0 = document.getElementById('upper_count_0');
+  if (c0) c0.value = 70;
+
+  lipidFiles.upper[1] = popgFile;
+  const l1 = document.getElementById('upper_label_1');
+  if (l1) { l1.textContent = 'POPG.pdb'; l1.classList.add('has-file'); }
+  const c1 = document.getElementById('upper_count_1');
+  if (c1) c1.value = 30;
+
+  document.getElementById('seed').value = 42;
+  document.getElementById('bilayerGap').value = 6.0;
+  document.getElementById('symCheck').checked = true;
+  toggleSymmetric();
+
+  setStatus('Example loaded. Click Build to generate the membrane.', 'done');
+}
+
+// ── Build ──────────────────────────────────────────────────────────────────────
+async function runBuild() {
+  const btn = document.getElementById('buildBtn');
+  const symmetric = document.getElementById('symCheck').checked;
+
+  // Collect valid upper entries
+  const upperEntries = lipidFiles.upper
+    .map((f, i) => ({ file: f, count: parseInt(document.getElementById(`upper_count_${i}`)?.value || '0') }))
+    .filter(e => e.file !== null);
+
+  if (upperEntries.length === 0) {
+    setStatus('Upload at least one upper leaflet lipid PDB.', 'error');
+    return;
+  }
+
+  const lowerEntries = symmetric ? [] :
+    lipidFiles.lower
+      .map((f, i) => ({ file: f, count: parseInt(document.getElementById(`lower_count_${i}`)?.value || '0') }))
+      .filter(e => e.file !== null);
+
+  if (!symmetric && lowerEntries.length === 0) {
+    setStatus('Upload at least one lower leaflet lipid PDB, or enable symmetric mode.', 'error');
+    return;
+  }
+
+  setStatus('Building membrane...', 'running');
+  btn.disabled = true;
+  document.getElementById('results').innerHTML = '';
+
+  const fd = new FormData();
+  upperEntries.forEach(e => fd.append('upper_files', e.file));
+  fd.append('upper_counts', upperEntries.map(e => e.count).join(','));
+  fd.append('symmetric', symmetric ? 'true' : 'false');
+
+  if (!symmetric) {
+    lowerEntries.forEach(e => fd.append('lower_files', e.file));
+    fd.append('lower_counts', lowerEntries.map(e => e.count).join(','));
+  }
+
+  if (proteinFile) fd.append('protein_file', proteinFile);
+
+  fd.append('seed', document.getElementById('seed').value);
+  const spacingVal = document.getElementById('spacing').value;
+  if (spacingVal) fd.append('spacing', spacingVal);
+  fd.append('bilayer_gap', document.getElementById('bilayerGap').value);
+  fd.append('sorting', document.getElementById('sorting').value);
+
+  try {
+    const resp = await fetch('/api/build', { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      setStatus('Error: ' + (data.detail || 'Unknown error'), 'error');
+      return;
+    }
+
+    currentPdb = data.pdb;
+    currentTopology = data.topology;
+    setStatus(`Done. ${data.n_atoms.toLocaleString()} atoms written.`, 'done');
+    renderResults(data);
+
+  } catch (err) {
+    setStatus('Network error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Results rendering ──────────────────────────────────────────────────────────
+function renderResults(data) {
+  const res = document.getElementById('results');
+
+  const warns = (data.warnings || []).map(w =>
+    `<div class="warn-item">${escHtml(w)}</div>`
+  ).join('');
+
+  res.innerHTML = `
+    <div class="summary-card">
+      <div class="section-label">Build summary</div>
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-val">${data.n_atoms.toLocaleString()}</div>
+          <div class="stat-label">Atoms</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">${data.n_lipids.upper}</div>
+          <div class="stat-label">Upper lipids</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">${data.n_lipids.lower}</div>
+          <div class="stat-label">Lower lipids</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val">${data.apl_a2}</div>
+          <div class="stat-label">APL (Å²)</div>
+        </div>
+      </div>
+      ${warns ? '<div class="warn-list">' + warns + '</div>' : ''}
+    </div>
+
+    <div class="viewer-wrap">
+      <div id="viewer"></div>
+      <div class="viewer-controls">
+        <button class="viewer-btn active" id="btnStick" onclick="setViewMode('stick')">Stick</button>
+        <button class="viewer-btn" id="btnSphere" onclick="setViewMode('sphere')">Sphere</button>
+        <button class="viewer-btn" id="btnLine" onclick="setViewMode('line')">Line</button>
+        <button class="viewer-btn" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
+      </div>
+    </div>
+
+    <div class="dl-row">
+      <button class="btn-download" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
+        Download PDB
+      </button>
+      ${data.topology ? `<button class="btn-download" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
+        Download topology
+      </button>` : ''}
+    </div>
+  `;
+
+  initViewer(data.pdb, data.protein_pdb);
+}
+
+function initViewer(pdb, proteinPdb) {
+  const el = document.getElementById('viewer');
+  if (!el) return;
+
+  viewer = $3Dmol.createViewer(el, { backgroundColor: '#fafafa' });
+  viewer.addModel(pdb, 'pdb');
+
+  applyViewMode('stick');
+
+  if (proteinPdb && proteinPdb.trim()) {
+    viewer.addModel(proteinPdb, 'pdb');
+    const nModels = viewer.getNumModels ? viewer.getNumModels() : 2;
+    viewer.setStyle({ model: nModels - 1 }, { cartoon: { color: 'spectrum' }, stick: { radius: 0.1 } });
+  }
+
+  viewer.zoomTo();
+  viewer.render();
+}
+
+function applyViewMode(mode) {
+  if (!viewer) return;
+  viewMode = mode;
+
+  // Remove all styles on model 0
+  viewer.setStyle({ chain: 'U' }, {});
+  viewer.setStyle({ chain: 'L' }, {});
+
+  const styles = {
+    stick:   [{ chain: 'U' }, { stick: { colorscheme: 'Jmol', radius: 0.12 } },
+              { chain: 'L' }, { stick: { color: '#e07b39', radius: 0.12 } }],
+    sphere:  [{ chain: 'U' }, { sphere: { colorscheme: 'Jmol', scale: 0.25 } },
+              { chain: 'L' }, { sphere: { color: '#e07b39', scale: 0.25 } }],
+    line:    [{ chain: 'U' }, { line: { colorscheme: 'Jmol' } },
+              { chain: 'L' }, { line: { color: '#e07b39' } }],
+    surface: [{ chain: 'U' }, { surface: { opacity: 0.72, color: '#4f83cc' } },
+              { chain: 'L' }, { surface: { opacity: 0.72, color: '#e07b39' } }],
+  };
+
+  if (styles[mode]) {
+    const s = styles[mode];
+    for (let i = 0; i < s.length; i += 2) {
+      viewer.setStyle(s[i], s[i + 1]);
+    }
+  }
+  viewer.render();
+
+  // Update button states
+  ['stick','sphere','line','surface'].forEach(m => {
+    const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (b) b.className = 'viewer-btn' + (m === mode ? ' active' : '');
+  });
+}
+
+function setViewMode(mode) {
+  applyViewMode(mode);
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = cls || '';
+}
+
+function downloadFile(content, filename, mime) {
+  if (!content) return;
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function clearAll(resetStatus = true) {
+  lipidFiles.upper = [];
+  lipidFiles.lower = [];
+  proteinFile = null;
+  document.getElementById('upperList').innerHTML = '';
+  document.getElementById('lowerList').innerHTML = '';
+  document.getElementById('proteinInput').value = '';
+  const pl = document.getElementById('proteinLabel');
+  pl.textContent = 'No file selected — click to upload a .pdb';
+  pl.classList.remove('has-file');
+  document.getElementById('proteinClear').style.display = 'none';
+  document.getElementById('results').innerHTML = '';
+  currentPdb = null;
+  currentTopology = null;
+  viewer = null;
+  if (resetStatus) setStatus('', '');
+}
+
+// Init with one upper entry
+addLipidEntry('upper');
+</script>
+</body>
+</html>

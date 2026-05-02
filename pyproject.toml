@@ -31,9 +31,14 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
 ]
+web = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/bilbo"]
+packages = ["src/bilbo", "web"]
 
 [tool.ruff]
 src = ["src"]

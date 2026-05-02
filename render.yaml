@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bilbo-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: BILBO_DB_PATH
+        value: /tmp/bilbo.db
+      - key: PORT
+        value: 8000
+    healthCheckPath: /health
