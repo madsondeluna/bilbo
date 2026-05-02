@@ -585,18 +585,18 @@ summing over all lipid counts across both leaflets. This places each lipid cente
 
 APL reference values (303 K, $L_\alpha$ phase, from MD simulations validated against X-ray and neutron diffraction):
 
-| Lipid | APL (Å²) | Source |
-|-------|----------|--------|
-| DPPC  | 64.3 | Kucerka et al. Biophys J. 2011;101:1828 |
-| DMPC  | 60.6 | Klauda et al. J Phys Chem B. 2010;114:7830 |
-| DOPC  | 72.5 | Kucerka et al. Biophys J. 2011;101:1828 |
-| DOPE  | 65.7 | Venable et al. J Chem Theory Comput. 2014;10:1397 |
-| POPE  | 56.6 | Kucerka et al. Biophys J. 2011;101:1828 |
-| POPC  | 68.3 | Kucerka et al. Biophys J. 2011;101:1828 |
-| POPG  | 65.0 | Venable et al. J Chem Theory Comput. 2014;10:1397 |
-| POPS  | 55.5 | Mukhopadhyay et al. Biophys J. 2004;86:1601 |
-| CL    | 130.0 | Dahlberg. J Phys Chem B. 2007;111:7194 |
-| TOCL  | 130.0 | Dahlberg. J Phys Chem B. 2007;111:7194 |
+| Lipid | Full name | APL (Å²) | Source |
+|-------|-----------|----------|--------|
+| DPPC  | 1,2-dipalmitoyl-sn-glycero-3-phosphocholine | 64.3 | Kucerka et al. Biophys J. 2011;101:1828 |
+| DMPC  | 1,2-dimyristoyl-sn-glycero-3-phosphocholine | 60.6 | Klauda et al. J Phys Chem B. 2010;114:7830 |
+| DOPC  | 1,2-dioleoyl-sn-glycero-3-phosphocholine | 72.5 | Kucerka et al. Biophys J. 2011;101:1828 |
+| DOPE  | 1,2-dioleoyl-sn-glycero-3-phosphoethanolamine | 65.7 | Venable et al. J Chem Theory Comput. 2014;10:1397 |
+| POPE  | 1-palmitoyl-2-oleoyl-sn-glycero-3-phosphoethanolamine | 56.6 | Kucerka et al. Biophys J. 2011;101:1828 |
+| POPC  | 1-palmitoyl-2-oleoyl-sn-glycero-3-phosphocholine | 68.3 | Kucerka et al. Biophys J. 2011;101:1828 |
+| POPG  | 1-palmitoyl-2-oleoyl-sn-glycero-3-phospho-(1'-rac-glycerol) | 65.0 | Venable et al. J Chem Theory Comput. 2014;10:1397 |
+| POPS  | 1-palmitoyl-2-oleoyl-sn-glycero-3-phosphoserine | 55.5 | Mukhopadhyay et al. Biophys J. 2004;86:1601 |
+| CL    | cardiolipin (1,3-bis(sn-3'-phosphatidyl)-sn-glycerol) | 130.0 | Dahlberg. J Phys Chem B. 2007;111:7194 |
+| TOCL  | 1,1',2,2'-tetraoleoyl cardiolipin | 130.0 | Dahlberg. J Phys Chem B. 2007;111:7194 |
 
 Cardiolipin (CL) has two phosphate groups and four acyl chains and is counted as one molecule; its APL of 130 Å² reflects the full molecular footprint.
 
