@@ -3,6 +3,8 @@ services:
     name: bilbo-web
     runtime: docker
     dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
     envVars:
       - key: BILBO_DB_PATH
         value: /tmp/bilbo.db
