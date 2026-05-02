@@ -607,9 +607,9 @@ Each lipid in the grid receives a random azimuthal rotation $\theta \sim U(0, 2\
 $$x' = \cos\theta \cdot (x_0 - \bar{x}) - \sin\theta \cdot (y_0 - \bar{y}) + c_x$$
 $$y' = \sin\theta \cdot (x_0 - \bar{x}) + \cos\theta \cdot (y_0 - \bar{y}) + c_y$$
 
-The pseudorandom generator is `random.Random(seed)`, isolated from Python's global state. Identical `(seed, composition, N)` triples always produce identical structures. The Z coordinate is normalized so the terminal tail atom sits at $z_\text{half\_gap}$ from the bilayer center, with sign flipped for the lower leaflet:
+The pseudorandom generator is `random.Random(seed)`, isolated from Python's global state. Identical `(seed, composition, N)` triples always produce identical structures. The Z coordinate is normalized so the terminal tail atom sits at $z_\text{gap}$ from the bilayer center, with sign flipped for the lower leaflet:
 
-$$z = z_\text{flip} \cdot (z_0 - z_\text{tail} + z_\text{half\_gap})$$
+$$z = z_\text{flip} \cdot (z_0 - z_\text{tail} + z_\text{gap})$$
 
 ### Inter-species clash detection
 
@@ -641,9 +641,9 @@ where $K$ is the skew-symmetric matrix of $\hat{u} \times \hat{v}$ and $\alpha$ 
 
 3. **Surface anchoring**: the headgroup surface Z is extracted from `preview_allatom.pdb` as the maximum Z of upper-leaflet atoms. The Z offset applied to the molecule is:
 
-$$\Delta z = z_\text{surface} - z_\text{bottom} - d_\text{depth}$$
+$$\Delta z = z_\text{surface} - z_\text{min} - d_\text{ins}$$
 
-where $z_\text{bottom}$ is the minimum Z of the rotated molecule and $d_\text{depth}$ is the insertion depth in Angstroms.
+where $z_\text{min}$ is the minimum Z of the rotated molecule and $d_\text{ins}$ is the insertion depth in Angstroms.
 
 4. **Collision count**: all peptide-membrane atom pairs below 2.0 Å are counted. The count and minimum distance are recorded in `build_report.json`.
 

@@ -59,7 +59,7 @@ app = typer.Typer(
     rich_markup_mode="rich",
     no_args_is_help=False,
     add_completion=False,
-    context_settings={"max_content_width": 88},
+    context_settings={"max_content_width": 88, "help_option_names": []},
 )
 
 lipid_app    = typer.Typer(help="Lipid library management",      add_completion=False)
@@ -161,14 +161,28 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _help_callback(ctx: typer.Context, param: typer.CallbackParam, value: bool) -> None:
+    if value and not ctx.resilient_parsing:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+
+
 @app.callback(invoke_without_command=True)
 def _main(
     ctx: typer.Context,
+    help: Optional[bool] = typer.Option(
+        None, "--help", "-h",
+        is_eager=True,
+        expose_value=False,
+        is_flag=True,
+        hidden=True,
+        callback=_help_callback,
+    ),
     version: Optional[bool] = typer.Option(
         None, "--version", "-v",
         callback=_version_callback,
         is_eager=True,
-        help="Show version and exit.",
+        hidden=True,
     ),
 ) -> None:
     _bootstrap_if_empty()
