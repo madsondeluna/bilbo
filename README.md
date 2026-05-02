@@ -120,9 +120,9 @@ bilbo membrane build [OPTIONS]
 | `--upper-pdb FILE.pdb:N` | TEXT | required | One lipid species for the upper leaflet with count N. Repeat for each species. |
 | `--lower-pdb FILE.pdb:N` | TEXT | mirrors upper | One lipid species for the lower leaflet. If omitted, the lower leaflet is identical to the upper. |
 | `--seed` | INTEGER | 42 | Random seed for grid placement and per-lipid azimuthal rotation. Same seed reproduces an identical structure. |
-| `--sorting` | TEXT | random | Lipid arrangement: `random` (uniform random placement) or `domain_enriched` (same species grouped in contiguous blocks). |
+| `--sorting` | TEXT | random | Lipid arrangement: `random` (uniform random placement), `domain_enriched` (same species grouped in contiguous blocks), or `stripe` (alternating horizontal bands, A-B-A-B). |
 | `--spacing` | FLOAT | APL-weighted | Lateral distance between lipid centers in nm. Computed automatically from composition when omitted. |
-| `--bilayer-gap` | FLOAT | 6.0 | Total gap at the bilayer center between tail terminals of opposing leaflets, in Angstroms. Use 1.0 for a more compact structure. |
+| `--bilayer-gap` | FLOAT | 2.5 | Total gap at the bilayer center between tail terminals of opposing leaflets, in Angstroms. |
 | `--output` | PATH | required | Output directory. Created if it does not exist. |
 
 **Output files:**
@@ -135,9 +135,9 @@ bilbo membrane build [OPTIONS]
 | `build_report.json` | Build parameters, realized counts, SHA-256 hashes of templates |
 | `manifest.json` | List of all files written |
 
-**About `--bilayer-gap`:** this parameter sets the vacuum gap between the terminal tail atoms of the two opposing leaflets before minimization. A value of 6.0 Å (default) prevents severe initial clashes at the bilayer center. A value of 1.0 Å gives a more realistic inter-leaflet distance before minimization. Either way, the final equilibrated bilayer thickness is determined by the simulation force field, not by this parameter.
+**About `--bilayer-gap`:** this parameter sets the vacuum gap between the terminal tail atoms of the two opposing leaflets before minimization. A value of 2.5 Å (default) gives a compact starting structure. Larger values (up to 10 Å) increase separation and reduce initial clashes at the bilayer center. The final equilibrated bilayer thickness is determined by the simulation force field, not by this parameter.
 
-**About `--sorting`:** `random` distributes species uniformly across the grid, which is the physically correct starting configuration for a well-mixed bilayer. `domain_enriched` groups identical species in blocks, which provides a visual representation of lateral lipid organization and can be used as a starting point for studying domain segregation.
+**About `--sorting`:** `random` distributes species uniformly across the grid, which is the physically correct starting configuration for a well-mixed bilayer. `domain_enriched` groups identical species in blocks, suitable as a starting point for domain segregation studies. `stripe` arranges species in alternating horizontal bands (A-B-A-B row pattern), useful for Lo/Ld phase separation studies where multiple domain interfaces are desired.
 
 ## bilbo membrane place
 
@@ -389,8 +389,9 @@ The **Symmetric** checkbox copies the upper leaflet composition to the lower lea
 | Field | Default | Description |
 |---|---|---|
 | Seed | 42 | Random seed for grid placement and azimuthal rotation. |
-| Bilayer gap (A) | 6.0 | Vacuum gap at the bilayer center between opposing tail terminals. |
-| Sorting | random | `random`: uniform placement. `domain_enriched`: same-species molecules grouped in blocks. |
+| Bilayer gap (A) | 2.5 | Vacuum gap at the bilayer center between opposing tail terminals. |
+| Sorting | random | `random`: uniform placement. `domain_enriched`: species grouped in blocks. `stripe`: alternating horizontal bands (A-B-A-B). |
+| Tilt angle (deg) | 0 | Global tilt of each lipid away from the membrane normal. 0 = upright. Use 10-30 for gel-phase or tilt-defect studies. Each lipid receives a random azimuthal tilt direction. |
 | Spacing (nm) | auto | Grid spacing. Leave blank to compute automatically from APL-weighted composition. |
 | Box side (nm) | auto | X and Y box dimensions. Leave blank to compute from the grid. |
 
@@ -428,7 +429,8 @@ Available ions: Na+, Ca2+, Mg2+, K+.
 
 After clicking **Build membrane**, BILBO returns:
 
-- **Download PDB**: all-atom bilayer, with optional peptide and water/ions. This file is the input for `gmx editconf` and subsequent GROMACS steps.
+- **Download PDB**: all-atom bilayer, with optional peptide and water/ions. Input for `gmx editconf` and subsequent GROMACS steps.
+- **Download GRO**: the same structure in GROMACS GRO format, with coordinates in nm and the periodic box dimensions on the last line. Use this file directly with `gmx grompp` without running `gmx editconf`.
 - **Download topology**: a `topol.top` skeleton with `#include` directives for each lipid species. Edit the force field path and verify lipid `.itp` includes before running `gmx grompp`.
 
 A build summary panel shows atom counts, water molecule count, ion counts, and any warnings (e.g., box Z too small, leaflet area mismatch).
@@ -446,7 +448,7 @@ MDP files (energy minimization, NVT, NPT, production) are not generated by BILBO
 ### Typical GROMACS pipeline after BILBO
 
 ```bash
-# 1. Set box dimensions (use BILBO's reported box X, Y, Z)
+# 1. Convert PDB to GRO (skip if you downloaded the GRO directly from the web interface)
 gmx editconf -f system.pdb -o system.gro -box 8.0 8.0 15.0
 
 # 2. Solvate (skip if you used BILBO solvation)
