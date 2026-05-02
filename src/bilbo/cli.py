@@ -58,29 +58,29 @@ app = typer.Typer(
     help="Bilayer Lipid Builder and Organizer",
     rich_markup_mode="rich",
     no_args_is_help=False,
+    add_completion=False,
+    context_settings={"max_content_width": 88},
 )
 
+lipid_app    = typer.Typer(help="Lipid library management",      add_completion=False)
+preset_app   = typer.Typer(help="Membrane preset management",    add_completion=False)
+compat_app   = typer.Typer(help="Force field compatibility",     add_completion=False)
+sources_app  = typer.Typer(help="External source management",    add_completion=False)
+extract_app  = typer.Typer(help="Data extraction",               add_completion=False)
+peptide_app  = typer.Typer(help="Peptide library management",    add_completion=False)
+membrane_app = typer.Typer(help="Membrane build and placement",  add_completion=False)
+view_app     = typer.Typer(help="Terminal visualization",        add_completion=False)
+export_app   = typer.Typer(help="Export previews and reports",   add_completion=False)
 
-
-lipid_app = typer.Typer(help="Lipid library management")
-preset_app = typer.Typer(help="Membrane preset management")
-compat_app = typer.Typer(help="Force field compatibility")
-sources_app = typer.Typer(help="External source management")
-extract_app = typer.Typer(help="Data extraction")
-peptide_app = typer.Typer(help="Peptide library management")
-membrane_app = typer.Typer(help="Membrane build and placement")
-view_app = typer.Typer(help="Terminal visualization")
-export_app = typer.Typer(help="Export previews and reports")
-
-app.add_typer(lipid_app, name="lipid")
-app.add_typer(preset_app, name="preset")
-app.add_typer(compat_app, name="compatibility")
-app.add_typer(sources_app, name="sources")
-app.add_typer(extract_app, name="extract")
-app.add_typer(peptide_app, name="peptide")
+app.add_typer(lipid_app,    name="lipid")
+app.add_typer(preset_app,   name="preset")
+app.add_typer(compat_app,   name="compatibility")
+app.add_typer(sources_app,  name="sources")
+app.add_typer(extract_app,  name="extract")
+app.add_typer(peptide_app,  name="peptide")
 app.add_typer(membrane_app, name="membrane")
-app.add_typer(view_app, name="view")
-app.add_typer(export_app, name="export")
+app.add_typer(view_app,     name="view")
+app.add_typer(export_app,   name="export")
 
 _MENU_W = 17  # column where all menu descriptions start (max cmd len + 4)
 
