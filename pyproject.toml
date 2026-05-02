@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-bilbo = "bilbo.cli:app"
+bilbo = "bilbo.cli:main"
 
 [project.optional-dependencies]
 dev = [

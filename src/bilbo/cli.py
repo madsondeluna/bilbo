@@ -172,10 +172,15 @@ def _main(
     ),
 ) -> None:
     _bootstrap_if_empty()
-    _bilbo_banner()
     if ctx.invoked_subcommand is None:
+        _bilbo_banner()
         _interactive_menu(ctx)
         raise typer.Exit()
+
+
+def main() -> None:
+    _bilbo_banner()
+    app(standalone_mode=True)
 
 
 def _run_bilbo(args: list[str]) -> None:
