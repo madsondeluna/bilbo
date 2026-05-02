@@ -359,6 +359,19 @@ uvicorn web.app:app --host 0.0.0.0 --port 8000
 
 Open `http://localhost:8000` in a browser.
 
+### Deploying on Render
+
+The repository includes a `render.yaml` that configures a Docker-based web service.
+
+1. In the Render dashboard, click **New + > Web Service**.
+2. Select **Build and deploy from a Git repository** and connect the `bilbo` repository.
+3. Render detects `render.yaml` automatically and fills in all fields. Confirm: runtime Docker, plan Free, region Oregon.
+4. Click **Create Web Service**. The first build takes 3-5 minutes. The service is ready when the logs show `Your service is live`.
+
+The deployed URL has the form `https://<service-name>.onrender.com`. To change it: open the service in the Render dashboard, go to **Settings**, and edit the **Service Name** field. The new name must be globally unique across Render. For a custom domain (e.g. `bilbo.yourdomain.com`), add it under **Custom Domain** and point a CNAME record in your DNS to the current `onrender.com` address.
+
+Subsequent deploys are automatic: every push to `main` triggers a new build.
+
 ### Inputs
 
 **Leaflet composition**
