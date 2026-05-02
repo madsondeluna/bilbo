@@ -219,6 +219,14 @@
           <label>Z gap from surface (Å)</label>
           <input type="number" id="peptideZGap" value="5.0" step="0.5" min="0">
         </div>
+        <div class="param-field">
+          <label>X center (Å)</label>
+          <input type="number" id="peptideX" placeholder="auto" step="0.5">
+        </div>
+        <div class="param-field">
+          <label>Y center (Å)</label>
+          <input type="number" id="peptideY" placeholder="auto" step="0.5">
+        </div>
       </div>
     </div>
   </div>
@@ -516,6 +524,10 @@ async function runBuild() {
     fd.append('peptide_replicas', document.getElementById('peptideReplicas').value);
     fd.append('peptide_surface', document.getElementById('peptideSurface').value);
     fd.append('peptide_z_gap', document.getElementById('peptideZGap').value);
+    const pxVal = document.getElementById('peptideX').value;
+    const pyVal = document.getElementById('peptideY').value;
+    if (pxVal !== '') fd.append('peptide_x', pxVal);
+    if (pyVal !== '') fd.append('peptide_y', pyVal);
   }
 
   const ionTypeVal = document.getElementById('ionType').value;

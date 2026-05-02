@@ -96,6 +96,8 @@ def _place_peptide_replicas(
     box_y: float,
     serial_start: int,
     seed: int,
+    fixed_x: float | None = None,
+    fixed_y: float | None = None,
 ) -> list[str]:
     if not peptide_lines or n_replicas < 1:
         return []
@@ -107,8 +109,12 @@ def _place_peptide_replicas(
 
     for i in range(n_replicas):
         chain = _PEP_CHAINS[i % len(_PEP_CHAINS)]
-        tx = rng.uniform(0.0, box_x)
-        ty = rng.uniform(0.0, box_y)
+        if fixed_x is not None and fixed_y is not None:
+            tx = fixed_x
+            ty = fixed_y
+        else:
+            tx = rng.uniform(0.0, box_x)
+            ty = rng.uniform(0.0, box_y)
         if surface == "lower":
             tz = z_min - z_gap
         elif surface == "both":
@@ -194,6 +200,8 @@ async def build_membrane(
     peptide_replicas: int = Form(1),
     peptide_surface: str = Form("upper"),
     peptide_z_gap: float = Form(5.0),
+    peptide_x: Optional[str] = Form(None),
+    peptide_y: Optional[str] = Form(None),
     # Coordination ions
     ion_type: Optional[str] = Form(None),
     ion_count: int = Form(0),
@@ -336,10 +344,16 @@ async def build_membrane(
             raw = (await peptide_file.read()).decode("utf-8", errors="replace")
             pep_lines = _atom_lines(raw)
             if pep_lines:
+                try:
+                    fx = float(peptide_x) if peptide_x and peptide_x.strip() else None
+                    fy = float(peptide_y) if peptide_y and peptide_y.strip() else None
+                except ValueError:
+                    fx, fy = None, None
                 peptide_lines_placed = _place_peptide_replicas(
                     pep_lines, peptide_replicas, peptide_surface,
                     peptide_z_gap, z_max, z_min, box_x, box_y,
                     next_serial, seed,
+                    fixed_x=fx, fixed_y=fy,
                 )
                 next_serial += len(peptide_lines_placed)
 
