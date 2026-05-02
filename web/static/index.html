@@ -168,7 +168,7 @@
   <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
   <p class="notice">
     CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
-    <code>bilbo membrane build --upper-pdb POPE.pdb:50 --output ./build</code>
+    <code style="display:block; overflow-x:auto; white-space:nowrap;">bilbo membrane build --upper-pdb POPC.pdb:50 --upper-pdb POPE.pdb:20 --upper-pdb DPPC.pdb:20 --upper-pdb CHOL.pdb:10 --lower-pdb POPE.pdb:40 --lower-pdb POPS.pdb:25 --lower-pdb POPG.pdb:20 --lower-pdb CL.pdb:15 --seed 42 --bilayer-gap 1.0 --output builds/asymmetric_euk</code>
   </p>
 
   <!-- Upper leaflet -->
@@ -193,13 +193,68 @@
 
   <hr class="divider">
 
-  <!-- Protein (optional) -->
+  <!-- Surface peptide (optional) -->
   <div class="section">
-    <div class="section-label">Protein / peptide (optional)</div>
+    <div class="section-label">Surface peptide (optional)</div>
     <div class="upload-row">
-      <input type="file" id="proteinInput" accept=".pdb" onchange="handleProteinUpload(event)" style="display:none;">
-      <button class="btn-upload" onclick="document.getElementById('proteinInput').click()">Upload .pdb</button>
-      <span id="proteinLabel" style="font-size:0.82rem; color:#999;">no file selected</span>
+      <input type="file" id="peptideInput" accept=".pdb" onchange="handlePeptideUpload(event)" style="display:none;">
+      <button class="btn-upload" onclick="document.getElementById('peptideInput').click()">Upload .pdb</button>
+      <span id="peptideLabel" style="font-size:0.82rem; color:#999;">no file selected</span>
+    </div>
+    <div id="peptideOptions" style="display:none; margin-top:14px;">
+      <div class="params-grid">
+        <div class="param-field">
+          <label>Replicas</label>
+          <input type="number" id="peptideReplicas" value="1" min="1" max="200">
+        </div>
+        <div class="param-field">
+          <label>Surface</label>
+          <select id="peptideSurface">
+            <option value="upper">Upper</option>
+            <option value="lower">Lower</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <div class="param-field">
+          <label>Z gap from surface (Å)</label>
+          <input type="number" id="peptideZGap" value="5.0" step="0.5" min="0">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coordination ions (optional) -->
+  <div class="section">
+    <div class="section-label">Coordination ions (optional)</div>
+    <div class="params-grid">
+      <div class="param-field">
+        <label>Ion type</label>
+        <select id="ionType">
+          <option value="">None</option>
+          <option value="CA">Ca&#178;&#8314;</option>
+          <option value="MG">Mg&#178;&#8314;</option>
+          <option value="NA">Na&#8314;</option>
+          <option value="K">K&#8314;</option>
+          <option value="CL">Cl&#8315;</option>
+          <option value="ZN">Zn&#178;&#8314;</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Count</label>
+        <input type="number" id="ionCount" value="0" min="0" max="10000">
+      </div>
+      <div class="param-field">
+        <label>Surface</label>
+        <select id="ionSurface">
+          <option value="both">Both</option>
+          <option value="upper">Upper</option>
+          <option value="lower">Lower</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Z from bilayer center (Å)</label>
+        <input type="number" id="ionZOffset" value="0.0" step="0.5">
+      </div>
     </div>
   </div>
 
@@ -259,7 +314,7 @@
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 const lipidFiles = { upper: [], lower: [] };
-let proteinFile = null;
+let peptideFile = null;
 let viewer = null;
 let currentPdb = null;
 let currentTopology = null;
@@ -320,22 +375,24 @@ function toggleSymmetric() {
   document.getElementById('lowerSection').style.display = checked ? 'none' : 'block';
 }
 
-// ── Protein upload ─────────────────────────────────────────────────────────────
-function handleProteinUpload(event) {
+// ── Peptide upload ─────────────────────────────────────────────────────────────
+function handlePeptideUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  proteinFile = file;
-  const label = document.getElementById('proteinLabel');
+  peptideFile = file;
+  const label = document.getElementById('peptideLabel');
   label.textContent = file.name;
   label.style.color = '#1a1a1a';
+  document.getElementById('peptideOptions').style.display = 'block';
 }
 
-function clearProtein() {
-  proteinFile = null;
-  document.getElementById('proteinInput').value = '';
-  const label = document.getElementById('proteinLabel');
+function clearPeptide() {
+  peptideFile = null;
+  document.getElementById('peptideInput').value = '';
+  const label = document.getElementById('peptideLabel');
   label.textContent = 'no file selected';
   label.style.color = '#999';
+  document.getElementById('peptideOptions').style.display = 'none';
 }
 
 // ── PDB helpers ───────────────────────────────────────────────────────────────
@@ -448,13 +505,27 @@ async function runBuild() {
     fd.append('lower_counts', lowerEntries.map(e => e.count).join(','));
   }
 
-  if (proteinFile) fd.append('protein_file', proteinFile);
-
   fd.append('seed', document.getElementById('seed').value);
   const spacingVal = document.getElementById('spacing').value;
   if (spacingVal) fd.append('spacing', spacingVal);
   fd.append('bilayer_gap', document.getElementById('bilayerGap').value);
   fd.append('sorting', document.getElementById('sorting').value);
+
+  if (peptideFile) {
+    fd.append('peptide_file', peptideFile);
+    fd.append('peptide_replicas', document.getElementById('peptideReplicas').value);
+    fd.append('peptide_surface', document.getElementById('peptideSurface').value);
+    fd.append('peptide_z_gap', document.getElementById('peptideZGap').value);
+  }
+
+  const ionTypeVal = document.getElementById('ionType').value;
+  const ionCountVal = parseInt(document.getElementById('ionCount').value) || 0;
+  if (ionTypeVal && ionCountVal > 0) {
+    fd.append('ion_type', ionTypeVal);
+    fd.append('ion_count', ionCountVal);
+    fd.append('ion_surface', document.getElementById('ionSurface').value);
+    fd.append('ion_z_offset', document.getElementById('ionZOffset').value);
+  }
 
   try {
     const resp = await fetch('/api/build', { method: 'POST', body: fd });
@@ -505,6 +576,14 @@ function renderResults(data) {
           <div class="stat-val">${data.apl_a2}</div>
           <div class="stat-label">APL (Å²)</div>
         </div>
+        ${data.n_peptide_atoms > 0 ? `<div class="stat">
+          <div class="stat-val">${data.n_peptide_atoms.toLocaleString()}</div>
+          <div class="stat-label">Peptide atoms</div>
+        </div>` : ''}
+        ${data.n_ions > 0 ? `<div class="stat">
+          <div class="stat-val">${data.n_ions}</div>
+          <div class="stat-label">Ions</div>
+        </div>` : ''}
       </div>
       ${warns ? '<div class="warn-list">' + warns + '</div>' : ''}
     </div>
@@ -529,18 +608,16 @@ function renderResults(data) {
     </div>
   `;
 
-  setTimeout(() => initViewer(data.pdb, data.protein_pdb), 50);
+  setTimeout(() => initViewer(data.pdb), 50);
 }
 
 let _pdbData = '';
-let _proteinData = '';
 
-function initViewer(pdb, proteinPdb) {
+function initViewer(pdb) {
   const el = document.getElementById('viewer');
   if (!el) return;
 
   _pdbData = pdb;
-  _proteinData = proteinPdb || '';
 
   viewer = $3Dmol.createViewer(el, { backgroundColor: '#fafafa' });
   _loadModels();
@@ -552,27 +629,35 @@ function _loadModels() {
   viewer.removeAllModels();
   viewer.addModel(_pdbData, 'pdb');
 
-  if (_proteinData.trim()) {
-    viewer.addModel(_proteinData, 'pdb');
-    viewer.setStyle({ model: 1 }, { cartoon: { color: 'spectrum' } });
-  }
-
   _applyLipidStyle(viewMode);
 }
 
+const _PEP_CHAINS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !['I','L','U'].includes(c));
+
 function _applyLipidStyle(mode) {
+  const pepSel = (c) => ({ chain: c, model: 0 });
+  const ionSel = { chain: 'I', model: 0 };
+
   if (mode === 'stick') {
     viewer.setStyle({ chain: 'U', model: 0 }, { stick: { color: '#4f83cc', radius: 0.2 } });
     viewer.setStyle({ chain: 'L', model: 0 }, { stick: { color: '#e07b39', radius: 0.2 } });
+    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { stick: { color: '#10b981', radius: 0.2 } }));
+    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
   } else if (mode === 'sphere') {
     viewer.setStyle({ chain: 'U', model: 0 }, { sphere: { color: '#4f83cc', scale: 0.3 } });
     viewer.setStyle({ chain: 'L', model: 0 }, { sphere: { color: '#e07b39', scale: 0.3 } });
+    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { sphere: { color: '#10b981', scale: 0.3 } }));
+    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
   } else if (mode === 'line') {
     viewer.setStyle({ chain: 'U', model: 0 }, { line: { color: '#4f83cc' } });
     viewer.setStyle({ chain: 'L', model: 0 }, { line: { color: '#e07b39' } });
+    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { line: { color: '#10b981' } }));
+    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
   } else if (mode === 'surface') {
     viewer.setStyle({ chain: 'U', model: 0 }, { stick: { color: '#4f83cc', radius: 0.15 } });
     viewer.setStyle({ chain: 'L', model: 0 }, { stick: { color: '#e07b39', radius: 0.15 } });
+    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { stick: { color: '#10b981', radius: 0.15 } }));
+    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
     viewer.addSurface('VDW', { opacity: 0.5, color: '#4f83cc' }, { chain: 'U', model: 0 });
     viewer.addSurface('VDW', { opacity: 0.5, color: '#e07b39' }, { chain: 'L', model: 0 });
   }
@@ -618,13 +703,11 @@ function escHtml(s) {
 function clearAll(resetStatus = true) {
   lipidFiles.upper = [];
   lipidFiles.lower = [];
-  proteinFile = null;
   document.getElementById('upperList').innerHTML = '';
   document.getElementById('lowerList').innerHTML = '';
-  document.getElementById('proteinInput').value = '';
-  const pl = document.getElementById('proteinLabel');
-  pl.textContent = 'no file selected';
-  pl.style.color = '#999';
+  clearPeptide();
+  document.getElementById('ionType').value = '';
+  document.getElementById('ionCount').value = 0;
   document.getElementById('results').innerHTML = '';
   currentPdb = null;
   currentTopology = null;
