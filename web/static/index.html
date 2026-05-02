@@ -20,6 +20,7 @@
   .status-dot.online  { background: #059669; }
   .status-dot.offline { background: #dc2626; }
   .sub { font-size: 0.78rem; color: #888; margin-bottom: 20px; line-height: 1.6; }
+  .beta-badge { font-size: 0.55em; font-weight: 600; letter-spacing: 0.1em; color: #fff; background: #dc2626; padding: 3px 8px; border-radius: 4px; vertical-align: middle; position: relative; top: -4px; }
   .notice { font-size: 0.75rem; color: #999; border-left: 2px solid #ddd; padding: 8px 12px; margin-bottom: 36px; line-height: 1.7; }
   .notice a { color: #555; text-decoration: underline; }
   .notice a:hover { color: #111; }
@@ -197,10 +198,62 @@
 
   /* Footer */
   footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8e8e8; font-size: 0.63rem; color: #aaa; line-height: 1.8; }
+  footer p { text-align: justify; }
+  .footer-note { margin-top: 12px; padding: 10px 14px; background: #f8fafc; border-left: 2px solid #cbd5e1; border-radius: 0 4px 4px 0; color: #666; line-height: 1.8; text-align: justify; }
+  .footer-note strong { color: #444; }
+  .footer-note code { font-family: 'Roboto Mono', monospace; font-size: 0.85em; background: #e8edf2; color: #1e3a5f; padding: 1px 5px; border-radius: 3px; }
   footer a { color: #999; text-decoration: underline; }
   footer a:hover { color: #333; }
   .feedback-link { color: #999; text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; font-size: inherit; font-weight: normal; padding: 0; letter-spacing: normal; }
   .feedback-link:hover { color: #333; background: none; }
+  .bug-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
+  .bug-overlay.open { display: flex; }
+  .bug-modal { background: #fff; border-radius: 8px; padding: 28px 28px 22px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); font-size: 0.78rem; color: #333; }
+  .bug-modal h3 { margin: 0 0 4px; font-size: 0.88rem; font-weight: 600; color: #111; }
+  .bug-modal p { margin: 0 0 14px; color: #777; font-size: 0.72rem; }
+  .bug-modal textarea { width: 100%; box-sizing: border-box; height: 110px; resize: vertical; border: 1px solid #ddd; border-radius: 5px; padding: 8px 10px; font-family: inherit; font-size: 0.78rem; color: #222; outline: none; }
+  .bug-modal textarea:focus { border-color: #999; }
+.bug-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .bug-submit { background: #111; color: #fff; border: none; border-radius: 5px; padding: 7px 18px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
+  .bug-submit:hover { background: #333; }
+  .bug-cancel { background: none; border: 1px solid #ddd; border-radius: 5px; padding: 7px 14px; font-size: 0.75rem; cursor: pointer; color: #666; font-family: inherit; }
+  .bug-cancel:hover { border-color: #999; color: #222; }
+  .bug-status { margin-top: 10px; font-size: 0.72rem; min-height: 1.2em; }
+
+  /* Tooltips */
+  .has-tip { position: relative; cursor: help; }
+  label.has-tip { display: inline-block; }
+  .has-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 0;
+    top: calc(100% + 5px);
+    background: #1a1a1a;
+    color: #e5e5e5;
+    font-size: 0.63rem;
+    line-height: 1.5;
+    padding: 6px 10px;
+    border-radius: 4px;
+    min-width: 180px;
+    max-width: 260px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: normal;
+    white-space: normal;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .has-tip:hover::after { opacity: 1; }
+
+  /* Counter-ion note */
+  .ion-note {
+    display: none; margin-top: 6px; font-size: 0.72rem; color: #92400e;
+    border-left: 2px solid #fcd34d; padding: 5px 10px; background: #fffbeb;
+    border-radius: 0 4px 4px 0; line-height: 1.5;
+  }
 </style>
 </head>
 <body>
@@ -208,7 +261,7 @@
 
   <!-- Header -->
   <div class="title-row">
-    <h1>BILBO</h1>
+    <h1>BILBO <span class="beta-badge">BETA</span></h1>
     <span class="status-dot" id="statusDot" title="Checking server..."></span>
   </div>
   <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
@@ -218,7 +271,7 @@
 
   <!-- Upper leaflet -->
   <div class="section">
-    <div class="section-label">Upper leaflet</div>
+    <div class="section-label has-tip" data-tip="Lipids placed in the upper (extracellular) leaflet of the bilayer.">Upper leaflet</div>
     <div class="lipid-list" id="upperList"></div>
     <button class="add-btn" onclick="addLipidEntry('upper')">+ add lipid</button>
   </div>
@@ -226,12 +279,12 @@
   <!-- Symmetric toggle -->
   <div class="toggle-row">
     <input type="checkbox" id="symCheck" checked onchange="toggleSymmetric()">
-    <label class="toggle-label" for="symCheck">Mirror upper leaflet to lower (symmetric bilayer)</label>
+    <label class="toggle-label has-tip" for="symCheck" data-tip="When enabled, the lower leaflet mirrors the upper leaflet composition exactly.">Mirror upper leaflet to lower (symmetric bilayer)</label>
   </div>
 
   <!-- Lower leaflet (hidden when symmetric) -->
   <div class="section" id="lowerSection" style="display:none;">
-    <div class="section-label">Lower leaflet</div>
+    <div class="section-label has-tip" data-tip="Lipids placed in the lower (cytoplasmic) leaflet. Available when symmetric mode is off.">Lower leaflet</div>
     <div class="lipid-list" id="lowerList"></div>
     <button class="add-btn" onclick="addLipidEntry('lower')">+ add lipid</button>
   </div>
@@ -240,7 +293,7 @@
 
   <!-- Surface peptide (optional) -->
   <div class="section">
-    <div class="section-label">Surface peptide (optional)</div>
+    <div class="section-label has-tip" data-tip="Attach a peptide PDB to the membrane surface. Multiple replicas are distributed across the XY plane.">Surface peptide (optional)</div>
     <div class="upload-row">
       <input type="file" id="peptideInput" accept=".pdb" onchange="handlePeptideUpload(event)" style="display:none;">
       <button class="btn-upload" onclick="document.getElementById('peptideInput').click()">Upload .pdb</button>
@@ -249,11 +302,11 @@
     <div id="peptideOptions" style="display:none; margin-top:14px;">
       <div class="params-grid">
         <div class="param-field">
-          <label>Replicas</label>
+          <label class="has-tip" data-tip="Number of copies of the peptide placed on the membrane surface.">Replicas</label>
           <input type="number" id="peptideReplicas" value="1" min="1" max="200" oninput="updateReplicaPositionFields()">
         </div>
         <div class="param-field">
-          <label>Surface</label>
+          <label class="has-tip" data-tip="Leaflet face to place the peptide on. 'Both' distributes replicas across both surfaces.">Surface</label>
           <select id="peptideSurface">
             <option value="upper">Upper</option>
             <option value="lower">Lower</option>
@@ -261,7 +314,7 @@
           </select>
         </div>
         <div class="param-field">
-          <label>Z gap from surface (Å)</label>
+          <label class="has-tip" data-tip="Minimum distance in angstroms between the peptide and the nearest lipid headgroup.">Z gap from surface (Å)</label>
           <input type="number" id="peptideZGap" value="5.0" step="0.5" min="0">
         </div>
       </div>
@@ -282,7 +335,7 @@
   <div class="section">
     <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; margin:0 0 8px 0;">
       <input type="checkbox" id="counterIonCheck" onchange="updateIonCount()" disabled>
-      <label for="counterIonCheck" style="font-size:0.82rem; color:#555; white-space:nowrap; cursor:pointer;">
+      <label for="counterIonCheck" class="has-tip" style="font-size:0.82rem; color:#555; white-space:nowrap;" data-tip="Place cations at anionic lipid headgroups to neutralize membrane charge before solvation. Only enabled when anionic lipids are present.">
         Counter-ions at headgroup
       </label>
       <select id="ionType" onchange="updateIonCount()"
@@ -298,14 +351,17 @@
         title="Auto-calculated from anionic lipid count.">
       <span style="font-size:0.72rem; color:#888; white-space:nowrap;" id="ionCountLabel"></span>
     </div>
-    <div class="toggle-row" style="margin:0 0 0 0;">
+    <div class="ion-note" id="counterIonNote">
+      No anionic lipids in this composition. Counter-ions at headgroup are not required.
+    </div>
+    <div class="toggle-row" style="margin:8px 0 0 0;">
       <input type="checkbox" id="solvateCheck" onchange="document.getElementById('solvBody').classList.toggle('visible', this.checked)">
-      <label class="toggle-label" for="solvateCheck" style="font-size:0.82rem; color:#555; font-weight:normal;">Solvate (add water + ions)</label>
+      <label class="toggle-label has-tip" for="solvateCheck" style="font-size:0.82rem; color:#555; font-weight:normal;" data-tip="Fill the simulation box with explicit water and ions using GROMACS gmx solvate.">Solvate (add water + ions)</label>
     </div>
     <div class="solv-body" id="solvBody">
       <div class="params-grid" style="margin-top:14px;">
         <div class="param-field">
-          <label>Water model</label>
+          <label class="has-tip" data-tip="Explicit solvent model. TIP3P is standard for the CHARMM36 lipid force field.">Water model</label>
           <select id="waterModel">
             <option value="tip3p">TIP3P</option>
             <option value="spc">SPC</option>
@@ -314,16 +370,16 @@
           </select>
         </div>
         <div class="param-field">
-          <label>Box Z (nm)</label>
+          <label class="has-tip" data-tip="Total simulation box height in nm. Leave blank for automatic sizing (3 nm water per side of the membrane).">Box Z (nm)</label>
           <input type="number" id="boxZNm" placeholder="auto" step="1.0" min="5.0"
             title="Total simulation box height (nm). Must exceed membrane thickness. Leave blank to default to 3 nm water layer each side.">
         </div>
         <div class="param-field">
-          <label>[NaCl] (mM)</label>
+          <label class="has-tip" data-tip="Bulk NaCl concentration added after charge neutralization. Physiological value is 150 mM.">[NaCl] (mM)</label>
           <input type="number" id="solIonConc" value="150" step="10" min="0">
         </div>
         <div class="param-field">
-          <label>Peptide net charge (e, auto)</label>
+          <label class="has-tip" data-tip="Net charge of the peptide in elementary charges. Auto-filled from the uploaded PDB; override if needed.">Peptide net charge (e, auto)</label>
           <input type="number" id="peptideNetCharge" value="0" step="1" title="Auto-filled when peptide is uploaded. Override if needed.">
         </div>
       </div>
@@ -334,29 +390,34 @@
 
   <!-- Parameters -->
   <div class="section">
-    <div class="section-label">Parameters</div>
+    <div class="section-label has-tip" data-tip="Global parameters controlling bilayer geometry and lipid placement.">Parameters</div>
     <div class="params-grid">
       <div class="param-field">
-        <label>Seed</label>
+        <label class="has-tip" data-tip="Random seed controlling lipid placement. Same seed always reproduces the same configuration.">Seed</label>
         <input type="number" id="seed" value="42" min="0" title="Random seed: controls lipid arrangement. Same seed = same structure. Change to get a different valid configuration.">
       </div>
       <div class="param-field">
-        <label>Spacing (nm)</label>
+        <label class="has-tip" data-tip="Target center-to-center lateral spacing between lipids in nm. Defaults to the APL-weighted average when blank.">Spacing (nm)</label>
         <input type="number" id="spacing" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
       </div>
       <div class="param-field">
-        <label>Box XY (nm)</label>
+        <label class="has-tip" data-tip="Fixed lateral box edge (X = Y) in nm. Overrides the spacing parameter when set.">Box XY (nm)</label>
         <input type="number" id="boxSide" placeholder="auto" step="0.5" min="1.0" title="Lateral box dimensions (X = Y). Overrides spacing.">
       </div>
       <div class="param-field">
-        <label>Bilayer gap (Å)</label>
-        <input type="number" id="bilayerGap" value="6.0" step="0.5" min="0">
+        <label class="has-tip" data-tip="Vertical distance in angstroms between the two leaflet midplanes.">Bilayer gap (Å)</label>
+        <input type="number" id="bilayerGap" value="2.5" step="0.5" min="0">
       </div>
       <div class="param-field">
-        <label>Sorting</label>
+        <label class="has-tip" data-tip="Global tilt of each lipid away from the membrane normal (degrees). 0 = upright. Use 10-30° for gel-phase or tilt-defect studies. Each lipid receives a random azimuthal tilt direction.">Tilt angle (°)</label>
+        <input type="number" id="tiltAngle" value="0" step="1" min="-45" max="45">
+      </div>
+      <div class="param-field">
+        <label class="has-tip" data-tip="Random: lipids placed in random order. Domain enriched: lipid species cluster together to form lateral domains. Stripe: species arranged in alternating horizontal bands (A-B-A-B), useful for Lo/Ld phase separation.">Sorting</label>
         <select id="sorting">
           <option value="random">Random</option>
           <option value="domain_enriched">Domain enriched</option>
+          <option value="stripe">Stripe</option>
         </select>
       </div>
     </div>
@@ -376,15 +437,46 @@
 
   <footer>
     <p>
-      BILBO — Bilayer Lipid Builder and Organizer.
+      BILBO (beta) — Bilayer Lipid Builder and Organizer. This tool is under active development; results should be
+      validated before use in production simulations.
       Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
     </p>
     <p style="margin-top:8px;">
       Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a>
       &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
       &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
+      &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
     </p>
+    <div class="footer-note">
+      <strong>Running MD in GROMACS</strong><br>
+      Convert the output PDB to a simulation box using <code>gmx editconf</code>, then proceed with energy minimization
+      and equilibration.<br><br>
+      <strong>CHARMM36 lipid parameters</strong><br>
+      The generated <code>topol.top</code> references per-lipid parameter files under <code>charmm36.ff/</code>.
+      The standard GROMACS distribution includes <code>charmm36.ff</code> for proteins and nucleic acids only;
+      lipid parameters are maintained separately by the MacKerell lab and are not bundled with GROMACS.
+      To obtain them, download the CHARMM36 lipid parameter set from
+      <code>mackerell.umaryland.edu/charmm_ff_params.html</code>, or export any system from CHARMM-GUI in GROMACS
+      format and copy the resulting <code>charmm36.ff/</code> directory into your working directory.<br><br>
+      <strong>MDP files</strong><br>
+      Input parameters for energy minimization, NVT, NPT, and production MD are not generated by BILBO and must be
+      prepared by the user.
+    </div>
   </footer>
+</div>
+
+<!-- Bug report modal -->
+<div class="bug-overlay" id="bugOverlay" onclick="if(event.target===this)closeBugModal()">
+  <div class="bug-modal">
+    <h3>Report a bug</h3>
+    <p>Describe the problem. Clicking "Open GitHub" will open a pre-filled issue on the BILBO repository — you can attach screenshots directly on GitHub before submitting.</p>
+    <textarea id="bugMessage" placeholder="Describe what happened and what you expected..."></textarea>
+    <div class="bug-status" id="bugStatus"></div>
+    <div class="bug-modal-actions">
+      <button class="bug-cancel" onclick="closeBugModal()">Cancel</button>
+      <button class="bug-submit" onclick="submitBugReport()">Open GitHub</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -394,6 +486,7 @@ let peptideFile = null;
 let viewer = null;
 let currentPdb = null;
 let currentTopology = null;
+let currentGro = null;
 let currentBuildData = null;
 let viewMode = 'stick';
 let libraryLipids = [];
@@ -456,6 +549,7 @@ function updateIonCount() {
   const ionType  = document.getElementById('ionType').value;
   const ionEl    = document.getElementById('ionCount');
   const labelEl  = document.getElementById('ionCountLabel');
+  const noteEl   = document.getElementById('counterIonNote');
 
   const isSymm  = document.getElementById('symCheck')?.checked;
   const leaflets = isSymm ? ['upper'] : ['upper', 'lower'];
@@ -465,8 +559,8 @@ function updateIonCount() {
   let totalCharge = 0;
   let anionicLipidCount = 0;
   for (const lf of leaflets) {
-    const n = lipidFiles[lf].length;
-    for (let i = 0; i < n; i++) {
+    const len = lipidFiles[lf].length;
+    for (let i = 0; i < len; i++) {
       const name = _getLipidName(lf, i);
       if (!name) continue;
       const lCharge = _LIPID_CHARGES_JS[name] ?? 0;
@@ -476,16 +570,19 @@ function updateIonCount() {
     }
   }
 
-  let n = 0;
+  let ionN = 0;
   if (ionCharge > 0 && totalCharge < 0)
-    n = Math.ceil(-totalCharge / ionCharge);
+    ionN = Math.ceil(-totalCharge / ionCharge);
   else if (ionCharge < 0 && totalCharge > 0)
-    n = Math.ceil(totalCharge / -ionCharge);
+    ionN = Math.ceil(totalCharge / -ionCharge);
+
+  const hasFilledEntries = leaflets.some(lf => lipidFiles[lf].some(f => f !== null));
 
   if (checkEl) {
-    if (n === 0) { checkEl.checked = false; checkEl.disabled = true; }
+    if (ionN === 0) { checkEl.checked = false; checkEl.disabled = true; }
     else checkEl.disabled = false;
   }
+  if (noteEl) noteEl.style.display = (hasFilledEntries && ionN === 0) ? 'block' : 'none';
 
   if (!checkEl?.checked) {
     ionEl.value = 0;
@@ -493,7 +590,7 @@ function updateIonCount() {
     return;
   }
 
-  ionEl.value = n;
+  ionEl.value = ionN;
   if (labelEl) labelEl.textContent = anionicLipidCount > 0 ? `(${anionicLipidCount} anionic lipids)` : '(no anionic lipids)';
 }
 
@@ -693,7 +790,7 @@ async function loadExample() {
   if (c1) c1.value = 18;
 
   document.getElementById('seed').value = 42;
-  document.getElementById('bilayerGap').value = 6.0;
+  document.getElementById('bilayerGap').value = 2.5;
   document.getElementById('symCheck').checked = true;
   toggleSymmetric();
 
@@ -747,6 +844,7 @@ async function runBuild() {
   if (boxSideVal) fd.append('box_side', boxSideVal);
   fd.append('bilayer_gap', document.getElementById('bilayerGap').value);
   fd.append('sorting', document.getElementById('sorting').value);
+  fd.append('tilt_angle', document.getElementById('tiltAngle').value);
 
   if (peptideFile) {
     const nRep = parseInt(document.getElementById('peptideReplicas').value) || 1;
@@ -795,6 +893,7 @@ async function runBuild() {
 
     currentPdb = data.pdb;
     currentTopology = data.topology;
+    currentGro = data.gro || null;
     currentBuildData = data;
     setStatus(`Done. ${data.n_atoms.toLocaleString()} atoms written.`, 'done');
     renderResults(data);
@@ -915,20 +1014,14 @@ function renderResults(data) {
       <button class="btn-download" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
         Download PDB
       </button>
+      ${data.gro ? `<button class="btn-download" onclick="downloadFile(currentGro, 'bilbo_preview.gro', 'text/plain')">
+        Download GRO
+      </button>` : ''}
       ${data.topology ? `<button class="btn-download" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
         Download topology
       </button>` : ''}
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
-    ${data.topology ? `<div class="md-note">
-      <strong>To run MD in GROMACS:</strong> convert the PDB with <code>gmx editconf</code>, then energy-minimize and equilibrate.<br>
-      The <code>topol.top</code> references individual <code>charmm36.ff/LIPID.itp</code> files.
-      The standard GROMACS installation includes <code>charmm36.ff</code> for proteins and nucleic acids only —
-      lipid parameters are maintained separately by the MacKerell lab and are <strong>not</strong> included.
-      Obtain them from <code>mackerell.umaryland.edu/charmm_ff_params.html</code> or extract <code>charmm36.ff/</code>
-      from a CHARMM-GUI GROMACS export, and place it in your working directory.<br>
-      MDP files (em, nvt, npt, md) are not provided and must be prepared by the user.
-    </div>` : ''}
     <pre class="log-panel" id="buildLogPanel"></pre>
   `;
 
@@ -1185,11 +1278,14 @@ function clearAll(resetStatus = true) {
   if (cc) { cc.checked = false; cc.disabled = true; }
   const ilbl = document.getElementById('ionCountLabel');
   if (ilbl) ilbl.textContent = '';
+  const noteEl = document.getElementById('counterIonNote');
+  if (noteEl) noteEl.style.display = 'none';
   const sc = document.getElementById('solvateCheck');
   if (sc) { sc.checked = false; document.getElementById('solvBody').classList.remove('visible'); }
   document.getElementById('results').innerHTML = '';
   currentPdb = null;
   currentTopology = null;
+  currentGro = null;
   currentBuildData = null;
   viewer = null;
   if (resetStatus) setStatus('', '');
@@ -1197,6 +1293,32 @@ function clearAll(resetStatus = true) {
 
 // Init with one upper entry
 addLipidEntry('upper');
+
+// ── Bug report modal ──────────────────────────────────────────────────────────
+function openBugModal() {
+  document.getElementById('bugMessage').value = '';
+  document.getElementById('bugStatus').textContent = '';
+  document.getElementById('bugStatus').style.color = '';
+  document.getElementById('bugOverlay').classList.add('open');
+}
+
+function closeBugModal() {
+  document.getElementById('bugOverlay').classList.remove('open');
+}
+
+function submitBugReport() {
+  const msg = document.getElementById('bugMessage').value.trim();
+  const statusEl = document.getElementById('bugStatus');
+  if (!msg) {
+    statusEl.style.color = '#dc2626';
+    statusEl.textContent = 'Please describe the problem before sending.';
+    return;
+  }
+  const title = encodeURIComponent('Bug report');
+  const body = encodeURIComponent(msg + '\n\n---\n*Reported via BILBO (beta)*');
+  window.open(`https://github.com/madsondeluna/bilbo/issues/new?title=${title}&body=${body}`, '_blank');
+  closeBugModal();
+}
 </script>
 </body>
 </html>

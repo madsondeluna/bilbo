@@ -49,10 +49,10 @@ def build_leaflet_layout(
         lipid_list = _make_lipid_list(ec.counts)
         n = len(lipid_list)
 
-        sorted_list = sort_lipids(lipid_list, sorting_mode, seed)
-
         nx = math.ceil(math.sqrt(n))
         ny = math.ceil(n / nx)
+
+        sorted_list = sort_lipids(lipid_list, sorting_mode, seed, nx=nx)
 
         positions = []
         for i, lid in enumerate(sorted_list):

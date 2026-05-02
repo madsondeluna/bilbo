@@ -1509,7 +1509,7 @@ def membrane_from_pdb(
         help="Lower leaflet lipid as FILE.pdb:COUNT. Defaults to same as upper (symmetric).",
     ),
     seed: int = typer.Option(42, "--seed", help="Random seed for lipid placement."),
-    sorting: str = typer.Option("random", "--sorting", help="Sorting mode: random or domain_enriched."),
+    sorting: str = typer.Option("random", "--sorting", help="Sorting mode: random, domain_enriched, or stripe."),
     spacing: Optional[float] = typer.Option(
         None, "--spacing", help="Grid spacing in nm. Defaults to APL-weighted spacing from reference data."
     ),

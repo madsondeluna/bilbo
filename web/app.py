@@ -398,6 +398,7 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+
 @app.post("/api/build")
 async def build_membrane(
     upper_files: list[UploadFile] = File(...),
@@ -410,6 +411,7 @@ async def build_membrane(
     box_side: Optional[str] = Form(None),
     bilayer_gap: float = Form(6.0),
     sorting: str = Form("random"),
+    tilt_angle: float = Form(0.0),
     # Surface peptide
     peptide_file: Optional[UploadFile] = File(None),
     peptide_replicas: int = Form(1),
@@ -433,6 +435,7 @@ async def build_membrane(
     from bilbo.builders.composition_expander import ExpandedComposition
     from bilbo.builders.leaflet_layout import build_leaflet_layout
     from bilbo.exporters.allatom_preview import write_allatom_preview
+    from bilbo.exporters.gro_exporter import pdb_to_gro
     from bilbo.exporters.gromacs_topology import write_gromacs_topology
 
     is_symmetric = symmetric.lower() in ("true", "1", "yes")
@@ -544,6 +547,7 @@ async def build_membrane(
                 z_half_gap=bilayer_gap / 2.0,
                 template_index=template_index,
                 seed=seed,
+                tilt_angle=tilt_angle,
             )
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Preview error: {exc}")
@@ -721,6 +725,7 @@ async def build_membrane(
 
         return JSONResponse({
             "pdb": final_pdb,
+            "gro": pdb_to_gro(final_pdb),
             "n_atoms": n_total_atoms,
             "n_lipid_atoms": n_lipid_atoms,
             "n_peptide_atoms": len(peptide_lines_placed),

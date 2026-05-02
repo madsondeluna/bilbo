@@ -52,6 +52,8 @@ def _place_atoms(
     resseq: int,
     z_tail: float,
     z_half_gap: float = _Z_TAIL,
+    tilt_angle_rad: float = 0.0,
+    tilt_phi: float = 0.0,
 ) -> list[str]:
     """Rotate each lipid azimuthally around Z, then translate to (cx, cy).
 
@@ -71,6 +73,16 @@ def _place_atoms(
         y = sin_t * x0 + cos_t * y0 + cy
         z_norm = z0 - z_tail + z_half_gap
         z = z_flip * z_norm
+        if tilt_angle_rad != 0.0:
+            cos_a = math.cos(tilt_angle_rad)
+            sin_a = math.sin(tilt_angle_rad)
+            ax = math.cos(tilt_phi)
+            ay = math.sin(tilt_phi)
+            xr = x - cx
+            yr = y - cy
+            x = xr * (cos_a + ax * ax * (1 - cos_a)) + yr * (ax * ay * (1 - cos_a)) + z * (ay * sin_a) + cx
+            y = xr * (ax * ay * (1 - cos_a)) + yr * (cos_a + ay * ay * (1 - cos_a)) + z * (-ax * sin_a) + cy
+            z = xr * (-ay * sin_a) + yr * (ax * sin_a) + z * cos_a
         record = (
             line[:21]
             + chain
@@ -157,6 +169,7 @@ def write_allatom_preview(
     template_index: dict[str, Path] | None = None,
     seed: int = 42,
     clash_threshold: float = 2.0,
+    tilt_angle: float = 0.0,
 ) -> tuple[int, list[str]]:
     """Tile lipid PDB templates across the leaflet grid.
 
@@ -213,12 +226,15 @@ def write_allatom_preview(
                 continue
             tmpl, z_tail, cent_x, cent_y = result
             theta = rng.uniform(0.0, 2.0 * math.pi)
+            tilt_phi = rng.uniform(0.0, 2.0 * math.pi) if tilt_angle != 0.0 else 0.0
             grid_x = pos.x * 10.0  # nm -> Angstrom
             grid_y = pos.y * 10.0
 
             placed = _place_atoms(
                 tmpl, grid_x, grid_y, cent_x, cent_y,
                 theta, z_flip, chain, resseq, z_tail, z_half_gap,
+                tilt_angle_rad=math.radians(tilt_angle),
+                tilt_phi=tilt_phi,
             )
             all_lines.extend(placed)
             resid_to_lipid[resseq] = pos.lipid_id.upper()

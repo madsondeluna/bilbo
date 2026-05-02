@@ -48,6 +48,31 @@ def test_domain_enriched_groups_lipids():
     assert pope_indices == list(range(min(pope_indices), max(pope_indices) + 1))
 
 
+def test_stripe_alternating_bands():
+    preset = _ecoli_preset()
+    expanded = expand_composition(preset, 64)
+    layouts = build_leaflet_layout(expanded, "stripe", seed=42)
+    upper = layouts["upper"]
+    nx = upper.grid_nx
+    ids = [p.lipid_id for p in upper.positions]
+
+    # Collect distinct species per row
+    ny = upper.grid_ny
+    row_species = []
+    for row in range(ny):
+        row_ids = ids[row * nx : (row + 1) * nx]
+        dominant = max(set(row_ids), key=row_ids.count) if row_ids else None
+        row_species.append(dominant)
+
+    # At least two distinct species must appear across rows
+    assert len(set(row_species)) >= 2
+
+    # Species must not be identical in all consecutive pairs (i.e. banding changes)
+    consecutive_same = sum(1 for a, b in zip(row_species, row_species[1:]) if a == b)
+    total_pairs = len(row_species) - 1
+    assert consecutive_same < total_pairs
+
+
 def test_layout_csv_columns(tmp_path):
     preset = _ecoli_preset()
     expanded = expand_composition(preset, 16)
