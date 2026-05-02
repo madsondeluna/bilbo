@@ -3,19 +3,38 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import random as _random
 import tempfile
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
 
 _STATIC = Path(__file__).parent / "static"
+_DATA_DIR = Path(__file__).parent.parent / "data" / "examples" / "charmm_gui"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+
+
+@app.get("/api/library")
+async def library_list() -> JSONResponse:
+    if not _DATA_DIR.is_dir():
+        return JSONResponse([])
+    names = sorted(p.stem for p in _DATA_DIR.glob("*.pdb") if not p.name.startswith("."))
+    return JSONResponse(names)
+
+
+@app.get("/api/library/{lipid_id}/pdb", response_class=PlainTextResponse)
+async def library_pdb(lipid_id: str) -> PlainTextResponse:
+    safe = Path(lipid_id.upper()).name
+    pdb_path = _DATA_DIR / f"{safe}.pdb"
+    if not pdb_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Lipid '{lipid_id}' not in library.")
+    return PlainTextResponse(pdb_path.read_text(encoding="utf-8"))
 
 # ── Ion definitions (CHARMM36 naming) ─────────────────────────────────────────
 _ION_NAMES: dict[str, tuple[str, str]] = {
@@ -25,6 +44,7 @@ _ION_NAMES: dict[str, tuple[str, str]] = {
     "MG": ("MG",  "MG"),
     "K":  ("POT", "K "),
     "ZN": ("ZN",  "ZN"),
+    "PO4": ("PO4", "P "),
 }
 
 
@@ -107,13 +127,24 @@ def _place_peptide_replicas(
     out: list[str] = []
     serial = serial_start
 
+    # Estimate the peptide's XY footprint so stacked replicas don't overlap.
+    xs_pep = [float(ln[30:38]) for ln in peptide_lines if ln.startswith(("ATOM", "HETATM"))]
+    ys_pep = [float(ln[38:46]) for ln in peptide_lines if ln.startswith(("ATOM", "HETATM"))]
+    pep_span_x = (max(xs_pep) - min(xs_pep) + 5.0) if xs_pep else 10.0
+    pep_span_y = (max(ys_pep) - min(ys_pep) + 5.0) if ys_pep else 10.0
+
     for i in range(n_replicas):
         chain = _PEP_CHAINS[i % len(_PEP_CHAINS)]
-        if fixed_x is not None and fixed_y is not None:
-            tx = fixed_x
-            ty = fixed_y
+        # X: use fixed value if given, otherwise random in box
+        if fixed_x is not None:
+            # Spread multiple replicas linearly from the fixed anchor
+            tx = fixed_x + i * pep_span_x
         else:
             tx = rng.uniform(0.0, box_x)
+        # Y: independent of X
+        if fixed_y is not None:
+            ty = fixed_y
+        else:
             ty = rng.uniform(0.0, box_y)
         if surface == "lower":
             tz = z_min - z_gap
@@ -193,6 +224,7 @@ async def build_membrane(
     lower_counts: Optional[str] = Form(None),
     seed: int = Form(42),
     spacing: Optional[str] = Form(None),
+    box_side: Optional[str] = Form(None),
     bilayer_gap: float = Form(6.0),
     sorting: str = Form("random"),
     # Surface peptide
@@ -266,7 +298,20 @@ async def build_membrane(
 
         resolved_spacing: float
         warnings: list[str] = []
-        if spacing and spacing.strip():
+
+        # box_side (nm) overrides spacing — derive spacing from desired box size
+        if box_side and box_side.strip():
+            try:
+                bs = float(box_side)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="box_side must be a number.")
+            n_max = max(
+                sum(upper_counts_dict.values()),
+                sum(lower_counts_dict.values()) if lower_counts_dict else 1,
+            )
+            nx_max = math.ceil(math.sqrt(n_max))
+            resolved_spacing = bs / nx_max
+        elif spacing and spacing.strip():
             try:
                 resolved_spacing = float(spacing)
             except ValueError:
@@ -379,6 +424,30 @@ async def build_membrane(
 
         n_total_atoms = n_lipid_atoms + len(peptide_lines_placed) + len(ion_lines)
 
+        # Compute peptide centroid per replica for reporting
+        pep_centroids: list[dict] = []
+        if peptide_lines_placed:
+            # Group by chain to get per-replica centroids
+            from collections import defaultdict
+            chain_coords: dict[str, list] = defaultdict(list)
+            for ln in peptide_lines_placed:
+                if ln.startswith(("ATOM", "HETATM")):
+                    ch = ln[21]
+                    try:
+                        chain_coords[ch].append((float(ln[30:38]), float(ln[38:46]), float(ln[46:54])))
+                    except (ValueError, IndexError):
+                        pass
+            for ch, coords in sorted(chain_coords.items()):
+                xs_ = [c[0] for c in coords]
+                ys_ = [c[1] for c in coords]
+                zs_ = [c[2] for c in coords]
+                pep_centroids.append({
+                    "chain": ch,
+                    "x": round(sum(xs_) / len(xs_), 2),
+                    "y": round(sum(ys_) / len(ys_), 2),
+                    "z": round(sum(zs_) / len(zs_), 2),
+                })
+
         return JSONResponse({
             "pdb": final_pdb,
             "n_atoms": n_total_atoms,
@@ -391,6 +460,13 @@ async def build_membrane(
             },
             "spacing_nm": round(resolved_spacing, 4),
             "apl_a2": round(apl_a2, 2),
+            "box_x_nm": round(box_x / 10.0, 3),
+            "box_y_nm": round(box_y / 10.0, 3),
+            "pep_centroids": pep_centroids,
             "warnings": warnings,
             "topology": topology,
+            "composition": {
+                "upper": upper_counts_dict,
+                "lower": lower_counts_dict,
+            },
         })

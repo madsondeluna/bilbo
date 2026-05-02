@@ -50,6 +50,13 @@
     padding: 4px 6px; line-height: 1; border-radius: 4px; font-family: inherit;
   }
   .remove-btn:hover { color: #dc2626; background: #fff5f5; }
+  .lib-select {
+    background: #f7f7f7; border: 1px solid #e0e0e0; color: #888;
+    font-family: 'Roboto Mono', monospace; font-size: 0.75rem; padding: 10px 8px;
+    border-radius: 4px; outline: none; min-width: 90px; max-width: 110px;
+  }
+  .lib-select:focus { border-color: #bbb; }
+  .lib-select.has-selection { color: #1a1a1a; }
 
   .add-btn {
     background: none; border: 1px dashed #ddd; color: #aaa;
@@ -100,6 +107,13 @@
   .btn-upload:hover { background: #444444; }
   .btn-download { background: #059669; font-weight: normal; padding: 10px 20px; }
   .btn-download:hover { background: #047857; }
+  .btn-log { background: #6b7280; font-weight: normal; padding: 10px 20px; }
+  .btn-log:hover { background: #4b5563; }
+  .log-panel {
+    background: #1a1a1a; color: #d1d5db; border-radius: 4px;
+    padding: 16px 20px; margin-top: 12px; font-size: 0.72rem; line-height: 1.8;
+    white-space: pre; overflow-x: auto; display: none;
+  }
 
   .action-row { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
   .action-row button { flex: 1; }
@@ -137,7 +151,15 @@
   .viewer-btn:hover { background: #fff; color: #111; border-color: #bbb; }
   .viewer-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 
-  .dl-row { display: flex; gap: 8px; }
+  .dl-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .lipid-legend {
+    display: flex; flex-wrap: wrap; gap: 10px 20px;
+    margin-top: 10px; margin-bottom: 14px;
+    font-size: 0.72rem; color: #555;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
   .warn-list { margin-top: 12px; }
   .warn-item {
@@ -167,8 +189,7 @@
   </div>
   <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
   <p class="notice">
-    CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
-    <code style="display:block; overflow-x:auto; white-space:nowrap;">bilbo membrane build --upper-pdb POPC.pdb:50 --upper-pdb POPE.pdb:20 --upper-pdb DPPC.pdb:20 --upper-pdb CHOL.pdb:10 --lower-pdb POPE.pdb:40 --lower-pdb POPS.pdb:25 --lower-pdb POPG.pdb:20 --lower-pdb CL.pdb:15 --seed 42 --bilayer-gap 1.0 --output builds/asymmetric_euk</code>
+    CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
   </p>
 
   <!-- Upper leaflet -->
@@ -245,6 +266,7 @@
           <option value="K">K&#8314;</option>
           <option value="CL">Cl&#8315;</option>
           <option value="ZN">Zn&#178;&#8314;</option>
+          <option value="PO4">PO&#8324;&#179;&#8315;</option>
         </select>
       </div>
       <div class="param-field">
@@ -279,6 +301,10 @@
       <div class="param-field">
         <label>Spacing (nm)</label>
         <input type="number" id="spacing" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
+      </div>
+      <div class="param-field">
+        <label>Box side (nm)</label>
+        <input type="number" id="boxSide" placeholder="auto" step="0.5" min="1.0">
       </div>
       <div class="param-field">
         <label>Bilayer gap (Å)</label>
@@ -326,9 +352,11 @@ let peptideFile = null;
 let viewer = null;
 let currentPdb = null;
 let currentTopology = null;
+let currentBuildData = null;
 let viewMode = 'stick';
+let libraryLipids = [];
 
-// ── Server health check ────────────────────────────────────────────────────────
+// ── Server health + library init ───────────────────────────────────────────────
 (async () => {
   const dot = document.getElementById('statusDot');
   try {
@@ -339,7 +367,30 @@ let viewMode = 'stick';
   }
 })();
 
+(async () => {
+  try {
+    const r = await fetch('/api/library');
+    if (r.ok) {
+      libraryLipids = await r.json();
+      _refreshAllLibSelects();
+    }
+  } catch (_) {}
+})();
+
 // ── Lipid entry management ─────────────────────────────────────────────────────
+function _libOptions() {
+  return '<option value="">library...</option>' +
+    libraryLipids.map(n => `<option value="${n}">${n}</option>`).join('');
+}
+
+function _refreshAllLibSelects() {
+  document.querySelectorAll('.lib-select').forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = _libOptions();
+    sel.value = cur;
+  });
+}
+
 function addLipidEntry(leaflet) {
   const list = document.getElementById(leaflet + 'List');
   const idx = lipidFiles[leaflet].length;
@@ -356,10 +407,31 @@ function addLipidEntry(leaflet) {
     <span class="file-label" id="${leaflet}_label_${idx}" onclick="document.getElementById('${fileId}').click()">
       No file — click to upload .pdb
     </span>
+    <select class="lib-select" id="${leaflet}_lib_${idx}" onchange="selectFromLibrary('${leaflet}', ${idx})">${_libOptions()}</select>
     <input type="number" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids">
     <button class="remove-btn" onclick="removeLipidEntry('${leaflet}', ${idx})" title="Remove">×</button>
   `;
   list.appendChild(entry);
+}
+
+async function selectFromLibrary(leaflet, idx) {
+  const sel = document.getElementById(`${leaflet}_lib_${idx}`);
+  if (!sel || !sel.value) return;
+  const lipidId = sel.value;
+  try {
+    const r = await fetch(`/api/library/${lipidId}/pdb`);
+    if (!r.ok) throw new Error('not found');
+    const content = await r.text();
+    const file = new File([content], `${lipidId}.pdb`, { type: 'text/plain' });
+    lipidFiles[leaflet][idx] = file;
+    const label = document.getElementById(`${leaflet}_label_${idx}`);
+    label.textContent = `${lipidId}.pdb`;
+    label.classList.add('has-file');
+    sel.classList.add('has-selection');
+  } catch (e) {
+    sel.value = '';
+    alert(`Failed to load ${lipidId} from library.`);
+  }
 }
 
 function handleLipidFile(event, leaflet, idx) {
@@ -369,6 +441,8 @@ function handleLipidFile(event, leaflet, idx) {
   const label = document.getElementById(`${leaflet}_label_${idx}`);
   label.textContent = file.name;
   label.classList.add('has-file');
+  const sel = document.getElementById(`${leaflet}_lib_${idx}`);
+  if (sel) { sel.value = ''; sel.classList.remove('has-selection'); }
 }
 
 function removeLipidEntry(leaflet, idx) {
@@ -503,6 +577,14 @@ async function runBuild() {
   btn.disabled = true;
   document.getElementById('results').innerHTML = '';
 
+  // Debug: log what is being sent for peptide X/Y
+  if (peptideFile) {
+    const _px = document.getElementById('peptideX')?.value;
+    const _py = document.getElementById('peptideY')?.value;
+    console.log('[BILBO] peptide_x sent:', _px !== '' ? _px : '(not sent, using random)');
+    console.log('[BILBO] peptide_y sent:', _py !== '' ? _py : '(not sent, using random)');
+  }
+
   const fd = new FormData();
   upperEntries.forEach(e => fd.append('upper_files', e.file));
   fd.append('upper_counts', upperEntries.map(e => e.count).join(','));
@@ -516,6 +598,8 @@ async function runBuild() {
   fd.append('seed', document.getElementById('seed').value);
   const spacingVal = document.getElementById('spacing').value;
   if (spacingVal) fd.append('spacing', spacingVal);
+  const boxSideVal = document.getElementById('boxSide').value;
+  if (boxSideVal) fd.append('box_side', boxSideVal);
   fd.append('bilayer_gap', document.getElementById('bilayerGap').value);
   fd.append('sorting', document.getElementById('sorting').value);
 
@@ -550,6 +634,7 @@ async function runBuild() {
 
     currentPdb = data.pdb;
     currentTopology = data.topology;
+    currentBuildData = data;
     setStatus(`Done. ${data.n_atoms.toLocaleString()} atoms written.`, 'done');
     renderResults(data);
 
@@ -596,7 +681,19 @@ function renderResults(data) {
           <div class="stat-val">${data.n_ions}</div>
           <div class="stat-label">Ions</div>
         </div>` : ''}
+        <div class="stat">
+          <div class="stat-val" style="font-size:1rem;">${data.box_x_nm} × ${data.box_y_nm}</div>
+          <div class="stat-label">Box X × Y (nm)</div>
+        </div>
       </div>
+      ${(data.pep_centroids && data.pep_centroids.length > 0) ? `
+        <div style="margin-top:10px; font-size:0.72rem; color:#555; line-height:1.8;">
+          <span style="color:#999; text-transform:uppercase; letter-spacing:0.06em;">Peptide positions (Å)</span><br>
+          ${data.pep_centroids.map(c =>
+            `chain ${c.chain}: X=${c.x} &nbsp; Y=${c.y} &nbsp; Z=${c.z}`
+          ).join('<br>')}
+          <span style="color:#aaa; font-size:0.68rem;"> &nbsp; (box: 0–${Math.round(data.box_x_nm*10)} × 0–${Math.round(data.box_y_nm*10)} Å)</span>
+        </div>` : ''}
       ${warns ? '<div class="warn-list">' + warns + '</div>' : ''}
     </div>
 
@@ -609,6 +706,7 @@ function renderResults(data) {
         <button class="viewer-btn" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
       </div>
     </div>
+    <div class="lipid-legend" id="lipidLegend"></div>
 
     <div class="dl-row">
       <button class="btn-download" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
@@ -617,20 +715,66 @@ function renderResults(data) {
       ${data.topology ? `<button class="btn-download" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
         Download topology
       </button>` : ''}
+      <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
+    <pre class="log-panel" id="buildLogPanel"></pre>
   `;
 
   setTimeout(() => initViewer(data.pdb), 50);
 }
 
 let _pdbData = '';
+let _lipidColorMap = {};   // resn (3-char or 4-char, whichever 3Dmol uses) → color
+let _resnLegend = [];      // [{name, color}] built from raw PDB for the legend
+
+const _PALETTE = [
+  '#4f83cc', '#e07b39', '#10b981', '#a855f7', '#f43f5e',
+  '#06b6d4', '#eab308', '#f97316', '#6366f1', '#14b8a6',
+  '#84cc16', '#ec4899',
+];
+
+// Build a color map from raw PDB text, storing BOTH the 4-char and 3-char key
+// so the callback works whichever format 3Dmol stores internally.
+function _parseLipidColors(pdb) {
+  const seen = new Set();
+  _resnLegend = [];
+  const map = {};
+  for (const line of pdb.split('\n')) {
+    if (!line.startsWith('ATOM') && !line.startsWith('HETATM')) continue;
+    const ch = line[21];
+    if (ch !== 'U' && ch !== 'L') continue;
+    const full  = line.slice(17, 21).trim();  // 4-char
+    const short = line.slice(17, 20).trim();  // 3-char
+    const key = full || short;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const color = _PALETTE[_resnLegend.length % _PALETTE.length];
+    _resnLegend.push({ name: full || short, color });
+    map[full]  = color;
+    if (short && short !== full) map[short] = color;  // 3-char alias
+  }
+  return map;
+}
+
+function _renderLegend() {
+  const el = document.getElementById('lipidLegend');
+  if (!el) return;
+  const items = _resnLegend
+    .map(({ name, color }) => `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${name}</div>`)
+    .join('');
+  const pepEntry = '<div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Peptide</div>';
+  const ionEntry = '<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Ion</div>';
+  el.innerHTML = items
+    + (currentBuildData?.n_peptide_atoms > 0 ? pepEntry : '')
+    + (currentBuildData?.n_ions > 0 ? ionEntry : '');
+}
 
 function initViewer(pdb) {
   const el = document.getElementById('viewer');
   if (!el) return;
-
   _pdbData = pdb;
-
+  _lipidColorMap = _parseLipidColors(pdb);
+  _renderLegend();
   viewer = $3Dmol.createViewer(el, { backgroundColor: '#fafafa' });
   _loadModels();
   viewer.zoomTo();
@@ -640,38 +784,50 @@ function initViewer(pdb) {
 function _loadModels() {
   viewer.removeAllModels();
   viewer.addModel(_pdbData, 'pdb');
-
   _applyLipidStyle(viewMode);
 }
 
 const _PEP_CHAINS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !['I','L','U'].includes(c));
 
-function _applyLipidStyle(mode) {
-  const pepSel = (c) => ({ chain: c, model: 0 });
-  const ionSel = { chain: 'I', model: 0 };
+function _styleObj(mode, color) {
+  if (mode === 'sphere')  return { sphere: { color, scale: 0.3 } };
+  if (mode === 'line')    return { line:   { color } };
+  if (mode === 'surface') return { stick:  { color, radius: 0.15 } };
+  return                         { stick:  { color, radius: 0.2 } };
+}
 
-  if (mode === 'stick') {
-    viewer.setStyle({ chain: 'U', model: 0 }, { stick: { color: '#4f83cc', radius: 0.2 } });
-    viewer.setStyle({ chain: 'L', model: 0 }, { stick: { color: '#e07b39', radius: 0.2 } });
-    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { stick: { color: '#10b981', radius: 0.2 } }));
-    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
-  } else if (mode === 'sphere') {
-    viewer.setStyle({ chain: 'U', model: 0 }, { sphere: { color: '#4f83cc', scale: 0.3 } });
-    viewer.setStyle({ chain: 'L', model: 0 }, { sphere: { color: '#e07b39', scale: 0.3 } });
-    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { sphere: { color: '#10b981', scale: 0.3 } }));
-    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
-  } else if (mode === 'line') {
-    viewer.setStyle({ chain: 'U', model: 0 }, { line: { color: '#4f83cc' } });
-    viewer.setStyle({ chain: 'L', model: 0 }, { line: { color: '#e07b39' } });
-    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { line: { color: '#10b981' } }));
-    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
-  } else if (mode === 'surface') {
-    viewer.setStyle({ chain: 'U', model: 0 }, { stick: { color: '#4f83cc', radius: 0.15 } });
-    viewer.setStyle({ chain: 'L', model: 0 }, { stick: { color: '#e07b39', radius: 0.15 } });
-    _PEP_CHAINS.forEach(c => viewer.setStyle(pepSel(c), { stick: { color: '#10b981', radius: 0.15 } }));
-    viewer.setStyle(ionSel, { sphere: { color: '#f59e0b', scale: 0.6 } });
-    viewer.addSurface('VDW', { opacity: 0.5, color: '#4f83cc' }, { chain: 'U', model: 0 });
-    viewer.addSurface('VDW', { opacity: 0.5, color: '#e07b39' }, { chain: 'L', model: 0 });
+function _applyLipidStyle(mode) {
+  // Layer 1: color whole chain (always works, keeps atoms visible).
+  // Use first species color for U, second for L when only one species exists;
+  // otherwise use neutral colors as base that get overridden below.
+  const col0 = _resnLegend[0]?.color || '#4f83cc';
+  const col1 = _resnLegend[1]?.color || '#e07b39';
+  viewer.setStyle({ chain: 'U', model: 0 }, _styleObj(mode, col0));
+  viewer.setStyle({ chain: 'L', model: 0 }, _styleObj(mode, col1 !== col0 ? col1 : col0));
+
+  // Layer 2: override per species using resn selector.
+  // 3Dmol reads 3 chars of resn from PDB (cols 17-19, 0-indexed).
+  // We try both the 4-char name and its 3-char prefix. The last winning call
+  // for a given atom is the one rendered, so we call 4-char last.
+  for (const { name, color } of _resnLegend) {
+    const short = name.slice(0, 3);
+    viewer.setStyle({ resn: short, chain: 'U', model: 0 }, _styleObj(mode, color));
+    viewer.setStyle({ resn: short, chain: 'L', model: 0 }, _styleObj(mode, color));
+    if (name !== short) {
+      viewer.setStyle({ resn: name, chain: 'U', model: 0 }, _styleObj(mode, color));
+      viewer.setStyle({ resn: name, chain: 'L', model: 0 }, _styleObj(mode, color));
+    }
+  }
+
+  // Peptide chains
+  _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, '#10b981')));
+
+  // Ions: always spheres regardless of mode
+  viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: '#f59e0b', scale: 0.6 } });
+
+  if (mode === 'surface') {
+    viewer.addSurface('VDW', { opacity: 0.45, color: col0 }, { chain: 'U', model: 0 });
+    viewer.addSurface('VDW', { opacity: 0.45, color: col1 }, { chain: 'L', model: 0 });
   }
 }
 
@@ -712,6 +868,59 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function formatBuildLog(data) {
+  const ts = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  const comp = data.composition || {};
+  const upper = comp.upper || {};
+  const lower = comp.lower || {};
+  const fmtComp = (obj) => Object.entries(obj).map(([k, v]) => `  ${k}: ${v}`).join('\n') || '  (none)';
+  let log = `BILBO build log — ${ts}\n`;
+  log += `${'='.repeat(50)}\n\n`;
+  log += `Composition\n`;
+  log += `  Upper leaflet:\n${fmtComp(upper)}\n`;
+  log += `  Lower leaflet:\n${fmtComp(lower)}\n\n`;
+  log += `Dimensions\n`;
+  log += `  Box X: ${data.box_x_nm ?? 'n/a'} nm\n`;
+  log += `  Box Y: ${data.box_y_nm ?? 'n/a'} nm\n`;
+  log += `  Spacing: ${data.spacing_nm} nm\n`;
+  log += `  APL: ${data.apl_a2} Ang^2\n`;
+  log += `  Bilayer gap: ${document.getElementById('bilayerGap')?.value ?? 'n/a'} A\n\n`;
+  log += `Atoms\n`;
+  log += `  Total: ${data.n_atoms}\n`;
+  log += `  Lipid: ${data.n_lipid_atoms}\n`;
+  log += `  Peptide: ${data.n_peptide_atoms}\n`;
+  log += `  Ions: ${data.n_ions}\n\n`;
+  if (data.n_peptide_atoms > 0) {
+    log += `Peptide\n`;
+    log += `  Replicas: ${document.getElementById('peptideReplicas')?.value ?? 'n/a'}\n`;
+    log += `  Surface: ${document.getElementById('peptideSurface')?.value ?? 'n/a'}\n`;
+    log += `  Z gap: ${document.getElementById('peptideZGap')?.value ?? 'n/a'} A\n\n`;
+  }
+  if (data.n_ions > 0) {
+    log += `Ions\n`;
+    log += `  Type: ${document.getElementById('ionType')?.value ?? 'n/a'}\n`;
+    log += `  Count: ${data.n_ions}\n`;
+    log += `  Surface: ${document.getElementById('ionSurface')?.value ?? 'n/a'}\n\n`;
+  }
+  if (data.warnings && data.warnings.length > 0) {
+    log += `Warnings\n`;
+    data.warnings.forEach(w => { log += `  ! ${w}\n`; });
+    log += '\n';
+  }
+  return log;
+}
+
+function toggleBuildLog() {
+  const panel = document.getElementById('buildLogPanel');
+  if (!panel) return;
+  if (panel.style.display === 'none' || !panel.style.display) {
+    panel.textContent = formatBuildLog(currentBuildData);
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
 function clearAll(resetStatus = true) {
   lipidFiles.upper = [];
   lipidFiles.lower = [];
@@ -723,6 +932,7 @@ function clearAll(resetStatus = true) {
   document.getElementById('results').innerHTML = '';
   currentPdb = null;
   currentTopology = null;
+  currentBuildData = null;
   viewer = null;
   if (resetStatus) setStatus('', '');
 }
