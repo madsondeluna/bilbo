@@ -59,7 +59,7 @@ app = typer.Typer(
     rich_markup_mode="rich",
     no_args_is_help=False,
     add_completion=False,
-    context_settings={"max_content_width": 88, "help_option_names": []},
+    context_settings={"max_content_width": 88},
 )
 
 lipid_app    = typer.Typer(help="Lipid library management",      add_completion=False)
@@ -161,25 +161,9 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _help_callback(ctx: typer.Context, param: typer.CallbackParam, value: bool) -> None:
-    if value and not ctx.resilient_parsing:
-        lines = ctx.get_help().splitlines()
-        start = next((i for i, ln in enumerate(lines) if ln.strip().startswith("╭")), 0)
-        typer.echo("\n".join(lines[start:]).rstrip())
-        raise typer.Exit()
-
-
 @app.callback(invoke_without_command=True)
 def _main(
     ctx: typer.Context,
-    help: Optional[bool] = typer.Option(
-        None, "--help", "-h",
-        is_eager=True,
-        expose_value=False,
-        is_flag=True,
-        hidden=True,
-        callback=_help_callback,
-    ),
     version: Optional[bool] = typer.Option(
         None, "--version", "-v",
         callback=_version_callback,
@@ -189,38 +173,70 @@ def _main(
 ) -> None:
     _bootstrap_if_empty()
     if ctx.invoked_subcommand is None:
-        _bilbo_banner()
         _interactive_menu(ctx)
         raise typer.Exit()
 
 
+def _print_top_help() -> None:
+    import io
+    import click
+    from contextlib import redirect_stdout
+    from typer.main import get_group
+
+    grp = get_group(app)
+    ctx = click.Context(grp, info_name="bilbo")
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        ctx.get_help()
+    raw = buf.getvalue()
+
+    desc = (app.info.help or "").strip()
+    lines = raw.splitlines()
+    filtered: list[str] = []
+    skip_section = False
+    for ln in lines:
+        s = ln.strip()
+        if s.startswith("Usage:") or (desc and s == desc):
+            continue
+        if s.startswith("╭─ Options") or s.startswith("+-"):
+            skip_section = True
+        if skip_section:
+            if s.startswith("╰") or s.startswith("+-"):
+                skip_section = False
+            continue
+        filtered.append(ln)
+    while filtered and not filtered[0].strip():
+        filtered.pop(0)
+    typer.echo("\n".join(filtered).rstrip())
+
+
 def main() -> None:
+    import sys
     _bilbo_banner()
+    if sys.argv[1:] in (["--help"], ["-h"]):
+        _print_top_help()
+        raise SystemExit(0)
     app(standalone_mode=True)
 
 
 def _run_bilbo(args: list[str]) -> None:
-    import shutil
-    import subprocess
-    bilbo = shutil.which("bilbo")
-    if bilbo:
-        subprocess.run([bilbo] + args)
-    else:
-        import sys
-        subprocess.run([sys.executable, "-m", "bilbo.cli"] + args)
+    try:
+        app(args, standalone_mode=True)
+    except SystemExit:
+        pass
 
 
 def _interactive_menu(ctx: typer.Context) -> None:
     import sys
 
     if not sys.stdin.isatty():
-        console.print(ctx.get_help())
+        _print_top_help()
         return
 
     try:
         import questionary
     except ModuleNotFoundError:
-        console.print(ctx.get_help())
+        _print_top_help()
         return
 
     style = _menu_style()
