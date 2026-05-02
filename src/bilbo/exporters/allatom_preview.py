@@ -1,6 +1,10 @@
 """Export all-atom membrane preview by tiling lipid PDB templates."""
 
+import math
+import random
 from pathlib import Path
+
+import numpy as np
 
 from bilbo.builders.leaflet_layout import LeafletLayout
 
@@ -29,29 +33,43 @@ def _template_z_tail(atom_lines: list[str]) -> float:
     return min(float(line[46:54]) for line in atom_lines)
 
 
+def _template_xy_centroid(atom_lines: list[str]) -> tuple[float, float]:
+    """Return the mean XY position of all template atoms."""
+    xs = [float(line[30:38]) for line in atom_lines]
+    ys = [float(line[38:46]) for line in atom_lines]
+    return sum(xs) / len(xs), sum(ys) / len(ys)
+
+
 def _place_atoms(
     atom_lines: list[str],
-    dx: float,
-    dy: float,
+    cx: float,
+    cy: float,
+    centroid_x: float,
+    centroid_y: float,
+    theta: float,
     z_flip: float,
     chain: str,
     resseq: int,
     z_tail: float,
     z_half_gap: float = _Z_TAIL,
 ) -> list[str]:
-    """Translate x/y and place lipid relative to bilayer center.
+    """Rotate each lipid azimuthally around Z, then translate to (cx, cy).
 
-    Normalizes z so the tail end (z_tail = template z_min) lands at
-    +z_half_gap for the upper leaflet and -z_half_gap for the lower leaflet.
-    This guarantees a 2*z_half_gap gap at the bilayer center regardless of
-    the individual chain length, preventing atomic clashes between leaflets.
-    Headgroups extend outward from the bilayer center in both leaflets.
+    Each atom is shifted relative to the template XY centroid, rotated by
+    theta around the membrane normal (Z axis), and placed so the centroid
+    lands at (cx, cy). Z is normalized so the tail end sits at z_half_gap
+    from the bilayer center, with z_flip = +1 for upper and -1 for lower.
     """
+    cos_t = math.cos(theta)
+    sin_t = math.sin(theta)
     out = []
     for line in atom_lines:
-        x = float(line[30:38]) + dx
-        y = float(line[38:46]) + dy
-        z_norm = float(line[46:54]) - z_tail + z_half_gap
+        x0 = float(line[30:38]) - centroid_x
+        y0 = float(line[38:46]) - centroid_y
+        z0 = float(line[46:54])
+        x = cos_t * x0 - sin_t * y0 + cx
+        y = sin_t * x0 + cos_t * y0 + cy
+        z_norm = z0 - z_tail + z_half_gap
         z = z_flip * z_norm
         record = (
             line[:21]
@@ -65,22 +83,93 @@ def _place_atoms(
     return out
 
 
+def _check_inter_species_clashes(
+    all_lines: list[str],
+    resid_to_lipid: dict[int, str],
+    threshold: float,
+) -> list[str]:
+    """Detect inter-species atom clashes and return warning strings.
+
+    Uses a 3D bounding-box pre-filter (correctly separates the two leaflets
+    whose Z ranges are non-overlapping) before doing full pairwise checks
+    only on candidate residue pairs.
+    """
+    if len(all_lines) < 2:
+        return []
+
+    from collections import defaultdict
+
+    res_coords: dict[int, list] = defaultdict(list)
+    for line in all_lines:
+        resid = int(line[22:26])
+        x = float(line[30:38])
+        y = float(line[38:46])
+        z = float(line[46:54])
+        res_coords[resid].append([x, y, z])
+
+    res_ids = sorted(res_coords.keys())
+    res_arrays = {r: np.array(v) for r, v in res_coords.items()}
+    res_mins = {r: a.min(axis=0) for r, a in res_arrays.items()}
+    res_maxs = {r: a.max(axis=0) for r, a in res_arrays.items()}
+
+    clash_pairs: list[tuple[int, int, str, str, float]] = []
+    for i, r1 in enumerate(res_ids):
+        l1 = resid_to_lipid.get(r1, "")
+        mn1, mx1 = res_mins[r1], res_maxs[r1]
+        for r2 in res_ids[i + 1:]:
+            l2 = resid_to_lipid.get(r2, "")
+            if l1 == l2:
+                continue
+            mn2, mx2 = res_mins[r2], res_maxs[r2]
+            if (
+                mx1[0] + threshold < mn2[0] or mx2[0] + threshold < mn1[0]
+                or mx1[1] + threshold < mn2[1] or mx2[1] + threshold < mn1[1]
+                or mx1[2] + threshold < mn2[2] or mx2[2] + threshold < mn1[2]
+            ):
+                continue
+            diff = res_arrays[r1][:, None, :] - res_arrays[r2][None, :, :]
+            dists = np.sqrt((diff ** 2).sum(axis=-1))
+            min_d = float(dists.min())
+            if min_d < threshold:
+                clash_pairs.append((r1, r2, l1, l2, min_d))
+
+    if not clash_pairs:
+        return []
+
+    details = [
+        f"  residue {r1} ({l1}) -- residue {r2} ({l2}): {d:.2f} A"
+        for r1, r2, l1, l2, d in clash_pairs[:5]
+    ]
+    suffix = f" (showing first {min(5, len(clash_pairs))})" if len(clash_pairs) > 1 else ""
+    summary = (
+        f"{len(clash_pairs)} inter-species clash(es) detected "
+        f"(threshold {threshold:.1f} A){suffix}. "
+        "Run energy minimization before simulation."
+    )
+    return [summary] + details
+
+
 def write_allatom_preview(
     layouts: dict[str, LeafletLayout],
     templates_dir: Path,
     output_path: Path,
     z_half_gap: float = _Z_TAIL,
     template_index: dict[str, Path] | None = None,
-) -> int:
+    seed: int = 42,
+    clash_threshold: float = 2.0,
+) -> tuple[int, list[str]]:
     """Tile lipid PDB templates across the leaflet grid.
 
-    Each template is normalized so its headgroup (maximum z atom) is placed
-    outward from z = 0 (bilayer center). Tails land at ±z_half_gap.
+    Each lipid is centered by its template XY centroid and given a random
+    azimuthal rotation around the membrane normal (Z). The rotation seed is
+    drawn from `seed` so builds are reproducible.
 
-    Pass template_index to bypass the directory scan (used by membrane build).
-    Returns total number of ATOM records written.
+    Returns (n_atoms_written, warnings). warnings contains inter-species
+    clash messages when atoms from different lipid types are closer than
+    clash_threshold Angstroms.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    rng = random.Random(seed)
 
     if template_index is None:
         template_index = {
@@ -88,24 +177,28 @@ def write_allatom_preview(
             for p in sorted(templates_dir.glob("*.pdb"))
             if not p.name.startswith("._")
         }
-    template_cache: dict[str, tuple[list[str], float]] = {}
+
+    # cache: lipid_id -> (lines, z_tail, centroid_x, centroid_y)
+    template_cache: dict[str, tuple[list[str], float, float, float]] = {}
     missing: set[str] = set()
 
-    def _get_template(lipid_id: str) -> tuple[list[str], float] | None:
+    def _get_template(lipid_id: str) -> tuple[list[str], float, float, float] | None:
         key = lipid_id.upper()
         if key in template_cache:
             return template_cache[key]
         if key in template_index:
             lines = _load_template(template_index[key])
             z_tail = _template_z_tail(lines)
-            template_cache[key] = (lines, z_tail)
-            return (lines, z_tail)
+            cx, cy = _template_xy_centroid(lines)
+            template_cache[key] = (lines, z_tail, cx, cy)
+            return (lines, z_tail, cx, cy)
         missing.add(lipid_id)
         return None
 
     serial = 1
     resseq = 1
     all_lines: list[str] = []
+    resid_to_lipid: dict[int, str] = {}
 
     for leaflet_name in ("upper", "lower"):
         if leaflet_name not in layouts:
@@ -118,24 +211,20 @@ def write_allatom_preview(
             result = _get_template(pos.lipid_id)
             if result is None:
                 continue
-            tmpl, z_tail = result
-            # center x/y on the grid position (nm -> Angstrom)
-            cx = pos.x * 10.0
-            cy = pos.y * 10.0
-            first = tmpl[0]
-            tx0 = float(first[30:38])
-            ty0 = float(first[38:46])
-            dx = cx - tx0
-            dy = cy - ty0
+            tmpl, z_tail, cent_x, cent_y = result
+            theta = rng.uniform(0.0, 2.0 * math.pi)
+            grid_x = pos.x * 10.0  # nm -> Angstrom
+            grid_y = pos.y * 10.0
 
-            placed = _place_atoms(tmpl, dx, dy, z_flip, chain, resseq, z_tail, z_half_gap)
+            placed = _place_atoms(
+                tmpl, grid_x, grid_y, cent_x, cent_y,
+                theta, z_flip, chain, resseq, z_tail, z_half_gap,
+            )
             all_lines.extend(placed)
+            resid_to_lipid[resseq] = pos.lipid_id.upper()
             resseq += 1
 
-    # Compute box dimensions for CRYST1 record.
-    # X/Y: take the maximum extent across all leaflets so that an asymmetric
-    # build (different lipid counts per leaflet) is fully contained.
-    # Z: actual atom extent plus 10 A buffer on each side.
+    # Compute box dimensions.
     box_x = max(lay.box_x() for lay in layouts.values()) * 10.0  # nm -> Angstrom
     box_y = max(lay.box_y() for lay in layouts.values()) * 10.0
     if all_lines:
@@ -144,11 +233,15 @@ def write_allatom_preview(
     else:
         box_z = 80.0
 
+    warnings = _check_inter_species_clashes(all_lines, resid_to_lipid, clash_threshold)
+
     with output_path.open("w", encoding="utf-8") as fh:
         fh.write("REMARK Generated by BILBO (all-atom preview, visual inspection only).\n")
         fh.write("REMARK Not suitable for molecular dynamics simulation without further preparation.\n")
         if missing:
             fh.write(f"REMARK Missing templates (skipped): {', '.join(sorted(missing))}\n")
+        if warnings:
+            fh.write(f"REMARK {warnings[0]}\n")
         fh.write(
             f"CRYST1{box_x:9.3f}{box_y:9.3f}{box_z:9.3f}"
             f"  90.00  90.00  90.00 P 1           1\n"
@@ -158,4 +251,4 @@ def write_allatom_preview(
             fh.write(record)
         fh.write("END\n")
 
-    return len(all_lines)
+    return len(all_lines), warnings

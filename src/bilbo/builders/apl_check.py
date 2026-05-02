@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from bilbo.models.preset import MembranePreset
 
 # Reference area per lipid (A^2) at 303 K, liquid-crystalline (La) phase.
@@ -27,6 +29,28 @@ APL_REFERENCE: dict[str, float] = {
 }
 
 _MISMATCH_WARN_PCT = 10.0
+
+
+def weighted_spacing(
+    counts_by_leaflet: dict[str, dict[str, int]],
+) -> float | None:
+    """Return grid spacing (nm) from composition-weighted mean APL.
+
+    Returns None when any lipid species is absent from APL_REFERENCE.
+    Spacing = sqrt(mean_APL) converted from Angstroms to nm.
+    """
+    total_n = 0
+    total_apl = 0.0
+    for counts in counts_by_leaflet.values():
+        for lid, n in counts.items():
+            apl = APL_REFERENCE.get(lid.upper())
+            if apl is None:
+                return None
+            total_n += n
+            total_apl += n * apl
+    if total_n == 0:
+        return None
+    return math.sqrt(total_apl / total_n) / 10.0  # A -> nm
 
 
 def check_apl_balance(preset: MembranePreset, lipids_per_leaflet: int) -> list[str]:

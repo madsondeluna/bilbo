@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from sqlmodel import Session
 
-from bilbo.builders.apl_check import check_apl_balance
+from bilbo.builders.apl_check import check_apl_balance, weighted_spacing
 from bilbo.builders.composition_expander import expand_composition
 from bilbo.builders.leaflet_layout import LeafletLayout, build_leaflet_layout, save_leaflet_csv
 from bilbo.builders.peptide_placer import place_peptide
@@ -1084,7 +1084,7 @@ def membrane_build(
     output: Path = typer.Option(..., "--output"),
     ff_dir: str = typer.Option("charmm36.ff", "--ff-dir", help="GROMACS force-field directory name (e.g. charmm36-jul2022.ff)."),
     allatom_dir: Path = typer.Option(None, "--allatom-dir", help="Directory with CHARMM-GUI PDB templates."),
-    spacing: float = typer.Option(0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."),
+    spacing: Optional[float] = typer.Option(None, "--spacing", help="Grid spacing in nm. Defaults to APL-weighted spacing from reference data."),
     bilayer_gap: float = typer.Option(6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."),
 ):
     """Build a membrane preview from a named preset in the local library."""
@@ -1133,7 +1133,19 @@ def membrane_build(
                 template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
 
     expanded = expand_composition(p, lipids_per_leaflet)
-    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
+    counts_by_leaflet = {ec.leaflet: ec.counts for ec in expanded}
+    if spacing is not None:
+        resolved_spacing = spacing
+    else:
+        resolved_spacing = weighted_spacing(counts_by_leaflet)
+        if resolved_spacing is None:
+            console.print(
+                "[yellow]APL reference missing for one or more species; using default spacing 0.7 nm.[/yellow]"
+            )
+            resolved_spacing = 0.7
+        else:
+            console.print(f"[dim]APL-weighted grid spacing: {resolved_spacing:.3f} nm[/dim]")
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=resolved_spacing)
 
     output.mkdir(parents=True, exist_ok=True)
 
@@ -1170,12 +1182,16 @@ def membrane_build(
     pdbs = [pdb for pdb in tmpl_dir.glob("*.pdb") if not pdb.name.startswith("._")] if tmpl_dir.exists() else []
     if pdbs:
         aa_out = output / "preview_allatom.pdb"
-        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2)
+        n_atoms, clash_warns = write_allatom_preview(
+            layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2, seed=seed
+        )
         found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
         if missing:
             console.print(f"[yellow]  No template for: {', '.join(missing)} -- skipped.[/yellow]")
+        for w in clash_warns:
+            console.print(f"[yellow]  {w}[/yellow]")
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
@@ -1232,7 +1248,7 @@ def membrane_compose(
     output: Path = typer.Option(..., "--output"),
     allatom_dir: Path = typer.Option(None, "--allatom-dir", help="Custom directory for all-atom PDB templates (overrides default data/examples/charmm_gui/)."),
     ff_dir: str = typer.Option("charmm36.ff", "--ff-dir", help="GROMACS force-field directory name (e.g. charmm36-jul2022.ff)."),
-    spacing: float = typer.Option(0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."),
+    spacing: Optional[float] = typer.Option(None, "--spacing", help="Grid spacing in nm. Defaults to APL-weighted spacing from reference data."),
     bilayer_gap: float = typer.Option(6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."),
 ) -> None:
     """Build a membrane from a direct lipid composition — no preset file required.
@@ -1310,7 +1326,19 @@ def membrane_compose(
                 template_hashes[pdb.name] = hashlib.sha256(pdb.read_bytes()).hexdigest()
 
     expanded = expand_composition(preset_obj, lipids_per_leaflet)
-    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
+    counts_by_leaflet = {ec.leaflet: ec.counts for ec in expanded}
+    if spacing is not None:
+        resolved_spacing = spacing
+    else:
+        resolved_spacing = weighted_spacing(counts_by_leaflet)
+        if resolved_spacing is None:
+            console.print(
+                "[yellow]APL reference missing for one or more species; using default spacing 0.7 nm.[/yellow]"
+            )
+            resolved_spacing = 0.7
+        else:
+            console.print(f"[dim]APL-weighted grid spacing: {resolved_spacing:.3f} nm[/dim]")
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=resolved_spacing)
 
     output.mkdir(parents=True, exist_ok=True)
 
@@ -1349,12 +1377,16 @@ def membrane_compose(
         console.print(f"[yellow]No all-atom templates found in {tmpl_dir}[/yellow]")
     else:
         aa_out = output / "preview_allatom.pdb"
-        n_atoms = write_allatom_preview(layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2)
+        n_atoms, clash_warns = write_allatom_preview(
+            layouts, tmpl_dir, aa_out, z_half_gap=bilayer_gap / 2, seed=seed
+        )
         found = {pdb.stem.upper() for pdb in pdbs}
         missing = [lid for lid in all_lipid_ids if lid.upper() not in found]
         console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
         if missing:
             console.print(f"[yellow]  No template for: {', '.join(missing)} -- skipped.[/yellow]")
+        for w in clash_warns:
+            console.print(f"[yellow]  {w}[/yellow]")
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
@@ -1421,8 +1453,8 @@ def membrane_from_pdb(
     ),
     seed: int = typer.Option(42, "--seed", help="Random seed for lipid placement."),
     sorting: str = typer.Option("random", "--sorting", help="Sorting mode: random or domain_enriched."),
-    spacing: float = typer.Option(
-        0.7, "--spacing", help="Lateral distance between lipid centers in the monolayer grid (nm)."
+    spacing: Optional[float] = typer.Option(
+        None, "--spacing", help="Grid spacing in nm. Defaults to APL-weighted spacing from reference data."
     ),
     bilayer_gap: float = typer.Option(
         6.0, "--bilayer-gap", help="Total gap at the bilayer center between the two monolayers (Angstrom)."
@@ -1472,29 +1504,40 @@ def membrane_from_pdb(
     upper_total = sum(upper_counts.values())
     lower_total = sum(lower_counts.values())
 
+    expanded = [
+        ExpandedComposition(leaflet="upper", counts=upper_counts, rounding_errors={}),
+        ExpandedComposition(leaflet="lower", counts=lower_counts, rounding_errors={}),
+    ]
+    counts_by_leaflet = {"upper": upper_counts, "lower": lower_counts}
+    if spacing is not None:
+        resolved_spacing = spacing
+    else:
+        resolved_spacing = weighted_spacing(counts_by_leaflet)
+        if resolved_spacing is None:
+            console.print(
+                "[yellow]APL reference missing for one or more species; using default spacing 0.7 nm.[/yellow]"
+            )
+            resolved_spacing = 0.7
+        else:
+            console.print(f"[dim]APL-weighted grid spacing: {resolved_spacing:.3f} nm[/dim]")
     # APL plausibility check. spacing² (nm² -> Å²) should be within the
     # physiologically observed range for phospholipid bilayers (~35-80 Å²;
     # Kucerka et al. Biophys J 2011). Values outside that range indicate a
     # spacing parameter that will produce physically unreasonable structures.
-    apl_angstrom2 = (spacing * 10.0) ** 2
+    apl_angstrom2 = (resolved_spacing * 10.0) ** 2
     if apl_angstrom2 < 35.0:
         console.print(
-            f"[yellow]Warning: --spacing {spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
+            f"[yellow]Warning: --spacing {resolved_spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
             "below the physiological minimum (~35 A^2 for phospholipids). "
             "Lipids will overlap severely.[/yellow]"
         )
     elif apl_angstrom2 > 80.0:
         console.print(
-            f"[yellow]Warning: --spacing {spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
+            f"[yellow]Warning: --spacing {resolved_spacing} nm gives an APL of {apl_angstrom2:.1f} A^2, "
             "above the physiological maximum (~80 A^2 for phospholipids). "
             "The bilayer will have unrealistically large inter-lipid gaps.[/yellow]"
         )
-
-    expanded = [
-        ExpandedComposition(leaflet="upper", counts=upper_counts, rounding_errors={}),
-        ExpandedComposition(leaflet="lower", counts=lower_counts, rounding_errors={}),
-    ]
-    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=spacing)
+    layouts = build_leaflet_layout(expanded, sorting, seed, spacing=resolved_spacing)
 
     output.mkdir(parents=True, exist_ok=True)
     generated_files: list[str] = []
@@ -1530,17 +1573,20 @@ def membrane_from_pdb(
     )
 
     aa_out = output / "preview_allatom.pdb"
-    n_atoms = write_allatom_preview(
+    n_atoms, clash_warns = write_allatom_preview(
         layouts,
         output,
         aa_out,
         z_half_gap=bilayer_gap / 2,
         template_index=template_index,
+        seed=seed,
     )
     generated_files.append("preview_allatom.pdb")
     report.generated_files = generated_files
 
     console.print(f"[green]All-atom preview: {aa_out} ({n_atoms} atoms)[/green]")
+    for w in clash_warns:
+        console.print(f"[yellow]  {w}[/yellow]")
 
     write_manifest(
         output,
@@ -1888,10 +1934,12 @@ def export_allatom(
         console.print(f"[red]No PDB templates found in {templates_dir}[/red]")
         console.print("Download lipid PDB files from CHARMM-GUI and place them there.")
         raise typer.Exit(1)
-    layouts, _ = _require_build(build_dir)
+    layouts, report = _require_build(build_dir)
     out = build_dir / "preview_allatom.pdb"
-    n = write_allatom_preview(layouts, templates_dir, out)
+    n, clash_warns = write_allatom_preview(layouts, templates_dir, out, seed=report.seed)
     console.print(f"[green]Written: {out} ({n} atoms)[/green]")
+    for w in clash_warns:
+        console.print(f"[yellow]  {w}[/yellow]")
 
 
 @export_app.command("manifest")
