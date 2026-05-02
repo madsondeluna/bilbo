@@ -368,33 +368,45 @@ function makeLipidPdb(resName, nAtoms = 12, x0 = 0.0) {
 
 // ── Example loader ─────────────────────────────────────────────────────────────
 async function loadExample() {
-  let dppcContent;
-  try {
-    const resp = await fetch('/static/examples/DPPC.pdb');
-    if (!resp.ok) throw new Error('fetch failed');
-    dppcContent = await resp.text();
-  } catch (_) {
-    dppcContent = makeLipidPdb('DPPC', 12, 0.0);
-  }
+  const fetchPdb = async (name, fallbackRes, fallbackN) => {
+    try {
+      const r = await fetch(`/static/examples/${name}.pdb`);
+      if (!r.ok) throw new Error();
+      return await r.text();
+    } catch (_) {
+      return makeLipidPdb(fallbackRes, fallbackN, 0.0);
+    }
+  };
+
+  const [dppcContent, cholContent] = await Promise.all([
+    fetchPdb('DPPC', 'DPPC', 12),
+    fetchPdb('CHL1', 'CHL1', 12),
+  ]);
 
   const toFile = (content, name) => new File([content], name, { type: 'text/plain' });
-  const dppcFile = toFile(dppcContent, 'DPPC.pdb');
 
   clearAll(false);
   addLipidEntry('upper');
+  addLipidEntry('upper');
 
-  lipidFiles.upper[0] = dppcFile;
+  lipidFiles.upper[0] = toFile(dppcContent, 'DPPC.pdb');
   const l0 = document.getElementById('upper_label_0');
   if (l0) { l0.textContent = 'DPPC.pdb'; l0.classList.add('has-file'); }
   const c0 = document.getElementById('upper_count_0');
-  if (c0) c0.value = 72;
+  if (c0) c0.value = 54;
+
+  lipidFiles.upper[1] = toFile(cholContent, 'CHL1.pdb');
+  const l1 = document.getElementById('upper_label_1');
+  if (l1) { l1.textContent = 'CHL1.pdb'; l1.classList.add('has-file'); }
+  const c1 = document.getElementById('upper_count_1');
+  if (c1) c1.value = 18;
 
   document.getElementById('seed').value = 42;
   document.getElementById('bilayerGap').value = 6.0;
   document.getElementById('symCheck').checked = true;
   toggleSymmetric();
 
-  setStatus('Example loaded. Click Build to generate the membrane.', 'done');
+  setStatus('Example loaded (DPPC:CHL1 3:1). Click Build to generate the membrane.', 'done');
 }
 
 // ── Build ──────────────────────────────────────────────────────────────────────
