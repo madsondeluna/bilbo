@@ -263,7 +263,7 @@ def write_allatom_preview(
             f"  90.00  90.00  90.00 P 1           1\n"
         )
         for i, line in enumerate(all_lines):
-            record = f"{line[:6]}{serial + i:5d}{line[11:]}\n"
+            record = f"{line[:6]}{(serial + i) % 100000:5d}{line[11:]}\n"
             fh.write(record)
         fh.write("END\n")
 

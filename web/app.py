@@ -47,6 +47,10 @@ _ION_NAMES: dict[str, tuple[str, str]] = {
     "PO4": ("PO4", "P "),
 }
 
+# Z separation (Å) between P atom and counter-ion along membrane normal.
+# Approximates the Stern layer distance for Na+–phosphate coordination.
+_ION_HEADGROUP_Z_SEP: float = 3.0
+
 # Formal charges (e) for common CHARMM36 lipids
 _LIPID_CHARGES: dict[str, int] = {
     "POPC": 0, "POPE": 0, "POPG": -1, "POPS": -1,
@@ -54,6 +58,10 @@ _LIPID_CHARGES: dict[str, int] = {
     "CHOL": 0, "CHL1": 0, "BSM": 0, "SM": 0, "SAPI": -1,
     "CL": -2, "CARD": -2, "PI": -1, "PA": -1, "PG": -1, "PS": -1,
 }
+
+_ANIONIC_RESNAMES: frozenset[str] = frozenset(
+    name for name, chg in _LIPID_CHARGES.items() if chg < 0
+)
 
 # Bond length (Å), H-O-H half-angle (deg), has virtual M-site, M-site offset (Å)
 _WATER_GEOM: dict[str, tuple[float, float, bool, float]] = {
@@ -138,7 +146,7 @@ def _translate_replica(
         res_name  = ln[17:21] if len(ln) > 21 else "LIP "
         tail      = ln[54:] if len(ln) > 54 else "  1.00  0.00"
         new_ln = (
-            f"{rec}{serial:5d} {atom_name}{alt_loc}{res_name}{chain}{new_res:4d}"
+            f"{rec}{serial % 100000:5d} {atom_name}{alt_loc}{res_name}{chain}{new_res % 10000:4d}"
             + (ln[26:30] if len(ln) > 30 else "    ")
             + f"{x:8.3f}{y:8.3f}{z:8.3f}"
             + tail
@@ -211,48 +219,81 @@ def _place_peptide_replicas(
     return out
 
 
+def _collect_anionic_sites(
+    pdb_lines: list[str],
+) -> tuple[list[tuple[float, float, float]], list[tuple[float, float, float]]]:
+    """Return (upper_sites, lower_sites): P-atom XYZ for anionic lipid residues.
+
+    Upper leaflet uses chain U; lower uses chain L.
+    """
+    upper: list[tuple[float, float, float]] = []
+    lower: list[tuple[float, float, float]] = []
+    for ln in pdb_lines:
+        if not ln.startswith(("ATOM", "HETATM")):
+            continue
+        if ln[12:16].strip() != "P":
+            continue
+        resname = ln[17:21].strip().upper()
+        if resname not in _ANIONIC_RESNAMES:
+            continue
+        chain = ln[21] if len(ln) > 21 else " "
+        try:
+            x, y, z = float(ln[30:38]), float(ln[38:46]), float(ln[46:54])
+        except ValueError:
+            continue
+        if chain == "U":
+            upper.append((x, y, z))
+        elif chain == "L":
+            lower.append((x, y, z))
+    return upper, lower
+
+
 def _make_ion_records(
     ion_type: str,
-    count: int,
+    sites_upper: list[tuple[float, float, float]],
+    sites_lower: list[tuple[float, float, float]],
     surface: str,
-    z_offset: float,
-    z_max: float,
-    z_min: float,
-    box_x: float,
-    box_y: float,
     serial_start: int,
     seed: int,
 ) -> list[str]:
-    if ion_type not in _ION_NAMES or count < 1:
+    """Place one counter-ion per anionic headgroup P atom.
+
+    Ions are offset _ION_HEADGROUP_Z_SEP Å along the membrane normal (away
+    from the bilayer center) so they sit in the Stern layer rather than
+    overlapping the phosphate.
+    """
+    if ion_type not in _ION_NAMES:
         return []
 
     res_name, atom_name = _ION_NAMES[ion_type]
     rng = _random.Random(seed + 2000)
-    out: list[str] = []
-    serial = serial_start
-    resseq = 1
+
+    if surface == "upper":
+        sites = [(x, y, z + _ION_HEADGROUP_Z_SEP) for x, y, z in sites_upper]
+    elif surface == "lower":
+        sites = [(x, y, z - _ION_HEADGROUP_Z_SEP) for x, y, z in sites_lower]
+    else:
+        sites = (
+            [(x, y, z + _ION_HEADGROUP_Z_SEP) for x, y, z in sites_upper]
+            + [(x, y, z - _ION_HEADGROUP_Z_SEP) for x, y, z in sites_lower]
+        )
+
+    if not sites:
+        return []
+
+    rng.shuffle(sites)
 
     rname = res_name.ljust(3)[:3]
     aname = atom_name.ljust(2)
+    out: list[str] = []
+    serial = serial_start
 
-    for i in range(count):
-        x = rng.uniform(0.0, box_x)
-        y = rng.uniform(0.0, box_y)
-        z_jitter = rng.uniform(-1.0, 1.0)
-        if surface == "upper":
-            z = z_max + z_offset + z_jitter
-        elif surface == "lower":
-            z = z_min - z_offset + z_jitter
-        else:
-            z = z_max + z_offset + z_jitter if i % 2 == 0 else z_min - z_offset + z_jitter
-
-        ln = (
-            f"HETATM{serial:5d}  {aname}  {rname} I{resseq:4d}    "
+    for resseq, (x, y, z) in enumerate(sites, start=1):
+        out.append(
+            f"HETATM{serial % 100000:5d}  {aname}  {rname} I{resseq % 10000:4d}    "
             f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
         )
-        out.append(ln)
         serial += 1
-        resseq += 1
 
     return out
 
@@ -332,7 +373,7 @@ def _solvate(
 
     for x, y, z, _ in valid[:n_na_placed]:
         out.append(
-            f"HETATM{serial:5d}  NA  SOD I{ion_res:4d}    "
+            f"HETATM{serial % 100000:5d}  NA  SOD I{ion_res % 10000:4d}    "
             f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
         )
         serial += 1
@@ -340,7 +381,7 @@ def _solvate(
 
     for x, y, z, _ in valid[n_na_placed:n_na_placed + n_cl_placed]:
         out.append(
-            f"HETATM{serial:5d}  CL  CLA I{ion_res:4d}    "
+            f"HETATM{serial % 100000:5d}  CL  CLA I{ion_res % 10000:4d}    "
             f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
         )
         serial += 1
@@ -354,25 +395,26 @@ def _solvate(
         h2x, h2y = x - hxy * cos_t, y - hxy * sin_t
         hz = z - slab_dir * hzz  # H atoms point toward membrane
 
+        wr = water_res % 10000
         out.append(
-            f"ATOM  {serial:5d}  OW  SOL W{water_res:4d}    "
+            f"ATOM  {serial % 100000:5d}  OW  SOL W{wr:4d}    "
             f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00"
         )
         serial += 1
         out.append(
-            f"ATOM  {serial:5d}  HW1 SOL W{water_res:4d}    "
+            f"ATOM  {serial % 100000:5d}  HW1 SOL W{wr:4d}    "
             f"{h1x:8.3f}{h1y:8.3f}{hz:8.3f}  1.00  0.00"
         )
         serial += 1
         out.append(
-            f"ATOM  {serial:5d}  HW2 SOL W{water_res:4d}    "
+            f"ATOM  {serial % 100000:5d}  HW2 SOL W{wr:4d}    "
             f"{h2x:8.3f}{h2y:8.3f}{hz:8.3f}  1.00  0.00"
         )
         serial += 1
         if has_msite:
             mz = z - slab_dir * msite_dist
             out.append(
-                f"ATOM  {serial:5d}  MW  SOL W{water_res:4d}    "
+                f"ATOM  {serial % 100000:5d}  MW  SOL W{wr:4d}    "
                 f"{x:8.3f}{y:8.3f}{mz:8.3f}  1.00  0.00"
             )
             serial += 1
@@ -597,18 +639,13 @@ async def build_membrane(
         # Extract mean Z of chain-U and chain-L P atoms; fall back to z_max/z_min.
         ion_lines: list[str] = []
         if ion_type and ion_type.strip() and ion_count > 0:
-            p_upper = [float(ln[46:54]) for ln in membrane_pdb.splitlines()
-                       if ln.startswith(("ATOM", "HETATM"))
-                       and ln[12:16].strip() == "P" and len(ln) > 21 and ln[21] == "U"]
-            p_lower = [float(ln[46:54]) for ln in membrane_pdb.splitlines()
-                       if ln.startswith(("ATOM", "HETATM"))
-                       and ln[12:16].strip() == "P" and len(ln) > 21 and ln[21] == "L"]
-            z_ion_upper = (sum(p_upper) / len(p_upper)) if p_upper else z_max
-            z_ion_lower = (sum(p_lower) / len(p_lower)) if p_lower else z_min
+            pdb_atom_lines = [ln for ln in membrane_pdb.splitlines()
+                              if ln.startswith(("ATOM", "HETATM"))]
+            sites_upper, sites_lower = _collect_anionic_sites(pdb_atom_lines)
             ion_lines = _make_ion_records(
-                ion_type.strip().upper(), ion_count,
-                ion_surface, ion_z_offset, z_ion_upper, z_ion_lower,
-                box_x, box_y, next_serial, seed,
+                ion_type.strip().upper(),
+                sites_upper, sites_lower,
+                ion_surface, next_serial, seed,
             )
             next_serial += len(ion_lines)
 
@@ -723,6 +760,31 @@ async def build_membrane(
         if solvate_enabled:
             box_z_nm = round((z_max - z_min + 2.0 * (2.0 + water_layer_a)) / 10.0, 3)
 
+        # Leaflet scatter plot — PNG encoded as base64
+        leaflet_plot_b64 = ""
+        try:
+            from base64 import b64encode
+            from bilbo.exporters.leaflet_png import write_leaflet_png
+
+            plot_tmp = tmp / "leaflet_plot.png"
+            pep_plot: list[dict] = []
+            if pep_centroids:
+                for i, c in enumerate(pep_centroids):
+                    if peptide_surface == "both":
+                        leaflet = "upper" if i % 2 == 0 else "lower"
+                    else:
+                        leaflet = peptide_surface
+                    pep_plot.append({
+                        "peptide_id": c["chain"],
+                        "leaflet": leaflet,
+                        "translation_vector": [c["x"], c["y"], c["z"]],
+                    })
+            write_leaflet_png(layouts, plot_tmp, peptide_placements=pep_plot or None)
+            if plot_tmp.exists():
+                leaflet_plot_b64 = b64encode(plot_tmp.read_bytes()).decode()
+        except Exception:
+            pass
+
         return JSONResponse({
             "pdb": final_pdb,
             "gro": pdb_to_gro(final_pdb),
@@ -756,4 +818,5 @@ async def build_membrane(
                 "upper": upper_counts_dict,
                 "lower": lower_counts_dict,
             },
+            "leaflet_plot_b64": leaflet_plot_b64,
         })

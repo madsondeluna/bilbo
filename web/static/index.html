@@ -138,8 +138,18 @@
 
   .viewer-wrap {
     border: 1px solid #e8e8e8; border-radius: 4px; overflow: hidden;
-    height: 500px; margin-bottom: 16px; position: relative; background: #fafafa;
+    height: 500px; margin-bottom: 0; position: relative; background: #fafafa;
   }
+  .atom-info {
+    min-height: 26px; padding: 5px 12px; margin-bottom: 16px;
+    background: #f7f7f7; border: 1px solid #e8e8e8; border-top: none;
+    border-radius: 0 0 4px 4px; font-size: 0.63rem; color: #555;
+    font-family: 'Roboto Mono', monospace; line-height: 1.5;
+    display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
+    overflow: hidden; white-space: nowrap;
+  }
+  .atom-info span { color: #999; }
+  .atom-info strong { color: #1a1a1a; font-weight: 500; }
   #viewer { width: 100%; height: 100%; }
   .viewer-controls {
     position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
@@ -153,6 +163,7 @@
   .viewer-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 
   .dl-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dl-row button { flex: 1; min-width: 0; }
 
   .lipid-legend {
     display: flex; flex-wrap: wrap; gap: 10px 20px;
@@ -195,6 +206,17 @@
 
   /* Divider */
   .divider { border: none; border-top: 1px solid #f0f0f0; margin: 28px 0; }
+
+  /* Assembly notes */
+  .asm-notes { margin-top: 28px; border-top: 1px solid #f0f0f0; padding-top: 20px; }
+  .asm-notes-title { font-size: 0.65rem; letter-spacing: 0.10em; text-transform: uppercase; color: #94a3b8; margin-bottom: 12px; }
+  .asm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .asm-grid { grid-template-columns: 1fr; } }
+  .asm-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; font-size: 0.70rem; line-height: 1.7; color: #475569; text-align: justify; }
+  .asm-card strong { display: block; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: #334155; margin-bottom: 4px; }
+  .asm-card code { font-family: 'Roboto Mono', monospace; font-size: 0.85em; background: #e2e8f0; color: #1e3a5f; padding: 1px 4px; border-radius: 3px; }
+  .asm-warn { border-left: 3px solid #f59e0b; background: #fffbeb; }
+  .asm-warn strong { color: #92400e; }
 
   /* Footer */
   footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #e8e8e8; font-size: 0.63rem; color: #aaa; line-height: 1.8; }
@@ -435,6 +457,28 @@
   <!-- Results -->
   <div id="results"></div>
 
+  <div class="asm-notes">
+    <div class="asm-notes-title">Assembly notes and recommendations</div>
+    <div class="asm-grid">
+      <div class="asm-card">
+        <strong>Bilayer gap is a buffer, not experimental</strong>
+        The inter-leaflet half-gap (default 2.5 A per leaflet) prevents tail overlap in the template-tiled structure. It does not represent measured bilayer thickness. Adjust and re-minimize as needed.
+      </div>
+      <div class="asm-card">
+        <strong>Asymmetric bilayers</strong>
+        When upper and lower leaflets differ in composition, check that the lipid area per molecule is compatible between leaflets. A large area mismatch produces curvature stress that persists even after minimization.
+      </div>
+      <div class="asm-card">
+        <strong>Lipid template names</strong>
+        Template PDB filenames must match the lipid names entered above (case-insensitive). Upload your own templates via the CLI (<code>bilbo membrane build --templates-dir</code>) for lipids not included in the default set.
+      </div>
+      <div class="asm-card">
+        <strong>Atom count limit</strong>
+        PDB serial numbers wrap at 99,999 atoms; residue numbers wrap at 9,999. BILBO handles this automatically, but downstream tools that rely on unique serial numbers should use the GRO file instead.
+      </div>
+    </div>
+  </div>
+
   <footer>
     <p>
       BILBO (beta) — Bilayer Lipid Builder and Organizer. This tool is under active development; results should be
@@ -447,20 +491,36 @@
       &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
       &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
     </p>
-    <div class="footer-note">
-      <strong>Running MD in GROMACS</strong><br>
-      Convert the output PDB to a simulation box using <code>gmx editconf</code>, then proceed with energy minimization
-      and equilibration.<br><br>
-      <strong>CHARMM36 lipid parameters</strong><br>
-      The generated <code>topol.top</code> references per-lipid parameter files under <code>charmm36.ff/</code>.
-      The standard GROMACS distribution includes <code>charmm36.ff</code> for proteins and nucleic acids only;
-      lipid parameters are maintained separately by the MacKerell lab and are not bundled with GROMACS.
-      To obtain them, download the CHARMM36 lipid parameter set from
-      <code>mackerell.umaryland.edu/charmm_ff_params.html</code>, or export any system from CHARMM-GUI in GROMACS
-      format and copy the resulting <code>charmm36.ff/</code> directory into your working directory.<br><br>
-      <strong>MDP files</strong><br>
-      Input parameters for energy minimization, NVT, NPT, and production MD are not generated by BILBO and must be
-      prepared by the user.
+    <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; display:flex; flex-wrap:nowrap; align-items:flex-start; gap:16px; overflow-x:auto;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#b0b8c8;">Institutions</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="/static/ufpe.png"     alt="Universidade Federal de Pernambuco" style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+          <img src="/static/ufmg.png"     alt="Universidade Federal de Minas Gerais" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+          <img src="/static/upe-logo.png" alt="Universidade de Pernambuco" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#b0b8c8;">Departments</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="/static/dqf.png"     alt="Departamento de Química Fundamental" style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+          <img src="/static/dgen.jpeg"   alt="Departamento de Genética"            style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#b0b8c8;">Funding</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="/static/fapemig.png" alt="FAPEMIG" style="height:38px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+          <img src="/static/capes.png"   alt="CAPES"   style="height:38px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#b0b8c8;">Research groups</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <img src="/static/lgbv.png" alt="Laboratório de Genética e Biotecnologia Vegetal" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+          <img src="/static/lcm3.png" alt="LCM3" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+        </div>
+      </div>
     </div>
   </footer>
 </div>
@@ -488,7 +548,9 @@ let currentPdb = null;
 let currentTopology = null;
 let currentGro = null;
 let currentBuildData = null;
+let currentLeafletPlotB64 = null;
 let viewMode = 'stick';
+let showWaterH = false;
 let libraryLipids = [];
 
 // ── Server health + library init ───────────────────────────────────────────────
@@ -895,6 +957,7 @@ async function runBuild() {
     currentTopology = data.topology;
     currentGro = data.gro || null;
     currentBuildData = data;
+    currentLeafletPlotB64 = data.leaflet_plot_b64 || null;
     setStatus(`Done. ${data.n_atoms.toLocaleString()} atoms written.`, 'done');
     renderResults(data);
 
@@ -1006,9 +1069,18 @@ function renderResults(data) {
         <button class="viewer-btn" id="btnSphere" onclick="setViewMode('sphere')">Sphere</button>
         <button class="viewer-btn" id="btnLine" onclick="setViewMode('line')">Line</button>
         <button class="viewer-btn" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
+        ${data.n_water > 0 ? `<button class="viewer-btn" id="btnWaterH" onclick="toggleWaterH()">Water H</button>` : ''}
       </div>
     </div>
+    <div class="atom-info" id="atomInfoBar">click an atom to inspect</div>
     <div class="lipid-legend" id="lipidLegend"></div>
+
+    ${data.leaflet_plot_b64 ? `
+    <div style="margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:8px;">Leaflet distribution</div>
+      <img id="leafletPlotImg" src="data:image/png;base64,${data.leaflet_plot_b64}"
+        style="width:100%; border:1px solid #e8e8e8; border-radius:4px; display:block; image-rendering:pixelated;">
+    </div>` : ''}
 
     <div class="dl-row">
       <button class="btn-download" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
@@ -1019,6 +1091,9 @@ function renderResults(data) {
       </button>` : ''}
       ${data.topology ? `<button class="btn-download" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
         Download topology
+      </button>` : ''}
+      ${data.leaflet_plot_b64 ? `<button class="btn-download" onclick="downloadLeafletPlot()">
+        Download plot
       </button>` : ''}
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
@@ -1080,6 +1155,20 @@ function _renderLegend() {
     + (currentBuildData?.n_sol_cl > 0 ? solClEntry : '');
 }
 
+const _CHAIN_LABEL = { U: 'upper leaflet', L: 'lower leaflet', W: 'water', I: 'ion' };
+
+function _atomLabel(atom) {
+  const chain = _CHAIN_LABEL[atom.chain] || `chain ${atom.chain}`;
+  const parts = [
+    `<span>atom</span> <strong>${atom.atom}</strong>`,
+    `<span>serial</span> <strong>${atom.serial}</strong>`,
+    `<span>residue</span> <strong>${atom.resn} ${atom.resi}</strong>`,
+    `<span>chain</span> <strong>${chain}</strong>`,
+    `<span>xyz</span> <strong>${atom.x.toFixed(2)}, ${atom.y.toFixed(2)}, ${atom.z.toFixed(2)} Å</strong>`,
+  ];
+  return parts.join(' &nbsp; ');
+}
+
 function initViewer(pdb) {
   const el = document.getElementById('viewer');
   if (!el) return;
@@ -1094,8 +1183,12 @@ function initViewer(pdb) {
 
 function _loadModels() {
   viewer.removeAllModels();
-  viewer.addModel(_pdbData, 'pdb');
+  viewer.addModel(_pdbData, 'pdb', { keepH: true });
   _applyLipidStyle(viewMode);
+  viewer.setClickable({}, true, (atom) => {
+    const bar = document.getElementById('atomInfoBar');
+    if (bar) bar.innerHTML = _atomLabel(atom);
+  });
 }
 
 const _PEP_CHAINS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !['I','L','U'].includes(c));
@@ -1133,12 +1226,25 @@ function _applyLipidStyle(mode) {
   // Peptide chains
   _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, '#10b981')));
 
-  // Ions: always spheres regardless of mode
+  // Coordination ions: always spheres
   viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: '#f59e0b', scale: 0.6 } });
 
-  // Water: show only OW atoms as tiny pale-blue spheres
-  viewer.setStyle({ chain: 'W', model: 0 }, {});  // hide HW/MW by default
-  viewer.setStyle({ chain: 'W', atom: 'OW', model: 0 }, { sphere: { color: '#93c5fd', scale: 0.12 } });
+  // Bulk solvent ions (chain I, resname SOD/CLA)
+  viewer.setStyle({ chain: 'I', resn: 'SOD', model: 0 }, { sphere: { color: '#facc15', scale: 0.55 } });
+  viewer.setStyle({ chain: 'I', resn: 'CLA', model: 0 }, { sphere: { color: '#f87171', scale: 0.55 } });
+
+  // Water
+  viewer.setStyle({ chain: 'W', model: 0 }, {});
+  if (showWaterH) {
+    viewer.setStyle({ chain: 'W', model: 0 },
+      { stick: { color: '#7dd3fc', radius: 0.07 } });
+    viewer.setStyle({ chain: 'W', elem: 'O', model: 0 },
+      { stick: { color: '#7dd3fc', radius: 0.07 }, sphere: { color: '#93c5fd', scale: 0.22 } });
+    viewer.setStyle({ chain: 'W', elem: 'H', model: 0 },
+      { stick: { color: '#7dd3fc', radius: 0.07 }, sphere: { color: '#e0f2fe', scale: 0.14 } });
+  } else {
+    viewer.setStyle({ chain: 'W', elem: 'O', model: 0 }, { sphere: { color: '#93c5fd', scale: 0.18 } });
+  }
 
   if (mode === 'surface') {
     viewer.addSurface('VDW', { opacity: 0.45, color: col0 }, { chain: 'U', model: 0 });
@@ -1163,6 +1269,15 @@ function setViewMode(mode) {
   applyViewMode(mode);
 }
 
+function toggleWaterH() {
+  showWaterH = !showWaterH;
+  const btn = document.getElementById('btnWaterH');
+  if (btn) btn.className = 'viewer-btn' + (showWaterH ? ' active' : '');
+  if (!viewer) return;
+  _loadModels();
+  viewer.render();
+}
+
 // ── Utilities ──────────────────────────────────────────────────────────────────
 function setStatus(msg, cls) {
   const el = document.getElementById('status');
@@ -1177,6 +1292,14 @@ function downloadFile(content, filename, mime) {
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadLeafletPlot() {
+  if (!currentLeafletPlotB64) return;
+  const a = document.createElement('a');
+  a.href = 'data:image/png;base64,' + currentLeafletPlotB64;
+  a.download = 'leaflet_plot.png';
+  a.click();
 }
 
 function escHtml(s) {
@@ -1287,6 +1410,7 @@ function clearAll(resetStatus = true) {
   currentTopology = null;
   currentGro = null;
   currentBuildData = null;
+  currentLeafletPlotB64 = null;
   viewer = null;
   if (resetStatus) setStatus('', '');
 }

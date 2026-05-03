@@ -33,6 +33,7 @@ from bilbo.db.repository import (
     upsert_preset,
 )
 from bilbo.exporters.allatom_preview import write_allatom_preview
+from bilbo.exporters.leaflet_png import write_leaflet_png
 from bilbo.exporters.gromacs_topology import write_gromacs_topology
 from bilbo.exporters.manifest import write_manifest
 from bilbo.exporters.markdown_report import write_markdown_report
@@ -1250,6 +1251,10 @@ def membrane_build(
         for w in clash_warns:
             console.print(f"[yellow]  {w}[/yellow]")
 
+    plot_out = output / "leaflet_plot.png"
+    write_leaflet_png(layouts, plot_out)
+    console.print(f"[green]Leaflet plot: {plot_out}[/green]")
+
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
 
@@ -1444,6 +1449,10 @@ def membrane_compose(
             console.print(f"[yellow]  No template for: {', '.join(missing)} -- skipped.[/yellow]")
         for w in clash_warns:
             console.print(f"[yellow]  {w}[/yellow]")
+
+    plot_out = output / "leaflet_plot.png"
+    write_leaflet_png(layouts, plot_out)
+    console.print(f"[green]Leaflet plot: {plot_out}[/green]")
 
     console.print(f"[green]Build complete: {output}[/green]")
     _print_realized(realized)
@@ -1656,6 +1665,10 @@ def membrane_from_pdb(
         report.model_dump_json(indent=2), encoding="utf-8"
     )
 
+    plot_out = output / "leaflet_plot.png"
+    write_leaflet_png(layouts, plot_out)
+    console.print(f"[green]Leaflet plot: {plot_out}[/green]")
+
     console.print(f"[green]Build complete ({symmetry}): {output}[/green]")
     console.print(f"  upper: {upper_total} lipids  lower: {lower_total} lipids")
 
@@ -1793,6 +1806,15 @@ def membrane_add_peptide(
     placements_path = out_dir / "peptide_placements.json"
     placements_data = [pp_r.model_dump() for pp_r in report.peptide_placements]
     placements_path.write_text(json.dumps(placements_data, indent=2), encoding="utf-8")
+
+    layouts_for_plot = _load_layouts_from_csvs(
+        build_dir / "upper_leaflet.csv",
+        build_dir / "lower_leaflet.csv",
+    )
+    if layouts_for_plot:
+        plot_out = out_dir / "leaflet_plot.png"
+        write_leaflet_png(layouts_for_plot, plot_out, peptide_placements=placements_data)
+        console.print(f"[green]Leaflet plot updated: {plot_out}[/green]")
 
     geometry_report = {
         "peptide_id": placement_result.peptide_id,
