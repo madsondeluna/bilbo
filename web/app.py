@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
+import os
 import random as _random
+import sqlite3
 import tempfile
+import threading
+import urllib.request
+import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +24,113 @@ app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
 _STATIC = Path(__file__).parent / "static"
 _DATA_DIR = Path(__file__).parent.parent / "data" / "examples" / "charmm_gui"
 app.mount("/static", StaticFiles(directory=_STATIC), name="static")
+
+
+# ── Usage stats ────────────────────────────────────────────────────────────────
+
+def _send_telegram(text: str) -> None:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    def _post() -> None:
+        try:
+            payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
+            req = urllib.request.Request(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
+    threading.Thread(target=_post, daemon=True).start()
+
+
+_db_lock = threading.Lock()
+
+
+def _stats_db_path() -> str:
+    return os.environ.get("STATS_DB", "/tmp/stats.db")
+
+
+def _stats_conn() -> sqlite3.Connection:
+    c = sqlite3.connect(_stats_db_path(), check_same_thread=False)
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)")
+    c.execute("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)")
+    for k in ("total_builds", "total_atoms", "unique_sessions"):
+        c.execute("INSERT OR IGNORE INTO stats VALUES (?, 0)", (k,))
+    c.commit()
+    return c
+
+
+def _init_stats_db() -> None:
+    with _db_lock:
+        _stats_conn().close()
+
+
+def _register_session(session_id: str) -> None:
+    with _db_lock:
+        c = _stats_conn()
+        if not c.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,)).fetchone():
+            c.execute("INSERT OR IGNORE INTO sessions VALUES (?)", (session_id,))
+            c.execute("UPDATE stats SET value = value + 1 WHERE key = ?", ("unique_sessions",))
+        c.commit()
+        c.close()
+
+
+def _increment_stats(atom_count: int) -> None:
+    with _db_lock:
+        c = _stats_conn()
+        c.execute("UPDATE stats SET value = value + 1 WHERE key = ?", ("total_builds",))
+        c.execute("UPDATE stats SET value = value + ? WHERE key = ?", (atom_count, "total_atoms"))
+        c.commit()
+        c.close()
+
+
+def _get_stats() -> dict:
+    with _db_lock:
+        c = _stats_conn()
+        rows = c.execute("SELECT key, value FROM stats").fetchall()
+        c.close()
+        return {k: v for k, v in rows}
+
+
+_init_stats_db()
+
+_ADMIN_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BILBO stats</title>
+<style>
+  body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 40px; }
+  h1 { font-size: 1.1rem; color: #aaa; margin-bottom: 28px; letter-spacing: 0.08em; }
+  .grid { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
+          padding: 20px 28px; min-width: 150px; text-align: center; }
+  .num { font-size: 2.4rem; color: #fff; }
+  .lbl { font-size: 0.72rem; color: #666; margin-top: 6px; letter-spacing: 0.05em; }
+  a { color: #555; font-size: 0.78rem; text-decoration: none; }
+  a:hover { color: #aaa; }
+</style>
+</head>
+<body>
+<h1>BILBO / usage stats</h1>
+<div class="grid" id="cards">loading...</div>
+<p style="margin-top:32px"><a href="/">back to app</a></p>
+<script>
+fetch('/stats').then(r=>r.json()).then(d=>{
+  const labels = {total_builds:'builds',total_lipids:'lipids placed',unique_sessions:'unique sessions'};
+  document.getElementById('cards').innerHTML = Object.entries(labels).map(
+    ([k,l]) => '<div class="card"><div class="num">'+(d[k]||0)+'</div><div class="lbl">'+l+'</div></div>'
+  ).join('');
+});
+</script>
+</body>
+</html>"""
 
 
 @app.get("/api/library")
@@ -431,8 +544,27 @@ async def peptide_charge_endpoint(pdb_file: UploadFile = File(...)) -> JSONRespo
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root() -> HTMLResponse:
-    return HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
+async def root(request: Request) -> HTMLResponse:
+    resp = HTMLResponse((_STATIC / "index.html").read_text(encoding="utf-8"))
+    sid = request.cookies.get("_bilbo_sid")
+    if not sid:
+        sid = str(uuid.uuid4())
+        resp.set_cookie("_bilbo_sid", sid, max_age=365 * 24 * 3600, samesite="lax", httponly=True)
+    try:
+        _register_session(sid)
+    except Exception:
+        pass
+    return resp
+
+
+@app.get("/stats")
+async def stats_endpoint() -> JSONResponse:
+    return JSONResponse(_get_stats())
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin() -> HTMLResponse:
+    return HTMLResponse(_ADMIN_PAGE)
 
 
 @app.get("/health")
@@ -472,6 +604,7 @@ async def build_membrane(
     box_z_nm_input: Optional[float] = Form(None),
     sol_ion_conc_mM: float = Form(150.0),
     peptide_charge: int = Form(0),
+    request: Request = None,
 ) -> JSONResponse:
     from bilbo.builders.apl_check import weighted_spacing as calc_spacing
     from bilbo.builders.composition_expander import ExpandedComposition
@@ -784,6 +917,30 @@ async def build_membrane(
                 leaflet_plot_b64 = b64encode(plot_tmp.read_bytes()).decode()
         except Exception:
             pass
+
+        n_upper = sum(upper_counts_dict.values())
+        n_lower = sum(lower_counts_dict.values())
+        session_id = (request.cookies.get("_bilbo_sid") if request else None) or str(uuid.uuid4())
+        try:
+            _increment_stats(n_total_atoms)
+        except Exception:
+            pass
+        upper_summary = ", ".join(f"{k}:{v}" for k, v in upper_counts_dict.items())
+        lower_summary = ", ".join(f"{k}:{v}" for k, v in lower_counts_dict.items())
+        totals = _get_stats()
+        _send_telegram(
+            f"[BILBO] New membrane built\n"
+            f"Upper: {upper_summary}\n"
+            f"Lower: {lower_summary}\n"
+            f"Lipids: {n_upper + n_lower} | Atoms: {n_total_atoms:,}\n"
+            f"Solvated: {'yes' if solvate_enabled else 'no'}\n"
+            f"Session: {session_id[:8]}...\n"
+            f"\n"
+            f"Totals\n"
+            f"Builds: {totals.get('total_builds', 0):,}\n"
+            f"Atoms assembled: {totals.get('total_atoms', 0):,}\n"
+            f"Unique users: {totals.get('unique_sessions', 0):,}"
+        )
 
         return JSONResponse({
             "pdb": final_pdb,
