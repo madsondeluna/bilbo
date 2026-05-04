@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import hashlib
 import html as _html_lib
 import io
@@ -873,6 +874,9 @@ async def send_results(
     pdb: Optional[str] = Form(None),
     gro: Optional[str] = Form(None),
     topology: Optional[str] = Form(None),
+    pdb_gz: Optional[UploadFile] = File(None),
+    gro_gz: Optional[UploadFile] = File(None),
+    topology_gz: Optional[UploadFile] = File(None),
     plot_b64: Optional[str] = Form(None),
     summary: Optional[str] = Form(None),
 ) -> JSONResponse:
@@ -880,6 +884,21 @@ async def send_results(
         lang = 'en'
     if not to_email or '@' not in to_email:
         return JSONResponse({'ok': False, 'error': 'Invalid email address.'}, status_code=400)
+    if pdb_gz is not None:
+        try:
+            pdb = gzip.decompress(await pdb_gz.read()).decode('utf-8')
+        except Exception:
+            return JSONResponse({'ok': False, 'error': 'Failed to decompress build data.'}, status_code=400)
+    if gro_gz is not None:
+        try:
+            gro = gzip.decompress(await gro_gz.read()).decode('utf-8')
+        except Exception:
+            gro = None
+    if topology_gz is not None:
+        try:
+            topology = gzip.decompress(await topology_gz.read()).decode('utf-8')
+        except Exception:
+            topology = None
     if not pdb:
         return JSONResponse({'ok': False, 'error': 'No build data to send.'}, status_code=400)
 

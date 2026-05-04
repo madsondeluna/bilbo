@@ -1691,9 +1691,21 @@ async function sendBuildByEmail() {
     const fd = new FormData();
     fd.append('to_email', email);
     fd.append('lang', lang);
-    fd.append('pdb', currentPdb);
-    if (currentGro) fd.append('gro', currentGro);
-    if (currentTopology) fd.append('topology', currentTopology);
+    const totalSize = (currentPdb || '').length + (currentGro || '').length + (currentTopology || '').length;
+    const useGzip = totalSize > 1_000_000 && typeof CompressionStream !== 'undefined';
+    if (useGzip) {
+      const gzipString = async (str) => {
+        const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+        return await new Response(stream).blob();
+      };
+      fd.append('pdb_gz', await gzipString(currentPdb), 'pdb.gz');
+      if (currentGro) fd.append('gro_gz', await gzipString(currentGro), 'gro.gz');
+      if (currentTopology) fd.append('topology_gz', await gzipString(currentTopology), 'topology.gz');
+    } else {
+      fd.append('pdb', currentPdb);
+      if (currentGro) fd.append('gro', currentGro);
+      if (currentTopology) fd.append('topology', currentTopology);
+    }
     if (currentLeafletPlotB64) fd.append('plot_b64', currentLeafletPlotB64);
     const d = currentBuildData;
     fd.append('summary', JSON.stringify({
