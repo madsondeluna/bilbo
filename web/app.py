@@ -35,8 +35,6 @@ ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
 EMAIL_SIGNATURE = (
     '\n'
     '**BILBO Team**\n'
-    'Principal Developer: madsondeluna@gmail.com\n'
-    'Repository: https://github.com/madsondeluna/bilbo\n'
 )
 
 EMAIL_CLOSING = {
@@ -933,7 +931,7 @@ async def send_results(
     messages = {
         'en': {
             'subject': '[BILBO] Your bilayer build is ready',
-            'intro': 'Hello,\n\nYour BILBO bilayer build has been completed. The output files are attached to this message.',
+            'intro': 'Hello,\n\nYour BILBO (Bilayer Lipid Builder and Organizer) bilayer build has been completed. The output files are attached to this message.',
             'summary_h': 'Build summary:',
             'date_label': 'Date/time',
             'interp_h': 'Interpretation note:',
@@ -950,7 +948,7 @@ async def send_results(
         },
         'fr': {
             'subject': '[BILBO] Votre bicouche est prête',
-            'intro': 'Bonjour,\n\nVotre construction de bicouche BILBO a été finalisée. Les fichiers de sortie sont joints à ce message.',
+            'intro': 'Bonjour,\n\nVotre construction de bicouche BILBO (Bilayer Lipid Builder and Organizer) a été finalisée. Les fichiers de sortie sont joints à ce message.',
             'summary_h': 'Résumé de la construction:',
             'date_label': 'Date/heure',
             'interp_h': 'Note d\'interprétation:',
@@ -967,7 +965,7 @@ async def send_results(
         },
         'es': {
             'subject': '[BILBO] Su bicapa está lista',
-            'intro': 'Hola,\n\nSu construcción de bicapa BILBO ha sido finalizada. Los archivos de salida se encuentran adjuntos a este mensaje.',
+            'intro': 'Hola,\n\nSu construcción de bicapa BILBO (Bilayer Lipid Builder and Organizer) ha sido finalizada. Los archivos de salida se encuentran adjuntos a este mensaje.',
             'summary_h': 'Resumen de la construcción:',
             'date_label': 'Fecha/hora',
             'interp_h': 'Nota de interpretación:',
@@ -984,7 +982,7 @@ async def send_results(
         },
         'pt': {
             'subject': '[BILBO] Sua bicamada está pronta',
-            'intro': 'Olá,\n\nA construção da sua bicamada no BILBO foi concluída. Os arquivos de saída estão anexados a esta mensagem.',
+            'intro': 'Olá,\n\nA construção da sua bicamada no BILBO (Bilayer Lipid Builder and Organizer) foi concluída. Os arquivos de saída estão anexados a esta mensagem.',
             'summary_h': 'Resumo da construção:',
             'date_label': 'Data/hora',
             'interp_h': 'Nota de interpretação:',
@@ -1001,7 +999,7 @@ async def send_results(
         },
         'zh': {
             'subject': '[BILBO] 您的双层膜已就绪',
-            'intro': '您好，\n\n您的 BILBO 双层膜构建已完成。输出文件已附在本邮件中。',
+            'intro': '您好，\n\n您的 BILBO（Bilayer Lipid Builder and Organizer）双层膜构建已完成。输出文件已附在本邮件中。',
             'summary_h': '构建摘要：',
             'date_label': '日期/时间',
             'interp_h': '解释说明：',
@@ -1026,9 +1024,9 @@ async def send_results(
         f'**{m["disclaimer_h"]}**\n{m["disclaimer"]}\n\n'
         f'{m["next"]}\n\n'
         f'{m["feedback"]}\n\n'
+        f'{EMAIL_FOOTER[lang]}'
         f'{EMAIL_CLOSING[lang]}'
         f'{EMAIL_SIGNATURE}'
-        f'{EMAIL_FOOTER[lang]}'
     )
 
     raw_files: list[tuple[str, bytes]] = [('bilbo_preview.pdb', pdb.encode('utf-8'))]
@@ -1116,8 +1114,10 @@ async def send_recommendation(
                 'for building all-atom flat lipid bilayer membranes from PDB templates. '
                 'It places proteins or peptides on or inside the membrane, producing '
                 'starting-point structures for molecular dynamics (MD) simulations.\n\n'
-                'Built with Python, FastAPI, NumPy, and SQLAlchemy. Runs directly in the '
-                'browser, with no installation required.\n\n'
+                'Built with Python, FastAPI, NumPy, SQLAlchemy, Docker, and JavaScript. '
+                'Runs directly in the browser, with no installation required. The CLI, '
+                'web, and pip package deliver identical performance, regardless of the '
+                'underlying computational infrastructure.\n\n'
                 'Available in three formats:\n'
                 f'Web: {site_url}\n'
                 'CLI / repo: https://github.com/madsondeluna/bilbo\n'
@@ -1138,8 +1138,10 @@ async def send_recommendation(
                 'à partir de gabarits PDB. Il place des protéines ou des peptides sur ou '
                 'dans la membrane, produisant des structures de départ pour les simulations '
                 'de dynamique moléculaire (MD).\n\n'
-                'Construit avec Python, FastAPI, NumPy et SQLAlchemy. Fonctionne directement '
-                'dans le navigateur, sans aucune installation.\n\n'
+                'Construit avec Python, FastAPI, NumPy, SQLAlchemy, Docker et JavaScript. '
+                'Fonctionne directement dans le navigateur, sans aucune installation. Les '
+                'versions CLI, web et pip offrent des performances identiques, indépendamment '
+                'de l\'infrastructure de calcul sous-jacente.\n\n'
                 'Disponible en trois formats:\n'
                 f'Web: {site_url}\n'
                 'CLI / dépôt: https://github.com/madsondeluna/bilbo\n'
@@ -1160,8 +1162,10 @@ async def send_recommendation(
                 'a partir de plantillas PDB. Coloca proteínas o péptidos sobre o dentro '
                 'de la membrana, produciendo estructuras iniciales para simulaciones de '
                 'dinámica molecular (MD).\n\n'
-                'Construido con Python, FastAPI, NumPy y SQLAlchemy. Funciona directamente '
-                'en el navegador, sin necesidad de instalación.\n\n'
+                'Construido con Python, FastAPI, NumPy, SQLAlchemy, Docker y JavaScript. '
+                'Funciona directamente en el navegador, sin necesidad de instalación. Las '
+                'versiones CLI, web y pip ofrecen un rendimiento idéntico, independientemente '
+                'de la infraestructura computacional subyacente.\n\n'
                 'Disponible en tres formatos:\n'
                 f'Web: {site_url}\n'
                 'CLI / repo: https://github.com/madsondeluna/bilbo\n'
@@ -1182,8 +1186,10 @@ async def send_recommendation(
                 'de templates PDB. Posiciona proteínas ou peptídeos sobre ou dentro da '
                 'membrana, produzindo estruturas iniciais para simulações de dinâmica '
                 'molecular (MD).\n\n'
-                'Construído com Python, FastAPI, NumPy e SQLAlchemy. Roda diretamente no '
-                'navegador, sem necessidade de instalação.\n\n'
+                'Construído com Python, FastAPI, NumPy, SQLAlchemy, Docker e JavaScript. '
+                'Roda diretamente no navegador, sem necessidade de instalação. CLI, web e '
+                'pacote pip entregam desempenho idêntico, independente da infraestrutura '
+                'computacional.\n\n'
                 'Disponível em três formatos:\n'
                 f'Web: {site_url}\n'
                 'CLI / repo: https://github.com/madsondeluna/bilbo\n'
@@ -1201,7 +1207,8 @@ async def send_recommendation(
                 'BILBO（Bilayer Lipid Builder and Organizer）是一款免费的开源工具，'
                 '用于从 PDB 模板构建全原子平面脂质双层膜。它能在膜上或膜内放置蛋白质或肽，'
                 '生成用于分子动力学（MD）模拟的起始结构。\n\n'
-                '使用 Python、FastAPI、NumPy 和 SQLAlchemy 构建。可直接在浏览器中运行，无需安装。\n\n'
+                '使用 Python、FastAPI、NumPy、SQLAlchemy、Docker 和 JavaScript 构建。可直接在浏览器中运行，无需安装。'
+                'CLI、Web 和 pip 包提供相同的性能，与底层计算基础设施无关。\n\n'
                 '提供三种格式：\n'
                 f'Web: {site_url}\n'
                 'CLI / repo: https://github.com/madsondeluna/bilbo\n'
@@ -1216,9 +1223,9 @@ async def send_recommendation(
     m = messages[lang]
     body_text = (
         f'{m["body"]}'
+        f'{EMAIL_FOOTER[lang]}'
         f'{EMAIL_CLOSING[lang]}'
         f'{EMAIL_SIGNATURE}'
-        f'{EMAIL_FOOTER[lang]}'
     )
     payload = {
         'from': from_addr,
