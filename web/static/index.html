@@ -1236,6 +1236,7 @@ function renderResults(data) {
         <button class="viewer-btn" id="btnSphere" onclick="setViewMode('sphere')">Sphere</button>
         <button class="viewer-btn" id="btnLine" onclick="setViewMode('line')">Line</button>
         <button class="viewer-btn" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
+        ${data.n_peptide_atoms > 0 ? `<button class="viewer-btn" id="btnCartoon" onclick="setViewMode('cartoon')" title="Protein as cartoon, lipids as lines">Cartoon</button>` : ''}
         ${data.n_water > 0 ? `<button class="viewer-btn" id="btnWaterH" onclick="toggleWaterH()">Water H</button>` : ''}
       </div>
     </div>
@@ -1364,6 +1365,7 @@ function _styleObj(mode, color) {
   if (mode === 'sphere')  return { sphere: { color, scale: 0.3 } };
   if (mode === 'line')    return { line:   { color } };
   if (mode === 'surface') return { stick:  { color, radius: 0.15 } };
+  if (mode === 'cartoon') return { line:   { color, linewidth: 1 } };
   return                         { stick:  { color, radius: 0.2 } };
 }
 
@@ -1391,7 +1393,14 @@ function _applyLipidStyle(mode) {
   }
 
   // Peptide chains
-  _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, '#10b981')));
+  if (mode === 'cartoon') {
+    _PEP_CHAINS.forEach(c => {
+      viewer.setStyle({ chain: c, model: 0 }, { cartoon: { color: '#10b981', thickness: 0.4 } });
+      viewer.addStyle({ chain: c, model: 0 }, { stick: { color: '#10b981', radius: 0.12, hidden: false } });
+    });
+  } else {
+    _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, '#10b981')));
+  }
 
   // Coordination ions: always spheres
   viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: '#f59e0b', scale: 0.6 } });
@@ -1414,8 +1423,12 @@ function _applyLipidStyle(mode) {
   }
 
   if (mode === 'surface') {
-    viewer.addSurface('VDW', { opacity: 0.45, color: col0 }, { chain: 'U', model: 0 });
-    viewer.addSurface('VDW', { opacity: 0.45, color: col1 }, { chain: 'L', model: 0 });
+    viewer.addSurface('VDW', { opacity: 0.35, color: col0 }, { chain: 'U', model: 0 });
+    viewer.addSurface('VDW', { opacity: 0.35, color: col1 }, { chain: 'L', model: 0 });
+    _PEP_CHAINS.forEach(c => viewer.addSurface('VDW', { opacity: 0.82, color: '#10b981' }, { chain: c, model: 0 }));
+  }
+  if (mode === 'cartoon') {
+    _PEP_CHAINS.forEach(c => viewer.addSurface('VDW', { opacity: 0.18, color: '#10b981' }, { chain: c, model: 0 }));
   }
 }
 
@@ -1426,7 +1439,7 @@ function applyViewMode(mode) {
   viewer.zoomTo();
   viewer.render();
 
-  ['stick', 'sphere', 'line', 'surface'].forEach(m => {
+  ['stick', 'sphere', 'line', 'surface', 'cartoon'].forEach(m => {
     const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
     if (b) b.className = 'viewer-btn' + (m === mode ? ' active' : '');
   });
