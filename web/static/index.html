@@ -20,7 +20,7 @@
   .status-dot.online  { background: #059669; }
   .status-dot.offline { background: #dc2626; }
   .sub { font-size: 0.78rem; color: #888; margin-bottom: 20px; line-height: 1.6; }
-  .beta-badge { font-size: 0.55em; font-weight: 600; letter-spacing: 0.1em; color: #fff; background: #dc2626; padding: 3px 8px; border-radius: 4px; vertical-align: middle; position: relative; top: -4px; }
+  .beta-badge { font-size: 0.55em; font-weight: 600; letter-spacing: 0.1em; color: #fff; background: #2563eb; padding: 3px 8px; border-radius: 4px; vertical-align: middle; position: relative; top: -4px; }
   .notice { font-size: 0.75rem; color: #999; border-left: 2px solid #ddd; padding: 8px 12px; margin-bottom: 36px; line-height: 1.7; }
   .notice a { color: #555; text-decoration: underline; }
   .notice a:hover { color: #111; }
@@ -288,7 +288,7 @@
 
   <!-- Header -->
   <div class="title-row">
-    <h1>BILBO <span class="beta-badge">BETA</span></h1>
+    <h1>BILBO <span class="beta-badge">preview</span></h1>
     <span class="status-dot" id="statusDot" title="Checking server..."></span>
   </div>
   <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
@@ -507,7 +507,7 @@
 
   <footer>
     <p>
-      BILBO (beta) — Bilayer Lipid Builder and Organizer. This tool is under active development; results should be
+      BILBO (preview) — Bilayer Lipid Builder and Organizer. This tool is under active development; results should be
       validated before use in production simulations.
       Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
     </p>
@@ -1478,7 +1478,7 @@ function submitBugReport() {
     return;
   }
   const title = encodeURIComponent('Bug report');
-  const body = encodeURIComponent(msg + '\n\n---\n*Reported via BILBO (beta)*');
+  const body = encodeURIComponent(msg + '\n\n---\n*Reported via BILBO (preview)*');
   window.open(`https://github.com/madsondeluna/bilbo/issues/new?title=${title}&body=${body}`, '_blank');
   closeBugModal();
 }
