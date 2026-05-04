@@ -670,7 +670,7 @@ async function loadStats() {
     const fmtK = v => { if (v == null) return '—'; if (v >= 1e6) return '~' + (v/1e6).toFixed(1) + 'M'; if (v >= 1e3) return '~' + Math.round(v/1e3) + 'k'; return v.toLocaleString(); };
     const set  = (id, v, compact) => { const e = document.getElementById(id); if (e) e.textContent = compact ? fmtK(v) : fmt(v); };
     set('statBuilds', d.total_builds);
-    set('statAtoms',  d.total_atoms, true);
+    set('statAtoms',  d.total_atoms);
     set('statUsers',  d.unique_sessions);
   } catch(e) {}
 }
