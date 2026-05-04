@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import html as _html_lib
 import json
 import math
 import os
 import random as _random
+import re as _re
 from sqlalchemy import create_engine, text, pool as sa_pool
 import tempfile
 import threading
+import urllib.error
 import urllib.request
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +25,114 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
+
+# ── Email infrastructure (Resend) ─────────────────────────────────────────────
+ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
+
+EMAIL_SIGNATURE = (
+    '\n'
+    'Madson A. de Luna Aragão\n'
+    'PhD Student in Bioinformatics, UFMG, Belo Horizonte, Brazil\n'
+    '\n'
+    'Email: madsondeluna@gmail.com\n'
+    'LinkedIn: https://www.linkedin.com/in/madsonaragao/\n'
+    'GitHub: https://github.com/madsondeluna\n'
+    'Portfolio: https://madsondeluna.com/\n'
+    'Lab tools: https://delunalab.dev/\n'
+    '\n'
+    'Repository:\n'
+    'https://github.com/madsondeluna/bilbo\n'
+)
+
+EMAIL_CLOSING = {
+    'en': 'Kind regards,\n',
+    'fr': 'Cordialement,\n',
+    'es': 'Saludos cordiales,\n',
+    'pt': 'Atenciosamente,\n',
+    'zh': '此致敬礼，\n',
+}
+
+EMAIL_FOOTER = {
+    'en': (
+        '\n'
+        'This is an automated message, you do not need to reply.\n'
+        'Your data is transmitted with end-to-end TLS encryption.\n'
+    ),
+    'fr': (
+        '\n'
+        'Ceci est un message automatique, vous n\'avez pas besoin de répondre.\n'
+        'Vos données sont transmises avec chiffrement TLS de bout en bout.\n'
+    ),
+    'es': (
+        '\n'
+        'Este es un mensaje automático, no es necesario responder.\n'
+        'Tus datos se transmiten con cifrado TLS de extremo a extremo.\n'
+    ),
+    'pt': (
+        '\n'
+        'Esta é uma mensagem automática, você não precisa responder.\n'
+        'Seus dados são transmitidos com criptografia TLS de ponta a ponta.\n'
+    ),
+    'zh': (
+        '\n'
+        '这是一封自动邮件，您无需回复。\n'
+        '您的数据通过端到端 TLS 加密传输。\n'
+    ),
+}
+
+
+def _wrap_email_html(text_body: str) -> str:
+    """Wrap plain text email in HTML with sans-serif left-aligned style.
+    Tokens wrapped in **...** become <strong>."""
+    escaped = _html_lib.escape(text_body)
+    escaped = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
+    html_body = escaped.replace('\n', '<br>')
+    return (
+        '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#ffffff;">'
+        '<div style="max-width:680px;margin:0;padding:20px;background:#ffffff;text-align:left;'
+        'font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222222;">'
+        f'{html_body}'
+        '</div></body></html>'
+    )
+
+
+def _resend_send(payload: dict) -> tuple[bool, str]:
+    """POST email payload to Resend API. Returns (ok, message_or_error)."""
+    api_key = os.environ.get('RESEND_API_KEY', '')
+    if not api_key:
+        return False, 'Email service not configured.'
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.resend.com/emails',
+        data=data,
+        headers={
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+            'User-Agent': 'BILBO/0.1.0 (https://github.com/madsondeluna/bilbo)',
+            'Accept': 'application/json',
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            resp.read()
+        return True, 'ok'
+    except urllib.error.HTTPError as e:
+        raw = ''
+        try:
+            raw = e.read().decode('utf-8', errors='replace')
+        except Exception:
+            pass
+        msg = raw
+        try:
+            d = json.loads(raw) if raw else {}
+            msg = d.get('message') or d.get('error') or raw
+        except Exception:
+            pass
+        return False, f'Resend {e.code}: {msg}'
+    except Exception as e:
+        return False, str(e)
+
 
 _STATIC = Path(__file__).parent / "static"
 _DATA_DIR = Path(__file__).parent.parent / "data" / "examples" / "charmm_gui"
@@ -594,6 +707,425 @@ async def admin() -> HTMLResponse:
 async def health() -> dict:
     return {"status": "ok"}
 
+
+def _format_composition(comp_dict: dict) -> str:
+    """Build a multiline string of lipid: count entries."""
+    if not comp_dict:
+        return '(none)'
+    return '\n'.join(f'  {name}: **{count}**' for name, count in comp_dict.items())
+
+
+def _build_summary_lines(summary: dict, lang: str) -> str:
+    """Build the localized 'Build summary' block from build data."""
+    labels = {
+        'en': {
+            'box': 'Box (X×Y×Z, nm)',
+            'spacing': 'Spacing (nm)',
+            'apl': 'Area per lipid (Å²)',
+            'upper': 'Upper leaflet',
+            'lower': 'Lower leaflet',
+            'pep': 'Peptide atoms',
+            'water': 'Water molecules',
+            'ions': 'Ions',
+            'water_model': 'Water model',
+            'charge_before': 'System charge (before neutralization)',
+            'charge_after': 'System charge (after neutralization)',
+            'total_atoms': 'Total atoms',
+        },
+        'fr': {
+            'box': 'Boîte (X×Y×Z, nm)',
+            'spacing': 'Espacement (nm)',
+            'apl': 'Aire par lipide (Å²)',
+            'upper': 'Feuillet supérieur',
+            'lower': 'Feuillet inférieur',
+            'pep': 'Atomes du peptide',
+            'water': 'Molécules d\'eau',
+            'ions': 'Ions',
+            'water_model': 'Modèle d\'eau',
+            'charge_before': 'Charge du système (avant neutralisation)',
+            'charge_after': 'Charge du système (après neutralisation)',
+            'total_atoms': 'Atomes totaux',
+        },
+        'es': {
+            'box': 'Caja (X×Y×Z, nm)',
+            'spacing': 'Espaciado (nm)',
+            'apl': 'Área por lípido (Å²)',
+            'upper': 'Monocapa superior',
+            'lower': 'Monocapa inferior',
+            'pep': 'Átomos del péptido',
+            'water': 'Moléculas de agua',
+            'ions': 'Iones',
+            'water_model': 'Modelo de agua',
+            'charge_before': 'Carga del sistema (antes de neutralizar)',
+            'charge_after': 'Carga del sistema (después de neutralizar)',
+            'total_atoms': 'Átomos totales',
+        },
+        'pt': {
+            'box': 'Caixa (X×Y×Z, nm)',
+            'spacing': 'Espaçamento (nm)',
+            'apl': 'Área por lipídeo (Å²)',
+            'upper': 'Monocamada superior',
+            'lower': 'Monocamada inferior',
+            'pep': 'Átomos do peptídeo',
+            'water': 'Moléculas de água',
+            'ions': 'Íons',
+            'water_model': 'Modelo de água',
+            'charge_before': 'Carga do sistema (antes de neutralizar)',
+            'charge_after': 'Carga do sistema (depois de neutralizar)',
+            'total_atoms': 'Átomos totais',
+        },
+        'zh': {
+            'box': '盒子尺寸（X×Y×Z, nm）',
+            'spacing': '间距 (nm)',
+            'apl': '每个脂质面积 (Å²)',
+            'upper': '上层',
+            'lower': '下层',
+            'pep': '肽原子数',
+            'water': '水分子',
+            'ions': '离子',
+            'water_model': '水模型',
+            'charge_before': '系统电荷（中和前）',
+            'charge_after': '系统电荷（中和后）',
+            'total_atoms': '原子总数',
+        },
+    }[lang]
+
+    lines = []
+    bx = summary.get('box_x_nm')
+    by = summary.get('box_y_nm')
+    bz = summary.get('box_z_nm')
+    if bx is not None and by is not None:
+        bz_part = f'×**{bz:.3f}**' if bz is not None else ''
+        lines.append(f'{labels["box"]}: **{bx:.3f}**×**{by:.3f}**{bz_part}')
+    if summary.get('spacing_nm') is not None:
+        lines.append(f'{labels["spacing"]}: **{summary["spacing_nm"]:.4f}**')
+    if summary.get('apl_a2') is not None:
+        lines.append(f'{labels["apl"]}: **{summary["apl_a2"]:.2f}**')
+    composition = summary.get('composition') or {}
+    upper_comp = composition.get('upper') or {}
+    lower_comp = composition.get('lower') or {}
+    if upper_comp:
+        lines.append(f'\n{labels["upper"]}:')
+        lines.append(_format_composition(upper_comp))
+    if lower_comp:
+        lines.append(f'\n{labels["lower"]}:')
+        lines.append(_format_composition(lower_comp))
+    if summary.get('n_peptide_atoms', 0) > 0:
+        lines.append(f'\n{labels["pep"]}: **{summary["n_peptide_atoms"]}**')
+    if summary.get('n_water', 0) > 0:
+        lines.append(f'{labels["water"]}: **{summary["n_water"]}**')
+        if summary.get('water_model'):
+            lines.append(f'{labels["water_model"]}: **{summary["water_model"]}**')
+    if summary.get('n_ions', 0) > 0:
+        lines.append(f'{labels["ions"]}: **{summary["n_ions"]}**')
+    if summary.get('charge_before') is not None:
+        lines.append(f'{labels["charge_before"]}: **{summary["charge_before"]}**')
+    if summary.get('charge_after') is not None:
+        lines.append(f'{labels["charge_after"]}: **{summary["charge_after"]}**')
+    if summary.get('n_atoms') is not None:
+        lines.append(f'\n{labels["total_atoms"]}: **{summary["n_atoms"]}**')
+    return '\n'.join(lines)
+
+
+@app.post("/send_results")
+async def send_results(
+    request: Request,
+    to_email: str = Form(...),
+    lang: str = Form('en'),
+    pdb: Optional[str] = Form(None),
+    gro: Optional[str] = Form(None),
+    topology: Optional[str] = Form(None),
+    plot_b64: Optional[str] = Form(None),
+    summary: Optional[str] = Form(None),
+) -> JSONResponse:
+    if lang not in ('en', 'fr', 'es', 'pt', 'zh'):
+        lang = 'en'
+    if not to_email or '@' not in to_email:
+        return JSONResponse({'ok': False, 'error': 'Invalid email address.'}, status_code=400)
+    if not pdb:
+        return JSONResponse({'ok': False, 'error': 'No build data to send.'}, status_code=400)
+
+    try:
+        summary_data = json.loads(summary) if summary else {}
+    except Exception:
+        summary_data = {}
+
+    from_addr = os.environ.get('RESEND_FROM_EMAIL', 'BILBO <bilbo@delunalab.dev>')
+    site_url = str(request.base_url)
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+    summary_block = _build_summary_lines(summary_data, lang)
+
+    interpretation = {
+        'en': (
+            'BILBO produces a starting-point structure for molecular dynamics (MD) simulations. '
+            'The output is unminimized and will have steric clashes, which is normal at this stage. '
+            'Energy minimization, force field assignment, and (if not enabled here) solvation must '
+            'be performed before running MD.'
+        ),
+        'fr': (
+            'BILBO produit une structure de départ pour les simulations de dynamique moléculaire (MD). '
+            'La sortie n\'est pas minimisée et présente des conflits stériques, ce qui est normal à ce stade. '
+            'Une minimisation d\'énergie, l\'attribution d\'un champ de forces et (si non activée ici) '
+            'la solvatation doivent être effectuées avant la MD.'
+        ),
+        'es': (
+            'BILBO produce una estructura inicial para simulaciones de dinámica molecular (MD). '
+            'La salida no está minimizada y presentará choques estéricos, lo cual es normal en esta etapa. '
+            'La minimización de energía, la asignación del campo de fuerza y (si no está activada aquí) '
+            'la solvatación deben realizarse antes de ejecutar la MD.'
+        ),
+        'pt': (
+            'O BILBO produz uma estrutura inicial para simulações de dinâmica molecular (MD). '
+            'A saída não é minimizada e terá choques estéricos, o que é normal neste estágio. '
+            'Minimização de energia, atribuição de campo de força e (se não foi ativada aqui) solvatação '
+            'devem ser realizadas antes de rodar MD.'
+        ),
+        'zh': (
+            'BILBO 生成用于分子动力学（MD）模拟的起始结构。'
+            '输出未经最小化，会存在空间冲突，这是该阶段的正常现象。'
+            '在运行 MD 之前必须进行能量最小化、力场分配以及（如果此处未启用）溶剂化。'
+        ),
+    }[lang]
+
+    messages = {
+        'en': {
+            'subject': '[BILBO] Your bilayer build is ready',
+            'intro': 'Hi!\n\nYour BILBO bilayer build is complete. The output files are attached to this message.',
+            'summary_h': 'Build summary:',
+            'date_label': 'Date/time',
+            'interp_h': 'Interpretation note:',
+            'next': f'Run another build: {site_url}',
+            'feedback': f'Found a bug or have a feature suggestion? Open an issue:\n{ISSUES_URL}',
+        },
+        'fr': {
+            'subject': '[BILBO] Votre bicouche est prête',
+            'intro': 'Salut!\n\nVotre construction de bicouche BILBO est terminée. Les fichiers de sortie sont en pièce jointe.',
+            'summary_h': 'Résumé de la construction:',
+            'date_label': 'Date/heure',
+            'interp_h': 'Note d\'interprétation:',
+            'next': f'Lancer une autre construction: {site_url}',
+            'feedback': f'Bug ou idée de fonctionnalité? Ouvre une issue:\n{ISSUES_URL}',
+        },
+        'es': {
+            'subject': '[BILBO] Tu bicapa está lista',
+            'intro': '¡Hola!\n\nTu construcción de bicapa BILBO está completa. Los archivos de salida están adjuntos.',
+            'summary_h': 'Resumen de la construcción:',
+            'date_label': 'Fecha/hora',
+            'interp_h': 'Nota de interpretación:',
+            'next': f'Realizar otra construcción: {site_url}',
+            'feedback': f'¿Bug o sugerencia? Abre un issue:\n{ISSUES_URL}',
+        },
+        'pt': {
+            'subject': '[BILBO] Sua bicamada está pronta',
+            'intro': 'Olá!\n\nSua construção de bicamada no BILBO está completa. Os arquivos de saída estão anexados a esta mensagem.',
+            'summary_h': 'Resumo da construção:',
+            'date_label': 'Data/hora',
+            'interp_h': 'Nota de interpretação:',
+            'next': f'Faça uma nova construção: {site_url}',
+            'feedback': f'Encontrou algum bug ou tem sugestão de feature? Abre uma issue:\n{ISSUES_URL}',
+        },
+        'zh': {
+            'subject': '[BILBO] 您的双层膜已就绪',
+            'intro': '您好！\n\n您的 BILBO 双层膜构建已完成。输出文件已附在本邮件中。',
+            'summary_h': '构建摘要：',
+            'date_label': '日期/时间',
+            'interp_h': '解释说明：',
+            'next': f'进行新的构建: {site_url}',
+            'feedback': f'发现 bug 或有功能建议？请提交 issue：\n{ISSUES_URL}',
+        },
+    }
+    m = messages[lang]
+    body_text = (
+        f'{m["intro"]}\n\n'
+        f'{m["summary_h"]}\n'
+        f'{m["date_label"]}: **{timestamp}**\n'
+        f'{summary_block}\n\n'
+        f'{m["interp_h"]}\n{interpretation}\n\n'
+        f'{m["next"]}\n\n'
+        f'{m["feedback"]}\n\n'
+        f'{EMAIL_CLOSING[lang]}'
+        f'{EMAIL_SIGNATURE}'
+        f'{EMAIL_FOOTER[lang]}'
+    )
+
+    attachments = [{
+        'filename': 'bilbo_preview.pdb',
+        'content': base64.b64encode(pdb.encode('utf-8')).decode('ascii'),
+    }]
+    if gro:
+        attachments.append({
+            'filename': 'bilbo_preview.gro',
+            'content': base64.b64encode(gro.encode('utf-8')).decode('ascii'),
+        })
+    if topology:
+        attachments.append({
+            'filename': 'topol.top',
+            'content': base64.b64encode(topology.encode('utf-8')).decode('ascii'),
+        })
+    if plot_b64:
+        # plot_b64 is already a base64 PNG string (no data: prefix expected)
+        b64 = plot_b64.split(',', 1)[-1] if plot_b64.startswith('data:') else plot_b64
+        attachments.append({
+            'filename': 'leaflet_plot.png',
+            'content': b64,
+        })
+
+    payload = {
+        'from': from_addr,
+        'to': [to_email],
+        'reply_to': 'madsondeluna@gmail.com',
+        'subject': m['subject'],
+        'text': body_text,
+        'html': _wrap_email_html(body_text),
+        'attachments': attachments,
+    }
+    ok, info = _resend_send(payload)
+    if ok:
+        return JSONResponse({'ok': True})
+    return JSONResponse({'ok': False, 'error': info}, status_code=503 if 'not configured' in info else 500)
+
+
+@app.post("/send_recommendation")
+async def send_recommendation(
+    request: Request,
+    to_email: str = Form(...),
+    lang: str = Form('en'),
+) -> JSONResponse:
+    if lang not in ('en', 'fr', 'es', 'pt', 'zh'):
+        lang = 'en'
+    if not to_email or '@' not in to_email:
+        return JSONResponse({'ok': False, 'error': 'Invalid email address.'}, status_code=400)
+
+    from_addr = os.environ.get('RESEND_FROM_EMAIL', 'BILBO <bilbo@delunalab.dev>')
+    site_url = str(request.base_url)
+
+    messages = {
+        'en': {
+            'subject': 'Someone recommends BILBO to you',
+            'body': (
+                'If you are receiving this message, it is because someone using BILBO '
+                'thought you might find it useful too.\n\n'
+                'Hi! Hope you are doing well.\n\n'
+                'BILBO (Bilayer Lipid Builder and Organizer) is a free, open-source tool '
+                'for building all-atom flat lipid bilayer membranes from PDB templates. '
+                'It places proteins or peptides on or inside the membrane, producing '
+                'starting-point structures for molecular dynamics (MD) simulations.\n\n'
+                'Built with Python, FastAPI, NumPy, and SQLAlchemy. Runs directly in the '
+                'browser, no installation required.\n\n'
+                'Available in three formats:\n'
+                f'Web: {site_url}\n'
+                'CLI / repo: https://github.com/madsondeluna/bilbo\n'
+                'Python package: pip install bilbo-md\n\n'
+                'Found a bug or have a feature suggestion? Please open an issue at:\n'
+                f'{ISSUES_URL}\n'
+                'Or reach out directly using the contacts below.\n\n'
+            ),
+        },
+        'fr': {
+            'subject': 'Quelqu\'un vous recommande BILBO',
+            'body': (
+                'Si vous recevez ce message, c\'est parce que quelqu\'un utilisant BILBO '
+                'a pensé que cet outil pourrait vous être utile.\n\n'
+                'Salut! Comment ça va?\n\n'
+                'BILBO (Bilayer Lipid Builder and Organizer) est un outil gratuit et '
+                'open-source pour construire des bicouches lipidiques tout-atome plates '
+                'à partir de gabarits PDB. Il place des protéines ou des peptides sur ou '
+                'dans la membrane, produisant des structures de départ pour les simulations '
+                'de dynamique moléculaire (MD).\n\n'
+                'Construit avec Python, FastAPI, NumPy et SQLAlchemy. Fonctionne directement '
+                'dans le navigateur, sans installation.\n\n'
+                'Disponible en trois formats:\n'
+                f'Web: {site_url}\n'
+                'CLI / dépôt: https://github.com/madsondeluna/bilbo\n'
+                'Paquet pip: pip install bilbo-md\n\n'
+                'Tu as trouvé un bug ou une idée de fonctionnalité? Ouvre une issue:\n'
+                f'{ISSUES_URL}\n'
+                'Ou contacte-moi directement via les liens ci-dessous.\n\n'
+            ),
+        },
+        'es': {
+            'subject': 'Alguien te recomienda BILBO',
+            'body': (
+                'Si recibes este mensaje, es porque alguien que usa BILBO pensó que '
+                'esta herramienta podría serte útil también.\n\n'
+                '¡Hola! Espero que estés bien.\n\n'
+                'BILBO (Bilayer Lipid Builder and Organizer) es una herramienta gratuita '
+                'y de código abierto para construir bicapas lipídicas todo-átomo planas '
+                'a partir de plantillas PDB. Coloca proteínas o péptidos sobre o dentro '
+                'de la membrana, produciendo estructuras iniciales para simulaciones de '
+                'dinámica molecular (MD).\n\n'
+                'Construido con Python, FastAPI, NumPy y SQLAlchemy. Funciona directamente '
+                'en el navegador, sin instalación.\n\n'
+                'Disponible en tres formatos:\n'
+                f'Web: {site_url}\n'
+                'CLI / repo: https://github.com/madsondeluna/bilbo\n'
+                'Paquete pip: pip install bilbo-md\n\n'
+                '¿Encontraste un bug o tienes una sugerencia? Abre un issue:\n'
+                f'{ISSUES_URL}\n'
+                'O contáctame directamente con los datos de abajo.\n\n'
+            ),
+        },
+        'pt': {
+            'subject': 'Alguém te recomendou o BILBO',
+            'body': (
+                'Se você está recebendo esta mensagem, é porque alguém usando o BILBO '
+                'achou que poderia ser útil para você também.\n\n'
+                'Olá! Tudo bem?\n\n'
+                'O BILBO (Bilayer Lipid Builder and Organizer) é uma ferramenta gratuita '
+                'e open-source para construir bicamadas lipídicas all-atom planas a partir '
+                'de templates PDB. Posiciona proteínas ou peptídeos sobre ou dentro da '
+                'membrana, produzindo estruturas iniciais para simulações de dinâmica '
+                'molecular (MD).\n\n'
+                'Construído com Python, FastAPI, NumPy e SQLAlchemy. Roda direto no '
+                'navegador, sem precisar instalar nada.\n\n'
+                'Disponível em três formatos:\n'
+                f'Web: {site_url}\n'
+                'CLI / repo: https://github.com/madsondeluna/bilbo\n'
+                'Pacote pip: pip install bilbo-md\n\n'
+                'Encontrou algum bug ou tem sugestão de feature? Abre uma issue:\n'
+                f'{ISSUES_URL}\n'
+                'Ou fala comigo direto pelos contatos abaixo.\n\n'
+            ),
+        },
+        'zh': {
+            'subject': '有人向您推荐 BILBO',
+            'body': (
+                '如果您收到此消息，是因为有 BILBO 的用户认为这个工具可能对您有用。\n\n'
+                '您好！希望您一切顺利。\n\n'
+                'BILBO（Bilayer Lipid Builder and Organizer）是一款免费的开源工具，'
+                '用于从 PDB 模板构建全原子平面脂质双层膜。它能在膜上或膜内放置蛋白质或肽，'
+                '生成用于分子动力学（MD）模拟的起始结构。\n\n'
+                '使用 Python、FastAPI、NumPy 和 SQLAlchemy 构建。直接在浏览器中运行，无需安装。\n\n'
+                '提供三种格式：\n'
+                f'Web: {site_url}\n'
+                'CLI / repo: https://github.com/madsondeluna/bilbo\n'
+                'Python 包: pip install bilbo-md\n\n'
+                '发现 bug 或有功能建议？请提交 issue：\n'
+                f'{ISSUES_URL}\n'
+                '或通过下方联系方式直接与我联系。\n\n'
+            ),
+        },
+    }
+
+    m = messages[lang]
+    body_text = (
+        f'{m["body"]}'
+        f'{EMAIL_CLOSING[lang]}'
+        f'{EMAIL_SIGNATURE}'
+        f'{EMAIL_FOOTER[lang]}'
+    )
+    payload = {
+        'from': from_addr,
+        'to': [to_email],
+        'reply_to': 'madsondeluna@gmail.com',
+        'subject': m['subject'],
+        'text': body_text,
+        'html': _wrap_email_html(body_text),
+    }
+    ok, info = _resend_send(payload)
+    if ok:
+        return JSONResponse({'ok': True})
+    return JSONResponse({'ok': False, 'error': info}, status_code=503 if 'not configured' in info else 500)
 
 
 @app.post("/api/build")

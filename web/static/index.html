@@ -319,6 +319,87 @@
     border-left: 2px solid #fcd34d; padding: 5px 10px; background: #fffbeb;
     border-radius: 0 4px 4px 0; line-height: 1.5;
   }
+
+  /* Share + Email features (Resend) */
+  .share-section {
+    margin-top: 20px; margin-bottom: 20px;
+    border: 1px solid #e0e0e0; border-left: 3px solid #1a1a1a;
+    border-radius: 4px; padding: 16px 20px; background: #f9f9f9;
+  }
+  .share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .share-heading { font-size: 0.82rem; color: #1a1a1a; font-weight: bold; letter-spacing: 0.03em; }
+  .share-sub { font-size: 0.7rem; color: #aaa; margin-top: 3px; }
+  .share-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .share-btn {
+    border: none; font-family: 'Roboto Mono', monospace; font-size: 0.75rem;
+    padding: 8px 18px; border-radius: 4px; cursor: pointer; font-weight: normal;
+    letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .share-btn.copy-btn { background: #1a1a1a; color: #fff; }
+  .share-btn.copy-btn:hover { background: #333; }
+  .share-btn.gmail-btn { background: #fff; color: #1a1a1a; border: 1px solid #d0d0d0; }
+  .share-btn.gmail-btn:hover { background: #f0f0f0; }
+  .share-url-box {
+    font-size: 0.72rem; color: #059669; background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 4px; padding: 7px 12px; margin-top: 12px; word-break: break-all; display: none;
+  }
+  .share-form { display: none; margin-top: 12px; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .share-form.open { display: flex; }
+  .share-form input {
+    flex: 1; min-width: 220px; padding: 8px 12px; border: 1px solid #d0d0d0;
+    border-radius: 4px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem;
+    background: #fff; color: #1a1a1a;
+  }
+  .share-form input:focus { border-color: #1a1a1a; outline: none; }
+  .share-form select {
+    padding: 8px 28px 8px 10px; border: 1px solid #d0d0d0; border-radius: 4px;
+    font-family: 'Roboto Mono', monospace; font-size: 0.78rem;
+    background: #fff; color: #1a1a1a; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23666' d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
+  .share-form select:focus { border-color: #1a1a1a; outline: none; }
+  .share-form-status { font-size: 0.72rem; min-height: 16px; flex-basis: 100%; }
+  .share-form-status .err { color: #dc2626; }
+
+  .email-build-section {
+    border: 1px solid #e0e0e0; background: #fafafa;
+    border-radius: 4px; padding: 16px 20px; margin-top: 16px;
+  }
+  .email-build-title { font-size: 0.78rem; color: #444; font-weight: bold; letter-spacing: 0.04em; }
+  .email-build-desc { font-size: 0.72rem; color: #aaa; margin-top: 3px; }
+  .email-build-fields {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
+    align-items: end; margin-top: 14px;
+  }
+  @media (max-width: 540px) {
+    .email-build-fields { grid-template-columns: 1fr !important; }
+  }
+  .email-build-field label {
+    font-size: 0.65rem; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em;
+    display: block; margin-bottom: 5px;
+  }
+  .email-build-field input, .email-build-field select {
+    width: 100%; background: #fff; border: 1px solid #e0e0e0; color: #1a1a1a;
+    font-family: 'Roboto Mono', monospace; font-size: 0.8rem; padding: 9px 11px;
+    border-radius: 4px; outline: none;
+  }
+  .email-build-field select {
+    padding: 9px 28px 9px 11px; appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23666' d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat; background-position: right 10px center;
+  }
+  .email-build-field input:focus, .email-build-field select:focus { border-color: #aaa; }
+  .email-build-btn {
+    background: #059669; color: #fff; border: none;
+    font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 9px 20px;
+    border-radius: 4px; cursor: pointer; font-weight: normal; white-space: nowrap;
+    align-self: end;
+  }
+  .email-build-btn:hover { background: #047857; }
+  .email-build-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; }
+  .email-build-status { font-size: 0.72rem; margin-top: 10px; min-height: 16px; }
+  .email-build-status .err { color: #dc2626; }
 </style>
 </head>
 <body>
@@ -352,6 +433,32 @@
         <span class="stats-val">3</span>
         <span class="stats-lbl">collaborating research groups using BILBO in their routines</span>
       </div>
+    </div>
+  </div>
+
+  <div class="share-section">
+    <div class="share-inner">
+      <div class="share-text">
+        <div class="share-heading">Find BILBO useful?</div>
+        <div class="share-sub">Share it with your lab or collaborators.</div>
+      </div>
+      <div class="share-actions">
+        <button class="share-btn copy-btn" onclick="copyLink()" id="copyLinkBtn">Copy link</button>
+        <button class="share-btn gmail-btn" onclick="toggleShareForm()" id="shareEmailBtn">Share by email</button>
+      </div>
+    </div>
+    <div class="share-url-box" id="shareUrlBox"></div>
+    <div class="share-form" id="shareForm">
+      <select id="shareLang" title="Email language">
+        <option value="en">EN</option>
+        <option value="fr">FR</option>
+        <option value="es">ES</option>
+        <option value="pt">PT</option>
+        <option value="zh">ZH</option>
+      </select>
+      <input type="email" id="shareFriendEmail" placeholder="friend@example.com">
+      <button class="share-btn copy-btn" onclick="sendShareEmail()" id="sendShareBtn">Send</button>
+      <div class="share-form-status" id="shareFormStatus"></div>
     </div>
   </div>
 
@@ -1270,6 +1377,29 @@ function renderResults(data) {
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
     <pre class="log-panel" id="buildLogPanel"></pre>
+
+    <div class="email-build-section">
+      <div class="email-build-title">Receive build by email</div>
+      <div class="email-build-desc">PDB${data.gro ? ', GRO' : ''}${data.topology ? ', topology' : ''}${data.leaflet_plot_b64 ? ', leaflet plot' : ''} attached, with full build summary.</div>
+      <div class="email-build-fields">
+        <div class="email-build-field">
+          <label for="buildEmailLang">Lang</label>
+          <select id="buildEmailLang">
+            <option value="en">EN</option>
+            <option value="fr">FR</option>
+            <option value="es">ES</option>
+            <option value="pt">PT</option>
+            <option value="zh">ZH</option>
+          </select>
+        </div>
+        <div class="email-build-field">
+          <label for="buildEmail">Your email</label>
+          <input type="email" id="buildEmail" placeholder="you@example.com">
+        </div>
+        <button class="email-build-btn" id="sendBuildBtn" onclick="sendBuildByEmail()">Send</button>
+      </div>
+      <div class="email-build-status" id="emailBuildStatus"></div>
+    </div>
   `;
 
   setTimeout(() => initViewer(data.pdb), 50);
@@ -1485,6 +1615,104 @@ function downloadLeafletPlot() {
   a.href = 'data:image/png;base64,' + currentLeafletPlotB64;
   a.download = 'leaflet_plot.png';
   a.click();
+}
+
+function copyLink() {
+  const url = window.location.origin + '/';
+  const box = document.getElementById('shareUrlBox');
+  const btn = document.getElementById('copyLinkBtn');
+  navigator.clipboard.writeText(url).then(() => {
+    box.textContent = url + '  (copied)';
+    box.style.display = 'block';
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy link'; box.style.display = 'none'; }, 2500);
+  }).catch(() => {
+    box.textContent = url;
+    box.style.display = 'block';
+  });
+}
+
+function toggleShareForm() {
+  const form = document.getElementById('shareForm');
+  const opening = !form.classList.contains('open');
+  form.classList.toggle('open');
+  if (opening) document.getElementById('shareFriendEmail').focus();
+}
+
+async function sendShareEmail() {
+  const email = document.getElementById('shareFriendEmail').value.trim();
+  const status = document.getElementById('shareFormStatus');
+  const btn = document.getElementById('sendShareBtn');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    status.innerHTML = '<span class="err">Enter a valid email.</span>';
+    return;
+  }
+  btn.disabled = true;
+  status.style.color = '#999';
+  status.textContent = 'Sending...';
+  try {
+    const fd = new FormData();
+    fd.append('to_email', email);
+    fd.append('lang', document.getElementById('shareLang').value);
+    const res = await fetch('/send_recommendation', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      status.style.color = '#059669';
+      status.textContent = 'Recommendation sent to ' + email;
+      document.getElementById('shareFriendEmail').value = '';
+    } else {
+      status.innerHTML = '<span class="err">' + (data.error || 'Failed to send.') + '</span>';
+    }
+  } catch (e) {
+    status.innerHTML = '<span class="err">' + e.message + '</span>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function sendBuildByEmail() {
+  if (!currentPdb || !currentBuildData) return;
+  const email = document.getElementById('buildEmail').value.trim();
+  const lang  = document.getElementById('buildEmailLang').value;
+  const status = document.getElementById('emailBuildStatus');
+  const btn = document.getElementById('sendBuildBtn');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    status.innerHTML = '<span class="err">Enter a valid email address.</span>';
+    return;
+  }
+  btn.disabled = true;
+  status.style.color = '#999';
+  status.textContent = 'Sending...';
+  try {
+    const fd = new FormData();
+    fd.append('to_email', email);
+    fd.append('lang', lang);
+    fd.append('pdb', currentPdb);
+    if (currentGro) fd.append('gro', currentGro);
+    if (currentTopology) fd.append('topology', currentTopology);
+    if (currentLeafletPlotB64) fd.append('plot_b64', currentLeafletPlotB64);
+    const d = currentBuildData;
+    fd.append('summary', JSON.stringify({
+      n_atoms: d.n_atoms, n_lipid_atoms: d.n_lipid_atoms,
+      n_peptide_atoms: d.n_peptide_atoms, n_water: d.n_water, n_ions: d.n_ions,
+      composition: d.composition, n_lipids: d.n_lipids,
+      box_x_nm: d.box_x_nm, box_y_nm: d.box_y_nm, box_z_nm: d.box_z_nm,
+      spacing_nm: d.spacing_nm, apl_a2: d.apl_a2,
+      water_model: d.water_model, charge_before: d.charge_before, charge_after: d.charge_after,
+    }));
+    const res = await fetch('/send_results', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      status.style.color = '#059669';
+      status.textContent = 'Build sent to ' + email;
+    } else {
+      status.innerHTML = '<span class="err">' + (data.error || 'Failed to send.') + '</span>';
+    }
+  } catch (e) {
+    status.innerHTML = '<span class="err">' + e.message + '</span>';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function escHtml(s) {
