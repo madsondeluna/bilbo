@@ -35,6 +35,7 @@ ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
 EMAIL_SIGNATURE = (
     '\n'
     'BILBO Team\n'
+    'Principal Developer: madsondeluna@gmail.com\n'
     '\n'
     'Repository: https://github.com/madsondeluna/bilbo\n'
 )
