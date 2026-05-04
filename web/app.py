@@ -34,23 +34,9 @@ ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
 
 EMAIL_SIGNATURE = (
     '\n'
-    'Madson A. de Luna Aragão\n'
-    'Nextflow Ambassador @ SEQERA\n'
-    'PhD Student in Bioinformatics @ UFMG\n'
-    'MBA Student in Software Engineering @ USP\n'
-    'Specialist in Data Science & Analytics @ PUC\n'
-    'MSc in Genetics & Molecular Biology @ UFPE\n'
-    'BSc in Biomedical Sciences @ UFPE\n'
-    'Belo Horizonte, Minas Gerais, Brazil\n'
+    'BILBO Team\n'
     '\n'
-    'Email: madsondeluna@gmail.com\n'
-    'LinkedIn: https://www.linkedin.com/in/madsonaragao/\n'
-    'GitHub: https://github.com/madsondeluna\n'
-    'Portfolio: https://madsondeluna.com/\n'
-    'Lab tools: https://delunalab.dev/\n'
-    '\n'
-    'Repository:\n'
-    'https://github.com/madsondeluna/bilbo\n'
+    'Repository: https://github.com/madsondeluna/bilbo\n'
 )
 
 EMAIL_CLOSING = {
