@@ -34,7 +34,13 @@ ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
 EMAIL_SIGNATURE = (
     '\n'
     'Madson A. de Luna Aragão\n'
-    'PhD Student in Bioinformatics, UFMG, Belo Horizonte, Brazil\n'
+    'Nextflow Ambassador @ SEQERA\n'
+    'PhD Student in Bioinformatics @ UFMG\n'
+    'MBA Student in Software Engineering @ USP\n'
+    'Specialist in Data Science & Analytics @ PUC\n'
+    'MSc in Genetics & Molecular Biology @ UFPE\n'
+    'BSc in Biomedical Sciences @ UFPE\n'
+    'Belo Horizonte, Minas Gerais, Brazil\n'
     '\n'
     'Email: madsondeluna@gmail.com\n'
     'LinkedIn: https://www.linkedin.com/in/madsonaragao/\n'
@@ -837,10 +843,10 @@ def _build_summary_lines(summary: dict, lang: str) -> str:
     upper_comp = composition.get('upper') or {}
     lower_comp = composition.get('lower') or {}
     if upper_comp:
-        lines.append(f'\n{labels["upper"]}:')
+        lines.append(f'\n**{labels["upper"]}:**')
         lines.append(_format_composition(upper_comp))
     if lower_comp:
-        lines.append(f'\n{labels["lower"]}:')
+        lines.append(f'\n**{labels["lower"]}:**')
         lines.append(_format_composition(lower_comp))
     if summary.get('n_peptide_atoms', 0) > 0:
         lines.append(f'\n{labels["pep"]}: **{summary["n_peptide_atoms"]}**')
@@ -935,7 +941,7 @@ async def send_results(
                 'should any be identified, we kindly ask that they be reported.'
             ),
             'next': f'To start a new build, please visit: {site_url}',
-            'feedback': f'To report an issue or suggest a feature, please open a ticket at:\n{ISSUES_URL}',
+            'feedback': f'To report an issue or suggest a feature, please open a ticket at {ISSUES_URL}.',
         },
         'fr': {
             'subject': '[BILBO] Votre bicouche est prête',
@@ -952,7 +958,7 @@ async def send_results(
                 'si elles sont constatées, nous vous prions de les signaler.'
             ),
             'next': f'Pour lancer une nouvelle construction, rendez-vous sur: {site_url}',
-            'feedback': f'Pour signaler un problème ou proposer une fonctionnalité, veuillez ouvrir une issue:\n{ISSUES_URL}',
+            'feedback': f'Pour signaler un problème ou proposer une fonctionnalité, veuillez ouvrir une issue à l\'adresse {ISSUES_URL}.',
         },
         'es': {
             'subject': '[BILBO] Su bicapa está lista',
@@ -969,7 +975,7 @@ async def send_results(
                 'en caso de detectarlos, solicitamos que sean reportados.'
             ),
             'next': f'Para iniciar una nueva construcción, visite: {site_url}',
-            'feedback': f'Para reportar un problema o sugerir una funcionalidad, abra una issue en:\n{ISSUES_URL}',
+            'feedback': f'Para reportar un problema o sugerir una funcionalidad, abra una issue en {ISSUES_URL}.',
         },
         'pt': {
             'subject': '[BILBO] Sua bicamada está pronta',
@@ -986,7 +992,7 @@ async def send_results(
                 'caso sejam identificados, solicitamos que sejam reportados.'
             ),
             'next': f'Para iniciar uma nova construção, acesse: {site_url}',
-            'feedback': f'Para reportar um problema ou sugerir uma funcionalidade, abra uma issue em:\n{ISSUES_URL}',
+            'feedback': f'Para reportar um problema ou sugerir uma funcionalidade, abra uma issue em {ISSUES_URL}.',
         },
         'zh': {
             'subject': '[BILBO] 您的双层膜已就绪',
@@ -1002,16 +1008,16 @@ async def send_results(
                 '如发现此类问题，敬请告知。'
             ),
             'next': f'如需启动新的构建，请访问: {site_url}',
-            'feedback': f'如需报告问题或提出功能建议，请在以下地址提交 issue：\n{ISSUES_URL}',
+            'feedback': f'如需报告问题或提出功能建议，请在 {ISSUES_URL} 提交 issue。',
         },
     }
     m = messages[lang]
     body_text = (
         f'{m["intro"]}\n\n'
-        f'{m["summary_h"]}\n'
+        f'**{m["summary_h"]}**\n'
         f'{m["date_label"]}: **{timestamp}**\n'
         f'{summary_block}\n\n'
-        f'{m["interp_h"]}\n{interpretation}\n\n'
+        f'**{m["interp_h"]}**\n{interpretation}\n\n'
         f'**{m["disclaimer_h"]}**\n{m["disclaimer"]}\n\n'
         f'{m["next"]}\n\n'
         f'{m["feedback"]}\n\n'
