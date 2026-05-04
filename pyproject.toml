@@ -35,6 +35,8 @@ web = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
+    "psycopg2-binary>=2.9",
+    "sqlalchemy>=2.0",
 ]
 
 [tool.hatch.build.targets.wheel]

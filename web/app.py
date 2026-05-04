@@ -7,7 +7,7 @@ import json
 import math
 import os
 import random as _random
-import sqlite3
+from sqlalchemy import create_engine, text, pool as sa_pool
 import tempfile
 import threading
 import urllib.request
@@ -48,53 +48,76 @@ def _send_telegram(text: str) -> None:
 
 
 _db_lock = threading.Lock()
+_engine = None
 
 
-def _stats_db_path() -> str:
-    return os.environ.get("STATS_DB", "/tmp/stats.db")
+def _get_engine():
+    global _engine
+    if _engine is not None:
+        return _engine
+    url = os.environ.get("DATABASE_URL", "")
+    if url:
+        if url.startswith("postgres://"):
+            url = "postgresql://" + url[len("postgres://"):]
+        _engine = create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=2)
+    else:
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stats.db")
+        _engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+            poolclass=sa_pool.StaticPool,
+        )
+    return _engine
 
 
-def _stats_conn() -> sqlite3.Connection:
-    c = sqlite3.connect(_stats_db_path(), check_same_thread=False)
-    c.execute("PRAGMA journal_mode=WAL")
-    c.execute("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)")
-    c.execute("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)")
-    for k in ("total_builds", "total_atoms", "unique_sessions"):
-        c.execute("INSERT OR IGNORE INTO stats VALUES (?, 0)", (k,))
-    c.commit()
-    return c
+def _is_pg() -> bool:
+    return _get_engine().dialect.name == "postgresql"
 
 
 def _init_stats_db() -> None:
     with _db_lock:
-        _stats_conn().close()
+        with _get_engine().begin() as conn:
+            if _is_pg():
+                conn.execute(text("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value BIGINT DEFAULT 0)"))
+                conn.execute(text("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)"))
+                for k in ("total_builds", "total_atoms", "unique_sessions"):
+                    conn.execute(text("INSERT INTO stats (key, value) VALUES (:k, 0) ON CONFLICT DO NOTHING"), {"k": k})
+            else:
+                conn.execute(text("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)"))
+                conn.execute(text("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)"))
+                for k in ("total_builds", "total_atoms", "unique_sessions"):
+                    conn.execute(text("INSERT OR IGNORE INTO stats VALUES (:k, 0)"), {"k": k})
 
 
 def _register_session(session_id: str) -> None:
     with _db_lock:
-        c = _stats_conn()
-        if not c.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,)).fetchone():
-            c.execute("INSERT OR IGNORE INTO sessions VALUES (?)", (session_id,))
-            c.execute("UPDATE stats SET value = value + 1 WHERE key = ?", ("unique_sessions",))
-        c.commit()
-        c.close()
+        with _get_engine().begin() as conn:
+            if _is_pg():
+                result = conn.execute(
+                    text("INSERT INTO sessions (id) VALUES (:id) ON CONFLICT DO NOTHING"),
+                    {"id": session_id},
+                )
+                if result.rowcount:
+                    conn.execute(text("UPDATE stats SET value = value + 1 WHERE key = 'unique_sessions'"))
+            else:
+                exists = conn.execute(text("SELECT 1 FROM sessions WHERE id = :id"), {"id": session_id}).fetchone()
+                if not exists:
+                    conn.execute(text("INSERT OR IGNORE INTO sessions VALUES (:id)"), {"id": session_id})
+                    conn.execute(text("UPDATE stats SET value = value + 1 WHERE key = 'unique_sessions'"))
 
 
 def _increment_stats(atom_count: int) -> None:
     with _db_lock:
-        c = _stats_conn()
-        c.execute("UPDATE stats SET value = value + 1 WHERE key = ?", ("total_builds",))
-        c.execute("UPDATE stats SET value = value + ? WHERE key = ?", (atom_count, "total_atoms"))
-        c.commit()
-        c.close()
+        with _get_engine().begin() as conn:
+            conn.execute(text("UPDATE stats SET value = value + 1 WHERE key = 'total_builds'"))
+            conn.execute(text("UPDATE stats SET value = value + :n WHERE key = 'total_atoms'"), {"n": atom_count})
 
 
 def _get_stats() -> dict:
     with _db_lock:
-        c = _stats_conn()
-        rows = c.execute("SELECT key, value FROM stats").fetchall()
-        c.close()
-        return {k: v for k, v in rows}
+        with _get_engine().connect() as conn:
+            rows = conn.execute(text("SELECT key, value FROM stats")).fetchall()
+            return {k: v for k, v in rows}
 
 
 _init_stats_db()

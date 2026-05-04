@@ -372,6 +372,18 @@ The deployed URL has the form `https://<service-name>.onrender.com`. To change i
 
 Subsequent deploys are automatic: every push to `main` triggers a new build.
 
+### Persistent usage stats (Neon PostgreSQL)
+
+The web interface tracks usage stats (builds, atoms assembled, unique users). By default these are stored in a local SQLite file (`web/stats.db`). On Render, the filesystem resets on every deploy, so the stats are lost unless you connect a persistent database.
+
+To persist stats across deploys, create a free project on [Neon](https://neon.tech), copy the connection string from the project dashboard (**Connection string** card), and add it as an environment variable in the Render service:
+
+```
+DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
+```
+
+The app detects `DATABASE_URL` automatically on startup, creates the tables if they do not exist, and uses PostgreSQL from that point on. No code changes or migrations are required.
+
 ### Inputs
 
 **Leaflet composition**
