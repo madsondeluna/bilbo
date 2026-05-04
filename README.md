@@ -384,6 +384,50 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=r
 
 The app detects `DATABASE_URL` automatically on startup, creates the tables if they do not exist, and uses PostgreSQL from that point on. No code changes or migrations are required.
 
+### Species membrane presets
+
+The web interface provides 17 curated membrane presets accessible via the "Load membrane preset" selector. Compositions are in mol% of total phospholipid and represent symmetric bilayers unless noted. All acyl chain variants use generic CHARMM36 templates (POPE, POPC, etc.) as proxies for the in-vivo acyl chain diversity. Post-translational lipid modifications, glycolipids, LPS, membrane proteins, and asymmetric leaflet distributions are not modeled.
+
+**Gram-negative bacteria**
+
+| Species | POPE | DPPE | POPG | DPPG | CL | Other |
+|---|---|---|---|---|---|---|
+| *Escherichia coli* K-12 | 45 | 30 | 12 | 8 | 5 | |
+| *Salmonella* Typhimurium | 43 | 29 | 12 | 8 | 8 | |
+| *Klebsiella pneumoniae* | 45 | 30 | 11 | 7 | 7 | |
+| *Pseudomonas aeruginosa* PAO1 | 50 | 23 | 11 | 6 | 10 | |
+| *Pseudomonas syringae* DC3000 | 42 | 23 | 13 | 7 | 10 | POPC 5 |
+| *Xanthomonas campestris* | 38 | 22 | 14 | 8 | 12 | POPC 6 |
+| *Ralstonia pseudosolanacearum* | 38 | 22 | 14 | 8 | 15 | POPC 3 |
+| *Acinetobacter baumannii* | 45 | 25 | 14 | 8 | 8 | |
+| *Helicobacter pylori* | 18 | 12 | 10 | 5 | 10 | POPS 5, SAPI 5, CHOL 35\* |
+
+\* Cholesterol glucosides (~25% of total native lipid) approximated as free CHOL.
+
+**Gram-positive bacteria**
+
+| Species | POPE | DPPE | POPG | DPPG | CL | Other |
+|---|---|---|---|---|---|---|
+| *Bacillus subtilis* (phospholipids only) | 35 | 30 | 15 | 12 | 8 | |
+| *Mycobacterium tuberculosis* (inner membrane) | 15 | 10 | 7 | 4 | 14 | SAPI 35\*, POPC 15 |
+
+\* Glycolipids (~30% native total) and L-PG omitted from *B. subtilis*. SAPI used as proxy for phosphatidylinositol mannosides (PIM2/PIM6) in *M. tuberculosis*.
+
+**Mammalian membranes**
+
+| Membrane | POPC | POPE | POPS | SAPI | BSM | CHOL | CL |
+|---|---|---|---|---|---|---|---|
+| Mammalian plasma (simplified symmetric) | 25 | 20 | 8 | 5 | 12 | 30 | |
+| Human erythrocyte (average bilayer) | 22 | 15 | 8 | 1 | 14 | 40 | |
+| Mitochondrial outer membrane (MOM) | 50 | 30 | 5 | 5 | | 5 | 5 |
+| Mitochondrial inner membrane (MIM) | 40 | 35 | 3 | 5 | | | 17 |
+| Endoplasmic reticulum | 55 | 25 | 5 | 10 | | 5 | |
+| *S. cerevisiae* plasma membrane | 17 | 20 | 30 | 18 | | 15\* | |
+
+\* Ergosterol approximated as CHOL.
+
+Erythrocyte and mitochondrial inner membrane compositions are based on Radhakrishnan & McConnell (PNAS, 1998) and Paradies et al. (Cells, 2019), respectively.
+
 ### Inputs
 
 **Leaflet composition**
