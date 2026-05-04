@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import html as _html_lib
+import io
 import json
 import math
 import os
@@ -16,6 +17,7 @@ import threading
 import urllib.error
 import urllib.request
 import uuid
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -93,6 +95,36 @@ def _wrap_email_html(text_body: str) -> str:
         'font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#222222;">'
         f'{html_body}'
         '</div></body></html>'
+    )
+
+
+# Threshold above which output files are bundled into a single ZIP archive
+# before being attached. Resend allows ~40 MB per request, but base64 inflates
+# raw bytes by ~33% and downstream providers (Gmail) reject above ~25 MB.
+EMAIL_ZIP_THRESHOLD_BYTES = 2 * 1024 * 1024
+
+
+def _pack_attachments(files: list[tuple[str, bytes]]) -> tuple[list[dict], list[str] | None]:
+    """Build Resend-style attachments. If total raw size exceeds the threshold,
+    bundle all files into a single ZIP and return its contents list as the
+    second tuple element. Otherwise return individual attachments and None."""
+    total = sum(len(b) for _, b in files)
+    if total <= EMAIL_ZIP_THRESHOLD_BYTES or len(files) <= 1:
+        return (
+            [
+                {'filename': name, 'content': base64.b64encode(data).decode('ascii')}
+                for name, data in files
+            ],
+            None,
+        )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        for name, data in files:
+            zf.writestr(name, data)
+    zip_b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    return (
+        [{'filename': 'bilbo_results.zip', 'content': zip_b64}],
+        [name for name, _ in files],
     )
 
 
@@ -988,27 +1020,50 @@ async def send_results(
         f'{EMAIL_FOOTER[lang]}'
     )
 
-    attachments = [{
-        'filename': 'bilbo_preview.pdb',
-        'content': base64.b64encode(pdb.encode('utf-8')).decode('ascii'),
-    }]
+    raw_files: list[tuple[str, bytes]] = [('bilbo_preview.pdb', pdb.encode('utf-8'))]
     if gro:
-        attachments.append({
-            'filename': 'bilbo_preview.gro',
-            'content': base64.b64encode(gro.encode('utf-8')).decode('ascii'),
-        })
+        raw_files.append(('bilbo_preview.gro', gro.encode('utf-8')))
     if topology:
-        attachments.append({
-            'filename': 'topol.top',
-            'content': base64.b64encode(topology.encode('utf-8')).decode('ascii'),
-        })
+        raw_files.append(('topol.top', topology.encode('utf-8')))
     if plot_b64:
-        # plot_b64 is already a base64 PNG string (no data: prefix expected)
         b64 = plot_b64.split(',', 1)[-1] if plot_b64.startswith('data:') else plot_b64
-        attachments.append({
-            'filename': 'leaflet_plot.png',
-            'content': b64,
-        })
+        try:
+            raw_files.append(('leaflet_plot.png', base64.b64decode(b64)))
+        except Exception:
+            pass
+    attachments, zip_contents = _pack_attachments(raw_files)
+    if zip_contents:
+        zip_note = {
+            'en': (
+                'Note: due to the size of the build, all output files have been '
+                'bundled into a single archive named **bilbo_results.zip** '
+                f'containing: {", ".join(zip_contents)}.'
+            ),
+            'fr': (
+                'Note: en raison de la taille de la construction, tous les fichiers '
+                'de sortie ont été regroupés dans une archive unique nommée '
+                f'**bilbo_results.zip** contenant: {", ".join(zip_contents)}.'
+            ),
+            'es': (
+                'Nota: debido al tamaño de la construcción, todos los archivos de '
+                'salida se han empaquetado en un único archivo llamado '
+                f'**bilbo_results.zip** que contiene: {", ".join(zip_contents)}.'
+            ),
+            'pt': (
+                'Observação: devido ao tamanho da construção, todos os arquivos de '
+                'saída foram agrupados em um único arquivo chamado '
+                f'**bilbo_results.zip** contendo: {", ".join(zip_contents)}.'
+            ),
+            'zh': (
+                f'注意：由于构建文件较大，所有输出文件已打包为单个压缩包 '
+                f'**bilbo_results.zip**，其中包含：{", ".join(zip_contents)}。'
+            ),
+        }[lang]
+        body_text = body_text.replace(
+            m['intro'],
+            f'{m["intro"]}\n\n{zip_note}',
+            1,
+        )
 
     payload = {
         'from': from_addr,
