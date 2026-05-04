@@ -101,6 +101,14 @@
   }
   .add-btn:hover { border-color: #bbb; color: #555; }
 
+  .preset-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .preset-select { flex: 1; background: #f7f7f7; border: 1px solid #e0e0e0; color: #888; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 8px 10px; border-radius: 4px; outline: none; }
+  .preset-select:focus { border-color: #bbb; }
+  .preset-select.has-selection { color: #1a1a1a; }
+  .btn-preset { background: #475569; color: #fff; border: none; padding: 8px 18px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .btn-preset:hover { background: #334155; }
+  .preset-notice { display: none; margin-bottom: 12px; padding: 10px 14px; background: #f8fafc; border-left: 2px solid #94a3b8; border-radius: 0 4px 4px 0; color: #555; font-size: 0.62rem; line-height: 1.7; }
+
   /* Symmetric toggle */
   .toggle-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
   .toggle-row input[type="checkbox"] { accent-color: #1a1a1a; width: 14px; height: 14px; cursor: pointer; }
@@ -501,6 +509,40 @@
     </div>
   </div>
 
+  <!-- Membrane presets -->
+  <div class="preset-row">
+    <select id="presetSelect" class="preset-select" onchange="this.classList.toggle('has-selection', this.value !== '')">
+      <option value="">— load membrane preset —</option>
+      <optgroup label="Gram-negative bacteria">
+        <option value="ecoli">Escherichia coli K-12</option>
+        <option value="salmonella">Salmonella Typhimurium</option>
+        <option value="klebsiella">Klebsiella pneumoniae</option>
+        <option value="paeruginosa">Pseudomonas aeruginosa PAO1</option>
+        <option value="psyringae">Pseudomonas syringae DC3000</option>
+        <option value="xanthomonas">Xanthomonas campestris</option>
+        <option value="ralstonia">Ralstonia pseudosolanacearum</option>
+        <option value="acineto">Acinetobacter baumannii</option>
+        <option value="hpylori">Helicobacter pylori</option>
+      </optgroup>
+      <optgroup label="Gram-positive bacteria">
+        <option value="bsubtilis">Bacillus subtilis (phospholipids only)</option>
+        <option value="mtb">Mycobacterium tuberculosis (inner membrane)</option>
+      </optgroup>
+      <optgroup label="Mammalian membranes">
+        <option value="plasma_sym">Mammalian plasma (simplified symmetric)</option>
+        <option value="erythrocyte">Human erythrocyte (average bilayer)</option>
+        <option value="mom">Mitochondrial outer membrane (MOM)</option>
+        <option value="mim">Mitochondrial inner membrane (MIM)</option>
+        <option value="er">Endoplasmic reticulum</option>
+        <option value="yeast">S. cerevisiae plasma membrane</option>
+      </optgroup>
+    </select>
+    <button class="btn-preset" onclick="loadPreset()">Load preset</button>
+  </div>
+  <div class="preset-notice" id="presetNotice">
+    <strong>Simplified model.</strong> Preset compositions are based on published averages and use a reduced set of generic phospholipid species as proxies for the acyl chain diversity found in native membranes. The following are not represented: post-translational lipid modifications (glycosylation, acylation, methylation), asymmetric leaflet distributions, membrane proteins, and LPS in Gram-negative bacteria. Species-specific simplifications: <em>B. subtilis</em> omits glycolipids (~30% of native total lipid) and L-PG; <em>M. tuberculosis</em> uses SAPI as a proxy for phosphatidylinositol mannosides (PIM2/PIM6); <em>H. pylori</em> approximates cholesterol glucosides as free CHOL; <em>S. cerevisiae</em> uses CHOL as a proxy for ergosterol. These presets are starting points for simulation setup and should be validated against organism- and condition-specific experimental data before drawing conclusions.
+  </div>
+
   <!-- Actions -->
   <div class="action-row">
     <button id="buildBtn" onclick="runBuild()">Build</button>
@@ -885,6 +927,62 @@ function makeLipidPdb(resName, nAtoms = 12, x0 = 0.0) {
 }
 
 // ── Example loader ─────────────────────────────────────────────────────────────
+const MEMBRANE_PRESETS = {
+  ecoli:       { label: "Escherichia coli K-12",                       lipids: [{n:"POPE",c:45},{n:"DPPE",c:30},{n:"POPG",c:12},{n:"DPPG",c:8},{n:"CL",c:5}] },
+  salmonella:  { label: "Salmonella Typhimurium",                      lipids: [{n:"POPE",c:43},{n:"DPPE",c:29},{n:"POPG",c:12},{n:"DPPG",c:8},{n:"CL",c:8}] },
+  klebsiella:  { label: "Klebsiella pneumoniae",                       lipids: [{n:"POPE",c:45},{n:"DPPE",c:30},{n:"POPG",c:11},{n:"DPPG",c:7},{n:"CL",c:7}] },
+  paeruginosa: { label: "Pseudomonas aeruginosa PAO1",                 lipids: [{n:"POPE",c:50},{n:"DPPE",c:23},{n:"POPG",c:11},{n:"DPPG",c:6},{n:"CL",c:10}] },
+  psyringae:   { label: "Pseudomonas syringae DC3000",                 lipids: [{n:"POPE",c:42},{n:"DPPE",c:23},{n:"POPG",c:13},{n:"DPPG",c:7},{n:"CL",c:10},{n:"POPC",c:5}] },
+  xanthomonas: { label: "Xanthomonas campestris",                      lipids: [{n:"POPE",c:38},{n:"DPPE",c:22},{n:"POPG",c:14},{n:"DPPG",c:8},{n:"CL",c:12},{n:"POPC",c:6}] },
+  ralstonia:   { label: "Ralstonia pseudosolanacearum",                 lipids: [{n:"POPE",c:38},{n:"DPPE",c:22},{n:"POPG",c:14},{n:"DPPG",c:8},{n:"CL",c:15},{n:"POPC",c:3}] },
+  acineto:     { label: "Acinetobacter baumannii",                     lipids: [{n:"POPE",c:45},{n:"DPPE",c:25},{n:"POPG",c:14},{n:"DPPG",c:8},{n:"CL",c:8}] },
+  hpylori:     { label: "Helicobacter pylori",                         lipids: [{n:"POPE",c:18},{n:"DPPE",c:12},{n:"POPG",c:10},{n:"DPPG",c:5},{n:"CL",c:10},{n:"POPS",c:5},{n:"SAPI",c:5},{n:"CHOL",c:35}] },
+  bsubtilis:   { label: "Bacillus subtilis (phospholipids only)",      lipids: [{n:"POPE",c:35},{n:"DPPE",c:30},{n:"POPG",c:15},{n:"DPPG",c:12},{n:"CL",c:8}] },
+  mtb:         { label: "Mycobacterium tuberculosis (inner membrane)", lipids: [{n:"POPE",c:15},{n:"DPPE",c:10},{n:"POPG",c:7},{n:"DPPG",c:4},{n:"CL",c:14},{n:"SAPI",c:35},{n:"POPC",c:15}] },
+  plasma_sym:  { label: "Mammalian plasma (simplified symmetric)",     lipids: [{n:"POPC",c:25},{n:"POPE",c:20},{n:"POPS",c:8},{n:"SAPI",c:5},{n:"BSM",c:12},{n:"CHOL",c:30}] },
+  erythrocyte: { label: "Human erythrocyte (average bilayer)",         lipids: [{n:"POPC",c:22},{n:"POPE",c:15},{n:"POPS",c:8},{n:"BSM",c:14},{n:"CHOL",c:40},{n:"SAPI",c:1}] },
+  mom:         { label: "Mitochondrial outer membrane (MOM)",          lipids: [{n:"POPC",c:50},{n:"POPE",c:30},{n:"POPS",c:5},{n:"SAPI",c:5},{n:"CHOL",c:5},{n:"CL",c:5}] },
+  mim:         { label: "Mitochondrial inner membrane (MIM)",          lipids: [{n:"POPC",c:40},{n:"POPE",c:35},{n:"POPS",c:3},{n:"SAPI",c:5},{n:"CL",c:17}] },
+  er:          { label: "Endoplasmic reticulum",                       lipids: [{n:"POPC",c:55},{n:"POPE",c:25},{n:"POPS",c:5},{n:"SAPI",c:10},{n:"CHOL",c:5}] },
+  yeast:       { label: "S. cerevisiae plasma membrane",               lipids: [{n:"POPC",c:17},{n:"POPE",c:20},{n:"POPS",c:30},{n:"SAPI",c:18},{n:"CHOL",c:15}] },
+};
+
+async function loadPreset() {
+  const sel = document.getElementById('presetSelect');
+  const id  = sel.value;
+  if (!id) return;
+  const preset = MEMBRANE_PRESETS[id];
+  if (!preset) return;
+
+  const entries = await Promise.all(preset.lipids.map(async ({ n, c }) => {
+    try {
+      const r = await fetch(`/api/library/${n}/pdb`);
+      if (!r.ok) throw new Error();
+      return { name: n, count: c, file: new File([await r.text()], `${n}.pdb`, { type: 'text/plain' }) };
+    } catch { return null; }
+  }));
+  const valid = entries.filter(Boolean);
+  if (!valid.length) { setStatus('No library lipids found for this preset.', 'error'); return; }
+
+  clearAll(false);
+  document.getElementById('symCheck').checked = true;
+  toggleSymmetric();
+
+  for (const { name, count, file } of valid) {
+    addLipidEntry('upper');
+    const i = lipidFiles.upper.length - 1;
+    lipidFiles.upper[i] = file;
+    const lbl = document.getElementById(`upper_label_${i}`);
+    if (lbl) { lbl.textContent = `${name}.pdb`; lbl.classList.add('has-file'); }
+    const cnt = document.getElementById(`upper_count_${i}`);
+    if (cnt) cnt.value = count;
+  }
+
+  updateIonCount();
+  document.getElementById('presetNotice').style.display = 'block';
+  setStatus(`Preset loaded: ${preset.label}. Review counts and click Build.`, 'done');
+}
+
 async function loadExample() {
   const fetchPdb = async (name, fallbackRes, fallbackN) => {
     try {
