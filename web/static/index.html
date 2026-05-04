@@ -670,9 +670,11 @@ async function loadStats() {
   try {
     const r = await fetch('/stats', { cache: 'no-cache' });
     const d = await r.json();
-    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v != null ? v.toLocaleString() : '—'; };
+    const fmt  = v => v != null ? v.toLocaleString() : '—';
+    const fmtK = v => { if (v == null) return '—'; if (v >= 1e6) return '~' + (v/1e6).toFixed(1) + 'M'; if (v >= 1e3) return '~' + Math.round(v/1e3) + 'k'; return v.toLocaleString(); };
+    const set  = (id, v, compact) => { const e = document.getElementById(id); if (e) e.textContent = compact ? fmtK(v) : fmt(v); };
     set('statBuilds', d.total_builds);
-    set('statAtoms',  d.total_atoms);
+    set('statAtoms',  d.total_atoms, true);
     set('statUsers',  d.unique_sessions);
   } catch(e) {}
 }
