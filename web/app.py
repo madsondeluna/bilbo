@@ -32,10 +32,7 @@ app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
 # ── Email infrastructure (Resend) ─────────────────────────────────────────────
 ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
 
-EMAIL_SIGNATURE = (
-    '\n'
-    '**BILBO Team**\n'
-)
+EMAIL_SIGNATURE = 'BILBO Team\n'
 
 EMAIL_CLOSING = {
     'en': 'Kind regards,\n',
@@ -47,29 +44,29 @@ EMAIL_CLOSING = {
 
 EMAIL_FOOTER = {
     'en': (
-        '\n'
         'This is an automated message, you do not need to reply.\n'
         'Your data is transmitted with end-to-end TLS encryption.\n'
+        '\n'
     ),
     'fr': (
-        '\n'
         'Ceci est un message automatique, vous n\'avez pas besoin de répondre.\n'
         'Vos données sont transmises avec chiffrement TLS de bout en bout.\n'
+        '\n'
     ),
     'es': (
-        '\n'
         'Este es un mensaje automático, no es necesario responder.\n'
         'Tus datos se transmiten con cifrado TLS de extremo a extremo.\n'
+        '\n'
     ),
     'pt': (
-        '\n'
         'Esta é uma mensagem automática, você não precisa responder.\n'
         'Seus dados são transmitidos com criptografia TLS de ponta a ponta.\n'
+        '\n'
     ),
     'zh': (
-        '\n'
         '这是一封自动邮件，您无需回复。\n'
         '您的数据通过端到端 TLS 加密传输。\n'
+        '\n'
     ),
 }
 
