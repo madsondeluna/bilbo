@@ -954,33 +954,34 @@ async function loadPreset() {
   const preset = MEMBRANE_PRESETS[id];
   if (!preset) return;
 
-  const entries = await Promise.all(preset.lipids.map(async ({ n, c }) => {
-    try {
+  setStatus('Loading preset...', 'running');
+  try {
+    const entries = await Promise.all(preset.lipids.map(async ({ n, c }) => {
       const r = await fetch(`/api/library/${n}/pdb`);
-      if (!r.ok) throw new Error();
+      if (!r.ok) throw new Error(`Lipid ${n} not found in library (HTTP ${r.status})`);
       return { name: n, count: c, file: new File([await r.text()], `${n}.pdb`, { type: 'text/plain' }) };
-    } catch { return null; }
-  }));
-  const valid = entries.filter(Boolean);
-  if (!valid.length) { setStatus('No library lipids found for this preset.', 'error'); return; }
+    }));
 
-  clearAll(false);
-  document.getElementById('symCheck').checked = true;
-  toggleSymmetric();
+    clearAll(false);
+    document.getElementById('symCheck').checked = true;
+    toggleSymmetric();
 
-  for (const { name, count, file } of valid) {
-    addLipidEntry('upper');
-    const i = lipidFiles.upper.length - 1;
-    lipidFiles.upper[i] = file;
-    const lbl = document.getElementById(`upper_label_${i}`);
-    if (lbl) { lbl.textContent = `${name}.pdb`; lbl.classList.add('has-file'); }
-    const cnt = document.getElementById(`upper_count_${i}`);
-    if (cnt) cnt.value = count;
+    for (const { name, count, file } of entries) {
+      addLipidEntry('upper');
+      const i = lipidFiles.upper.length - 1;
+      lipidFiles.upper[i] = file;
+      const lbl = document.getElementById(`upper_label_${i}`);
+      if (lbl) { lbl.textContent = `${name}.pdb`; lbl.classList.add('has-file'); }
+      const cnt = document.getElementById(`upper_count_${i}`);
+      if (cnt) cnt.value = count;
+    }
+
+    updateIonCount();
+    document.getElementById('presetNotice').style.display = 'block';
+    setStatus(`Preset loaded: ${preset.label}. Review counts and click Build.`, 'done');
+  } catch (err) {
+    setStatus('Preset error: ' + err.message, 'error');
   }
-
-  updateIonCount();
-  document.getElementById('presetNotice').style.display = 'block';
-  setStatus(`Preset loaded: ${preset.label}. Review counts and click Build.`, 'done');
 }
 
 async function loadExample() {
@@ -1422,13 +1423,14 @@ function _applyLipidStyle(mode) {
     viewer.setStyle({ chain: 'W', elem: 'O', model: 0 }, { sphere: { color: '#93c5fd', scale: 0.18 } });
   }
 
+  const _activePepChains = [...new Set(_pdbData.split('\n').filter(l => l.startsWith('ATOM') || l.startsWith('HETATM')).map(l => l[21]).filter(c => _PEP_CHAINS.includes(c)))];
   if (mode === 'surface') {
     viewer.addSurface('VDW', { opacity: 0.35, color: col0 }, { chain: 'U', model: 0 });
     viewer.addSurface('VDW', { opacity: 0.35, color: col1 }, { chain: 'L', model: 0 });
-    _PEP_CHAINS.forEach(c => viewer.addSurface('VDW', { opacity: 0.82, color: '#10b981' }, { chain: c, model: 0 }));
+    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.82, color: '#10b981' }, { chain: c, model: 0 }));
   }
   if (mode === 'cartoon') {
-    _PEP_CHAINS.forEach(c => viewer.addSurface('VDW', { opacity: 0.18, color: '#10b981' }, { chain: c, model: 0 }));
+    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.18, color: '#10b981' }, { chain: c, model: 0 }));
   }
 }
 
