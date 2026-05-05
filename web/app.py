@@ -71,12 +71,22 @@ EMAIL_FOOTER = {
 }
 
 
+def _strip_bold(text: str) -> str:
+    return _re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+
+
 def _wrap_email_html(text_body: str) -> str:
     """Wrap plain text email in HTML with sans-serif left-aligned style.
-    Tokens wrapped in **...** become <strong>."""
-    escaped = _html_lib.escape(text_body)
-    escaped = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
-    html_body = escaped.replace('\n', '<br>')
+    Tokens wrapped in **...** become <strong>. Double newlines become paragraphs."""
+    parts = []
+    for para in text_body.split('\n\n'):
+        if not para.strip():
+            continue
+        escaped = _html_lib.escape(para)
+        escaped = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
+        escaped = escaped.replace('\n', '<br>')
+        parts.append(f'<p style="margin:0 0 14px 0;">{escaped}</p>')
+    html_body = ''.join(parts)
     return (
         '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#ffffff;">'
         '<div style="max-width:680px;margin:0;padding:20px;background:#ffffff;text-align:left;'
@@ -935,8 +945,7 @@ async def send_results(
             'disclaimer_h': 'Important notice:',
             'disclaimer': (
                 'BILBO is currently in beta preview and proof-of-concept stage. '
-                'The tool is being extensively tested and used by researchers in theoretical chemistry '
-                'and biology, with the goal of releasing a more consolidated final version in the near future. '
+                'The tool is under active testing, performance analysis, and requirements gathering. '
                 'All contributions are welcome. Errors, instabilities, or inconsistencies may occur; '
                 'should any be identified, we kindly ask that they be reported.'
             ),
@@ -952,8 +961,7 @@ async def send_results(
             'disclaimer_h': 'Avis important:',
             'disclaimer': (
                 'BILBO se trouve actuellement en phase de beta preview et de preuve de concept. '
-                'L\'outil fait l\'objet de tests approfondis et est utilisé par des chercheurs en chimie théorique '
-                'et en biologie, en vue de la mise à disposition prochaine d\'une version finale plus aboutie. '
+                'L\'outil est en phase de tests, d\'analyse des performances et de recueil des exigences. '
                 'Toute contribution est la bienvenue. Des erreurs, instabilités ou incohérences peuvent survenir; '
                 'si elles sont constatées, nous vous prions de les signaler.'
             ),
@@ -969,8 +977,7 @@ async def send_results(
             'disclaimer_h': 'Aviso importante:',
             'disclaimer': (
                 'BILBO se encuentra actualmente en fase de beta preview y prueba de concepto. '
-                'La herramienta está siendo ampliamente probada y utilizada por investigadores de química teórica '
-                'y biología, con vistas a poner a disposición próximamente una versión final más consolidada. '
+                'La herramienta está en fase de pruebas, análisis de rendimiento y relevamiento de requisitos. '
                 'Toda contribución es bienvenida. Pueden ocurrir errores, inestabilidades o inconsistencias; '
                 'en caso de detectarlos, solicitamos que sean reportados.'
             ),
@@ -986,8 +993,7 @@ async def send_results(
             'disclaimer_h': 'Aviso importante:',
             'disclaimer': (
                 'O BILBO encontra-se em fase de beta preview e prova de conceito. '
-                'A ferramenta vem sendo amplamente testada e utilizada por pesquisadores das áreas de química teórica '
-                'e biologia, com vistas à disponibilização de uma versão final mais consolidada em breve. '
+                'A ferramenta está em fase de testes, análise de desempenho e levantamento de requisitos. '
                 'Toda contribuição é bem-vinda. Erros, instabilidades ou inconsistências podem ocorrer; '
                 'caso sejam identificados, solicitamos que sejam reportados.'
             ),
@@ -1003,7 +1009,7 @@ async def send_results(
             'disclaimer_h': '重要提示：',
             'disclaimer': (
                 'BILBO 目前处于 beta 预览和概念验证阶段。'
-                '该工具正由理论化学和生物学领域的研究人员进行充分测试与使用，旨在不久后推出更为完善的正式版本。'
+                '该工具正处于测试、性能分析和需求收集阶段。'
                 '欢迎任何形式的贡献与反馈。在使用过程中可能出现错误、不稳定或不一致的情况，'
                 '如发现此类问题，敬请告知。'
             ),
@@ -1076,7 +1082,7 @@ async def send_results(
         'to': [to_email],
         'reply_to': 'madsondeluna@gmail.com',
         'subject': m['subject'],
-        'text': body_text,
+        'text': _strip_bold(body_text),
         'html': _wrap_email_html(body_text),
         'attachments': attachments,
     }
@@ -1229,7 +1235,7 @@ async def send_recommendation(
         'to': [to_email],
         'reply_to': 'madsondeluna@gmail.com',
         'subject': m['subject'],
-        'text': body_text,
+        'text': _strip_bold(body_text),
         'html': _wrap_email_html(body_text),
     }
     ok, info = _resend_send(payload)
