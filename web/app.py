@@ -951,6 +951,7 @@ async def send_results(
             ),
             'next': f'To start a new build, please visit: {site_url}',
             'feedback': f'To report an issue or suggest a feature, please open a ticket at {ISSUES_URL}.',
+            'contact': 'For questions, suggestions, or feedback: bilbo@delunalab.dev',
         },
         'fr': {
             'subject': '[BILBO] Votre bicouche est prête',
@@ -967,6 +968,7 @@ async def send_results(
             ),
             'next': f'Pour lancer une nouvelle construction, rendez-vous sur: {site_url}',
             'feedback': f'Pour signaler un problème ou proposer une fonctionnalité, veuillez ouvrir une issue à l\'adresse {ISSUES_URL}.',
+            'contact': 'Pour toute question, suggestion ou retour: bilbo@delunalab.dev',
         },
         'es': {
             'subject': '[BILBO] Su bicapa está lista',
@@ -983,6 +985,7 @@ async def send_results(
             ),
             'next': f'Para iniciar una nueva construcción, visite: {site_url}',
             'feedback': f'Para reportar un problema o sugerir una funcionalidad, abra una issue en {ISSUES_URL}.',
+            'contact': 'Para preguntas, sugerencias o comentarios: bilbo@delunalab.dev',
         },
         'pt': {
             'subject': '[BILBO] Sua bicamada está pronta',
@@ -999,6 +1002,7 @@ async def send_results(
             ),
             'next': f'Para iniciar uma nova construção, acesse: {site_url}',
             'feedback': f'Para reportar um problema ou sugerir uma funcionalidade, abra uma issue em {ISSUES_URL}.',
+            'contact': 'Para dúvidas, sugestões ou comentários: bilbo@delunalab.dev',
         },
         'zh': {
             'subject': '[BILBO] 您的双层膜已就绪',
@@ -1015,6 +1019,7 @@ async def send_results(
             ),
             'next': f'如需启动新的构建，请访问: {site_url}',
             'feedback': f'如需报告问题或提出功能建议，请在 {ISSUES_URL} 提交 issue。',
+            'contact': '如有问题、建议或反馈，请联系：bilbo@delunalab.dev',
         },
     }
     m = messages[lang]
@@ -1027,6 +1032,7 @@ async def send_results(
         f'**{m["disclaimer_h"]}**\n{m["disclaimer"]}\n\n'
         f'{m["next"]}\n\n'
         f'{m["feedback"]}\n\n'
+        f'{m["contact"]}\n\n'
         f'{EMAIL_FOOTER[lang]}'
         f'{EMAIL_CLOSING[lang]}'
         f'{EMAIL_SIGNATURE}'
@@ -1127,7 +1133,7 @@ async def send_recommendation(
                 'Python package: pip install bilbo-md\n\n'
                 'To report an issue or suggest a feature, please open a ticket at:\n'
                 f'{ISSUES_URL}\n'
-                'For any further questions, contact details are provided below.\n\n'
+                'For questions, suggestions, or feedback: bilbo@delunalab.dev\n\n'
             ),
         },
         'fr': {
@@ -1151,7 +1157,7 @@ async def send_recommendation(
                 'Paquet pip: pip install bilbo-md\n\n'
                 'Pour signaler un problème ou proposer une fonctionnalité, veuillez ouvrir une issue:\n'
                 f'{ISSUES_URL}\n'
-                'Pour toute question, les coordonnées de contact figurent ci-dessous.\n\n'
+                'Pour toute question, suggestion ou retour: bilbo@delunalab.dev\n\n'
             ),
         },
         'es': {
@@ -1175,7 +1181,7 @@ async def send_recommendation(
                 'Paquete pip: pip install bilbo-md\n\n'
                 'Para reportar un problema o sugerir una funcionalidad, abra una issue en:\n'
                 f'{ISSUES_URL}\n'
-                'Para cualquier consulta, los datos de contacto se encuentran a continuación.\n\n'
+                'Para preguntas, sugerencias o comentarios: bilbo@delunalab.dev\n\n'
             ),
         },
         'pt': {
@@ -1199,7 +1205,7 @@ async def send_recommendation(
                 'Pacote pip: pip install bilbo-md\n\n'
                 'Para reportar um problema ou sugerir uma funcionalidade, abra uma issue em:\n'
                 f'{ISSUES_URL}\n'
-                'Em caso de dúvidas, os contatos estão disponíveis abaixo.\n\n'
+                'Para dúvidas, sugestões ou comentários: bilbo@delunalab.dev\n\n'
             ),
         },
         'zh': {
@@ -1218,7 +1224,7 @@ async def send_recommendation(
                 'Python 包: pip install bilbo-md\n\n'
                 '如需报告问题或提出功能建议，请在以下地址提交 issue：\n'
                 f'{ISSUES_URL}\n'
-                '如有任何疑问，请使用下方联系方式与我联系。\n\n'
+                '如有问题、建议或反馈，请联系：bilbo@delunalab.dev\n\n'
             ),
         },
     }
