@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import gzip
 import hashlib
+import zlib
 import html as _html_lib
 import io
 import json
@@ -28,6 +29,19 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
+
+# ── Gzip upload limits ─────────────────────────────────────────────────────────
+_MAX_GZ_UPLOAD_BYTES = 20 * 1024 * 1024      # 20 MB compressed
+_MAX_GZ_DECOMPRESS_BYTES = 100 * 1024 * 1024  # 100 MB decompressed
+
+
+def _safe_gzip_decompress(data: bytes) -> bytes:
+    d = zlib.decompressobj(wbits=31)
+    out = d.decompress(data, _MAX_GZ_DECOMPRESS_BYTES + 1)
+    if len(out) > _MAX_GZ_DECOMPRESS_BYTES:
+        raise ValueError("decompressed size exceeds limit")
+    return out
+
 
 # ── Email infrastructure (Resend) ─────────────────────────────────────────────
 ISSUES_URL = 'https://github.com/madsondeluna/bilbo/issues'
@@ -876,20 +890,29 @@ async def send_results(
     if not to_email or '@' not in to_email:
         return JSONResponse({'ok': False, 'error': 'Invalid email address.'}, status_code=400)
     if pdb_gz is not None:
+        raw = await pdb_gz.read()
+        if len(raw) > _MAX_GZ_UPLOAD_BYTES:
+            return JSONResponse({'ok': False, 'error': 'Compressed upload too large.'}, status_code=413)
         try:
-            pdb = gzip.decompress(await pdb_gz.read()).decode('utf-8')
+            pdb = _safe_gzip_decompress(raw).decode('utf-8')
         except Exception:
             return JSONResponse({'ok': False, 'error': 'Failed to decompress build data.'}, status_code=400)
     if gro_gz is not None:
+        raw = await gro_gz.read()
+        if len(raw) > _MAX_GZ_UPLOAD_BYTES:
+            return JSONResponse({'ok': False, 'error': 'Compressed upload too large.'}, status_code=413)
         try:
-            gro = gzip.decompress(await gro_gz.read()).decode('utf-8')
+            gro = _safe_gzip_decompress(raw).decode('utf-8')
         except Exception:
-            gro = None
+            return JSONResponse({'ok': False, 'error': 'Failed to decompress auxiliary data.'}, status_code=400)
     if topology_gz is not None:
+        raw = await topology_gz.read()
+        if len(raw) > _MAX_GZ_UPLOAD_BYTES:
+            return JSONResponse({'ok': False, 'error': 'Compressed upload too large.'}, status_code=413)
         try:
-            topology = gzip.decompress(await topology_gz.read()).decode('utf-8')
+            topology = _safe_gzip_decompress(raw).decode('utf-8')
         except Exception:
-            topology = None
+            return JSONResponse({'ok': False, 'error': 'Failed to decompress auxiliary data.'}, status_code=400)
     if not pdb:
         return JSONResponse({'ok': False, 'error': 'No build data to send.'}, status_code=400)
 
@@ -1086,7 +1109,7 @@ async def send_results(
     payload = {
         'from': from_addr,
         'to': [to_email],
-        'reply_to': 'madsondeluna@gmail.com',
+        'reply_to': 'bilbo@delunalab.dev',
         'subject': m['subject'],
         'text': _strip_bold(body_text),
         'html': _wrap_email_html(body_text),
@@ -1239,7 +1262,7 @@ async def send_recommendation(
     payload = {
         'from': from_addr,
         'to': [to_email],
-        'reply_to': 'madsondeluna@gmail.com',
+        'reply_to': 'bilbo@delunalab.dev',
         'subject': m['subject'],
         'text': _strip_bold(body_text),
         'html': _wrap_email_html(body_text),
