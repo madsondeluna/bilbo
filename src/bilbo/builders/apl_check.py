@@ -21,9 +21,17 @@ APL_REFERENCE: dict[str, float] = {
     "DOPC": 72.5,   # [K11]
     "DOPE": 65.7,   # [V14]
     "POPE": 56.6,   # [K11]
+    "DPPE": 52.0,   # CHARMM36 estimate (gel/Lβ at 303 K)
     "POPC": 68.3,   # [K11]
     "POPG": 65.0,   # [V14]
     "POPS": 55.5,   # [P04]
+    "DPPS": 54.0,   # CHARMM36 estimate
+    "DPPG": 60.0,   # CHARMM36 estimate
+    "CHOL": 28.5,   # cholesterol condensing APL in mixed PC bilayer, CHARMM36
+    "CHL1": 28.5,   # CHL1 = CHOL (CHARMM-GUI naming convention)
+    "BSM":  52.0,   # sphingomyelin, CHARMM36 estimate
+    "SM":   52.0,   # sphingomyelin alias
+    "SAPI": 58.0,   # PI(4,5)P2 CHARMM36 estimate
     "CL":  130.0,   # [D07]
     "TOCL":130.0,   # [D07] (tetraoleoyl cardiolipin analogue)
 }

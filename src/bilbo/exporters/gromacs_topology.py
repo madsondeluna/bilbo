@@ -59,7 +59,8 @@ def write_gromacs_topology(
         fh.write("; Lipid molecule topologies\n")
         for lipid_id in unique_lipids:
             fh.write(f'#include "{ff_dir}/{lipid_id}.itp"\n')
-        fh.write("\n")
+        fh.write(f'\n; Water and ions\n#include "{ff_dir}/tip3p.itp"\n')
+        fh.write(f'#include "{ff_dir}/ions.itp"\n\n')
 
         fh.write("[ system ]\n")
         fh.write(f"{system_name}\n\n")
