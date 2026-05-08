@@ -1378,6 +1378,9 @@ function renderResults(data) {
       ${data.leaflet_plot_b64 ? `<button class="btn-download" onclick="downloadLeafletPlot()">
         Download plot
       </button>` : ''}
+      ${data.topology ? `<button class="btn-download btn-md-package" onclick="downloadMdPackage()" title="Requires GROMACS 2021+ and charmm36.ff/ in the working directory">
+        Download MD package
+      </button>` : ''}
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
     <pre class="log-panel" id="buildLogPanel"></pre>
@@ -1619,6 +1622,34 @@ function downloadLeafletPlot() {
   a.href = 'data:image/png;base64,' + currentLeafletPlotB64;
   a.download = 'leaflet_plot.png';
   a.click();
+}
+
+async function downloadMdPackage() {
+  if (!currentPdb || !currentTopology) return;
+  const btn = document.querySelector('.btn-md-package');
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing...'; }
+  try {
+    let peptidePdbText = '';
+    if (peptideFile) {
+      peptidePdbText = await peptideFile.text();
+    }
+    const fd = new FormData();
+    fd.append('pdb', currentPdb);
+    fd.append('topology', currentTopology);
+    fd.append('has_peptide', peptidePdbText ? 'true' : 'false');
+    fd.append('peptide_pdb', peptidePdbText);
+    fd.append('solvated', (currentBuildData?.n_water > 0) ? 'true' : 'false');
+    const resp = await fetch('/api/md_package', { method: 'POST', body: fd });
+    if (!resp.ok) { alert('Failed to generate MD package.'); return; }
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bilbo_md_package.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Download MD package'; }
+  }
 }
 
 function copyLink() {
