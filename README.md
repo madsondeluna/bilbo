@@ -870,6 +870,60 @@ data/
     peptides/        PDB structures for test peptides
 ```
 
+## Force field and GROMACS pipeline validation
+
+The CHARMM36 lipid templates, ITP files, water model files, ion files, topology generator, and MDP parameter templates were validated through a full end-to-end GROMACS simulation pipeline. The pipeline was exercised by submitting a DPPC:CHL1 3:1 bilayer (24+8 lipids per leaflet) through the `/api/build` and `/api/md_package` endpoints using the FastAPI test client, extracting the resulting ZIP package, and running each GROMACS step from `gmx editconf` through energy minimization.
+
+### Bugs found and fixed
+
+**Missing CHL1.itp.** The web interface example uses `CHL1.pdb` as the cholesterol template, producing lipid ID `CHL1`. The topology included `CHL1.itp`, which did not exist. Fixed by creating `data/ff/charmm36_lipids/CHL1.itp` as an alias of `CHOL.itp` with the moleculetype name changed from `CHOL` to `CHL1`.
+
+**SOL and NA/CL moleculetypes not defined.** After `gmx solvate`, GROMACS appended `SOL` entries to `[ molecules ]` in `topol.top`. After `gmx genion`, it appended `NA` and `CL` entries. Neither was defined because `write_gromacs_topology` did not emit `#include` directives for water or ion ITPs. Fixed by adding `#include "charmm36.ff/tip3p.itp"` and `#include "charmm36.ff/ions.itp"` to the generated topology.
+
+**Truncated DPPC.pdb in web examples.** The file `web/static/examples/DPPC.pdb` contained only 50 atoms (a partial template) while the CHARMM36 DPPC ITP defines 130 atoms. This caused `gmx grompp` to abort with "number of coordinates does not match topology". Fixed by replacing the file with the full 130-atom CHARMM-GUI template.
+
+**nstcalcenergy/nstenergy mismatch.** The NVT, NPT, and production MDP templates did not set `nstcalcenergy`. GROMACS defaults it to 100. When `output_freq_ps` is set to values such as 0.5 ps (yielding `nstenergy = 250` steps), 250 is not a multiple of 100 and `gmx grompp` raises a fatal error. Fixed by adding `nstcalcenergy = 100` to all three templates and computing `nstcalcenergy = gcd(100, nstenergy)` dynamically in the MDP generators so that the divisibility constraint is always satisfied regardless of the output frequency requested.
+
+**Incorrect APL reference for CHL1/CHOL causing grid spacing fallback.** `APL_REFERENCE` in `apl_check.py` was missing entries for CHL1, CHOL, DPPE, DPPG, DPPS, BSM, SM, SAPI, TOCL. When any species in a leaflet is absent from the table, `weighted_spacing` returns `None` and the builder falls back to a fixed spacing of 0.7 nm. For a DPPC:CHL1 3:1 bilayer, this spacing is too small: lipids from adjacent cells overlap, producing severe steric clashes in the starting structure. Energy minimization cannot resolve them and converges to `Fmax = inf`. Fixed by adding all missing species to `APL_REFERENCE` with CHARMM36 estimates or literature values.
+
+**CHOL.pdb atom order mismatch.** In `data/examples/charmm_gui/CHOL.pdb`, atoms at sequential positions 2, 3, and 4 were O3/H3'/H3. The CHARMM36 ITP (both `CHOL.itp` and `CHL1.itp`) lists them in the order H3/O3/H3'. GROMACS assigns force field parameters positionally: a mismatched order silently assigns the O3 charge and Lennard-Jones parameters to the H3 atom and vice versa, corrupting the electrostatics of the hydroxyl group without any error message. Fixed by reordering lines 2-4 in CHOL.pdb so each atom name matches the ITP position. The residue name in CHOL.pdb was also corrected from `CHOL` to `CHL1` to match the residue name used in the ITP `[ atoms ]` section.
+
+**NON_PROT set incomplete.** The Python snippet in the generated `gmx.sh` script that extracts protein residues for `pdb2gmx` filtering (the `has_peptide` branch) did not include `CHL1` in the `NON_PROT` exclusion set. CHL1 residues would be passed to `pdb2gmx` and cause it to fail. Fixed by adding `CHL1` to `NON_PROT` in both `_gmx_sh` and `patch_topology.py`.
+
+### Data integrity test suite
+
+The file `tests/test_lipid_data_integrity.py` contains automated checks that run as part of the standard `pytest` suite. These tests catch the classes of bugs above before they reach a user's simulation.
+
+**PDB/ITP consistency** (parametrized over all 12 lipid species in `data/examples/charmm_gui/`):
+
+- `test_itp_exists_for_pdb`: every PDB template has a matching ITP in `data/ff/charmm36_lipids/`. CHOL is aliased to CHL1.itp.
+- `test_atom_count_pdb_matches_itp`: the number of ATOM records in the first residue of the PDB (after `_load_template` filtering) equals the number of entries in the ITP `[ atoms ]` section. A mismatch causes `gmx grompp` to abort.
+- `test_atom_name_order_pdb_matches_itp`: the atom name at each sequential position is the same in the PDB and the ITP. A mismatch causes GROMACS to assign wrong force field parameters silently.
+- `test_residue_name_pdb_matches_itp`: the residue name in the PDB matches the residue name used in the ITP `[ atoms ]` section. CL is skipped: its ITP residue name is `TLCL1` (5 characters), which cannot be represented in the 4-character PDB residue field; `gmx grompp` issues a warning but does not fail.
+
+**Water and ion ITPs**:
+
+- `test_water_itp_exists`: `tip3p.itp`, `spc.itp`, and `spce.itp` are present in `data/ff/charmm36_base/`.
+- `test_ion_itp_exists`: `ions.itp` is present in `data/ff/charmm36_base/`.
+- `test_water_itp_has_sol_moleculetype`: each water ITP defines the `SOL` moleculetype, which is what `gmx solvate` appends to `[ molecules ]`.
+- `test_ions_itp_has_na_and_cl`: `ions.itp` defines both `NA` and `CL` moleculetypes, which `gmx genion` appends.
+
+**Topology includes**:
+
+- `test_topology_includes_water_and_ions`: the `topol.top` generated by `write_gromacs_topology` contains `#include` directives for `tip3p.itp` and `ions.itp`.
+
+**APL reference completeness**:
+
+- `test_apl_reference_covers_all_shipped_lipids`: every lipid with a PDB template in `data/examples/charmm_gui/` has an entry in `APL_REFERENCE`. A missing entry causes the grid spacing fallback to 0.7 nm.
+
+**MDP parameter consistency**:
+
+- `test_mdp_nstcalcenergy_set`: `nvt.mdp`, `npt.mdp`, and `prod.mdp` all declare `nstcalcenergy`, preventing the divisibility error at `gmx grompp` time.
+
+### CL residue name note
+
+The cardiolipin template `data/examples/charmm_gui/CL.pdb` uses `CL` as the PDB residue name. The CHARMM36 ITP (`CL.itp`) uses `TLCL1` as the residue name in its `[ atoms ]` section, but `TLCL1` is five characters and cannot be stored in the four-character PDB residue field without truncation. GROMACS generates a residue-name mismatch warning during `gmx grompp` but does not fail; atom names and their sequential order are correct, so force field parameters are assigned correctly. The mismatch appears in trajectory residue labels but does not affect simulation energetics.
+
 ## Limitations
 
 - The all-atom PDB is assembled by tiling single-lipid templates. Each template is rotated azimuthally but not otherwise modified. The structure contains steric clashes and is not energy-minimized. It is suitable only for visual inspection and as a starting point for minimization.
