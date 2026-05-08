@@ -151,9 +151,12 @@
   .btn-upload:hover { background: #444444; }
   .btn-download { background: #059669; font-weight: normal; padding: 10px 20px; }
   .btn-download:hover { background: #047857; }
-  .md-pkg-row { display: inline-flex; align-items: center; gap: 4px; }
+  .md-pkg-row { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .md-pkg-param { display: inline-flex; align-items: center; gap: 3px; }
   .traj-ns-input { width: 64px; padding: 9px 6px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; border: 1px solid #e0e0e0; border-radius: 4px; text-align: right; background: #f7f7f7; }
+  .md-param-input { width: 64px; padding: 9px 6px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; border: 1px solid #e0e0e0; border-radius: 4px; text-align: right; background: #f7f7f7; }
   .traj-ns-label { font-size: 0.75rem; color: #888; margin-right: 4px; }
+  .md-param-label { font-size: 0.75rem; color: #888; }
   .btn-log { background: #6b7280; font-weight: normal; padding: 10px 20px; }
   .btn-log:hover { background: #4b5563; }
   .log-panel {
@@ -1382,8 +1385,22 @@ function renderResults(data) {
         Download plot
       </button>` : ''}
       ${data.topology ? `<span class="md-pkg-row">
-        <input type="number" id="trajNs" value="100" min="1" max="10000" step="1" class="traj-ns-input" title="Production trajectory length (ns)">
-        <span class="traj-ns-label">ns</span>
+        <span class="md-pkg-param">
+          <input type="number" id="trajNs" value="100" min="1" max="10000" step="1" class="traj-ns-input" title="Production trajectory length (ns)">
+          <span class="md-param-label">ns</span>
+        </span>
+        <span class="md-pkg-param">
+          <input type="number" id="tempK" value="310.15" min="200" max="500" step="0.01" class="md-param-input" title="Simulation temperature (K)">
+          <span class="md-param-label">K</span>
+        </span>
+        <span class="md-pkg-param">
+          <input type="number" id="equilPs" value="100" min="10" max="10000" step="10" class="md-param-input" title="Equilibration time per stage (ps)">
+          <span class="md-param-label">ps eq.</span>
+        </span>
+        <span class="md-pkg-param">
+          <input type="number" id="outputFreqPs" value="10" min="0.1" max="1000" step="1" class="md-param-input" title="Output frequency (ps)">
+          <span class="md-param-label">ps out</span>
+        </span>
         <button class="btn-download btn-md-package" onclick="downloadMdPackage()" title="Download self-contained GROMACS package (charmm36.ff included)">
           Download MD package
         </button>
@@ -1641,6 +1658,9 @@ async function downloadMdPackage() {
       peptidePdbText = await peptideFile.text();
     }
     const trajNs = parseFloat(document.getElementById('trajNs')?.value) || 100;
+    const tempK = parseFloat(document.getElementById('tempK')?.value) || 310.15;
+    const equilPs = parseFloat(document.getElementById('equilPs')?.value) || 100;
+    const outputFreqPs = parseFloat(document.getElementById('outputFreqPs')?.value) || 10;
     const fd = new FormData();
     fd.append('pdb', currentPdb);
     fd.append('topology', currentTopology);
@@ -1648,6 +1668,9 @@ async function downloadMdPackage() {
     fd.append('peptide_pdb', peptidePdbText);
     fd.append('solvated', (currentBuildData?.n_water > 0) ? 'true' : 'false');
     fd.append('traj_ns', trajNs);
+    fd.append('temp_k', tempK);
+    fd.append('equil_ps', equilPs);
+    fd.append('output_freq_ps', outputFreqPs);
     const resp = await fetch('/api/md_package', { method: 'POST', body: fd });
     if (!resp.ok) { alert('Failed to generate MD package.'); return; }
     const blob = await resp.blob();

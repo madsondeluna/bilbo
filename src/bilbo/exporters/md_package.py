@@ -196,11 +196,46 @@ def _bundle_ff(zf: zipfile.ZipFile) -> None:
                 zf.writestr(f"md_package/charmm36.ff/{f.name}", f.read_bytes())
 
 
-def _prod_mdp(traj_ns: float) -> str:
-    nsteps = int(traj_ns * 1_000 / 0.002)
+_DT = 0.002  # ps
+
+
+def _sub(text: str, key: str, value: str, comment: str = "") -> str:
+    suffix = f"  ; {comment}" if comment else ""
+    return re.sub(rf'{key}\s*=\s*[^\n]+', f'{key:<16s}= {value}{suffix}', text)
+
+
+def _nvt_mdp(equil_ps: float, temp_k: float, output_freq_ps: float) -> str:
+    nsteps = int(equil_ps / _DT)
+    out_steps = max(1, int(output_freq_ps / _DT))
+    text = _read_tmpl("nvt.mdp")
+    text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {equil_ps:g} ps', text)
+    for key in ("nstxout", "nstvout", "nstenergy", "nstlog"):
+        text = _sub(text, key, str(out_steps))
+    text = _sub(text, "ref_t", f"{temp_k:.2f}")
+    text = _sub(text, "gen_temp", f"{temp_k:.2f}")
+    return text
+
+
+def _npt_mdp(equil_ps: float, temp_k: float, output_freq_ps: float) -> str:
+    nsteps = int(equil_ps / _DT)
+    out_steps = max(1, int(output_freq_ps / _DT))
+    text = _read_tmpl("npt.mdp")
+    text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {equil_ps:g} ps', text)
+    for key in ("nstxout", "nstvout", "nstenergy", "nstlog"):
+        text = _sub(text, key, str(out_steps))
+    text = _sub(text, "ref_t", f"{temp_k:.2f}")
+    return text
+
+
+def _prod_mdp(traj_ns: float, temp_k: float, output_freq_ps: float) -> str:
+    nsteps = int(traj_ns * 1_000 / _DT)
+    out_steps = max(1, int(output_freq_ps / _DT))
     text = _read_tmpl("prod.mdp")
     text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {traj_ns:g} ns', text)
     text = re.sub(r'; \d[\d.]* ns at ', f'; {traj_ns:g} ns at ', text)
+    for key in ("nstxout-compressed", "nstenergy", "nstlog"):
+        text = _sub(text, key, str(out_steps))
+    text = _sub(text, "ref_t", f"{temp_k:.2f}")
     return text
 
 
@@ -211,6 +246,9 @@ def build_md_package(
     peptide_pdb_text: str = "",
     solvated: bool = False,
     traj_ns: float = 100.0,
+    temp_k: float = 310.15,
+    equil_ps: float = 100.0,
+    output_freq_ps: float = 10.0,
 ) -> bytes:
     """Return a ZIP archive (bytes) with all files needed for a GROMACS MD run."""
     buf = io.BytesIO()
@@ -221,9 +259,14 @@ def build_md_package(
         if has_peptide and peptide_pdb_text:
             zf.writestr("md_package/peptide.pdb", peptide_pdb_text)
 
+        _mdp_map = {
+            "em.mdp": lambda: _read_tmpl("em.mdp"),
+            "nvt.mdp": lambda: _nvt_mdp(equil_ps, temp_k, output_freq_ps),
+            "npt.mdp": lambda: _npt_mdp(equil_ps, temp_k, output_freq_ps),
+            "prod.mdp": lambda: _prod_mdp(traj_ns, temp_k, output_freq_ps),
+        }
         for mdp in _MDP_FILES:
-            content = _prod_mdp(traj_ns) if mdp == "prod.mdp" else _read_tmpl(mdp)
-            zf.writestr(f"md_package/{mdp}", content)
+            zf.writestr(f"md_package/{mdp}", _mdp_map[mdp]())
 
         if has_peptide:
             zf.writestr("md_package/patch_topology.py", _read_tmpl("patch_topology.py"))

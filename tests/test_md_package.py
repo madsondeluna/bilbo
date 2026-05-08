@@ -145,6 +145,37 @@ def test_readme_mentions_charmm36():
     assert "GROMACS" in readme
 
 
+def test_prod_mdp_custom_traj_ns():
+    raw = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, traj_ns=50.0)
+    with _open_zip(raw) as zf:
+        prod = zf.read("md_package/prod.mdp").decode()
+    assert "25000000" in prod  # 50 ns / 0.002 ps
+    assert "50 ns" in prod
+
+
+def test_nvt_mdp_custom_equil_and_temp():
+    raw = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, equil_ps=200.0, temp_k=300.0)
+    with _open_zip(raw) as zf:
+        nvt = zf.read("md_package/nvt.mdp").decode()
+    assert "100000" in nvt  # 200 ps / 0.002 ps
+    assert "300.00" in nvt
+
+
+def test_npt_mdp_custom_equil_and_temp():
+    raw = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, equil_ps=200.0, temp_k=300.0)
+    with _open_zip(raw) as zf:
+        npt = zf.read("md_package/npt.mdp").decode()
+    assert "100000" in npt
+    assert "300.00" in npt
+
+
+def test_output_freq_reflected_in_prod_mdp():
+    raw = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, output_freq_ps=5.0)
+    with _open_zip(raw) as zf:
+        prod = zf.read("md_package/prod.mdp").decode()
+    assert "2500" in prod  # 5 ps / 0.002 ps
+
+
 # ── endpoint tests ────────────────────────────────────────────────────────────
 
 def test_endpoint_returns_zip():
@@ -185,3 +216,23 @@ def test_endpoint_with_peptide_includes_peptide_pdb():
     assert resp.status_code == 200
     with _open_zip(resp.content) as zf:
         assert "md_package/peptide.pdb" in zf.namelist()
+
+
+def test_endpoint_sim_params_reflected_in_mdp():
+    resp = client.post(
+        "/api/md_package",
+        data={
+            "pdb": _MINIMAL_PDB,
+            "topology": _MINIMAL_TOP,
+            "traj_ns": "50",
+            "temp_k": "300.0",
+            "equil_ps": "200",
+            "output_freq_ps": "5",
+        },
+    )
+    assert resp.status_code == 200
+    with _open_zip(resp.content) as zf:
+        prod = zf.read("md_package/prod.mdp").decode()
+        nvt = zf.read("md_package/nvt.mdp").decode()
+    assert "25000000" in prod
+    assert "300.00" in nvt
