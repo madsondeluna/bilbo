@@ -45,3 +45,13 @@ def ecoli_preset_yaml() -> Path:
 @pytest.fixture
 def popc_yaml() -> Path:
     return DATA_DIR / "lipids" / "POPC.yaml"
+
+
+@pytest.fixture
+def charmm36_templates_dir() -> Path:
+    return DATA_DIR / "charmm_gui"
+
+
+@pytest.fixture
+def charmm36_lipid_fixtures_dir() -> Path:
+    return FIXTURES_DIR / "pdbs" / "lipids"
