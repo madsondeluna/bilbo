@@ -111,7 +111,7 @@ def test_gmx_sh_has_preflight_check():
     raw = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP)
     with _open_zip(raw) as zf:
         script = zf.read("md_package/gmx.sh").decode()
-    assert "charmm36.ff/forcefield.itp" in script
+    assert "command -v gmx" in script
 
 
 def test_gmx_sh_no_pdb2gmx_without_peptide():
