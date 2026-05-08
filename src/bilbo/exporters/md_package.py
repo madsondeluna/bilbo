@@ -196,12 +196,21 @@ def _bundle_ff(zf: zipfile.ZipFile) -> None:
                 zf.writestr(f"md_package/charmm36.ff/{f.name}", f.read_bytes())
 
 
+def _prod_mdp(traj_ns: float) -> str:
+    nsteps = int(traj_ns * 1_000 / 0.002)
+    text = _read_tmpl("prod.mdp")
+    text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {traj_ns:g} ns', text)
+    text = re.sub(r'; \d[\d.]* ns at ', f'; {traj_ns:g} ns at ', text)
+    return text
+
+
 def build_md_package(
     pdb_text: str,
     topology_text: str,
     has_peptide: bool = False,
     peptide_pdb_text: str = "",
     solvated: bool = False,
+    traj_ns: float = 100.0,
 ) -> bytes:
     """Return a ZIP archive (bytes) with all files needed for a GROMACS MD run."""
     buf = io.BytesIO()
@@ -213,7 +222,8 @@ def build_md_package(
             zf.writestr("md_package/peptide.pdb", peptide_pdb_text)
 
         for mdp in _MDP_FILES:
-            zf.writestr(f"md_package/{mdp}", _read_tmpl(mdp))
+            content = _prod_mdp(traj_ns) if mdp == "prod.mdp" else _read_tmpl(mdp)
+            zf.writestr(f"md_package/{mdp}", content)
 
         if has_peptide:
             zf.writestr("md_package/patch_topology.py", _read_tmpl("patch_topology.py"))

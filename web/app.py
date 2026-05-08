@@ -726,14 +726,17 @@ async def md_package_endpoint(
     has_peptide: bool = Form(False),
     peptide_pdb: str = Form(""),
     solvated: bool = Form(False),
+    traj_ns: float = Form(100.0),
 ) -> Response:
     from bilbo.exporters.md_package import build_md_package
+    traj_ns = max(1.0, min(float(traj_ns), 10000.0))
     zip_bytes = build_md_package(
         pdb_text=pdb,
         topology_text=topology,
         has_peptide=has_peptide,
         peptide_pdb_text=peptide_pdb,
         solvated=solvated,
+        traj_ns=traj_ns,
     )
     return Response(
         content=zip_bytes,
