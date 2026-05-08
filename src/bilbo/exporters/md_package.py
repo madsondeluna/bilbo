@@ -1,6 +1,7 @@
 """Build a ready-to-run GROMACS MD ZIP package from a BILBO membrane build."""
 
 import io
+import math
 import os
 import re
 import zipfile
@@ -105,15 +106,15 @@ def _gmx_sh(has_peptide: bool, solvated: bool) -> str:
         "gmx mdrun -v -deffnm em",
         "",
         "# ── NVT equilibration ────────────────────────────────────────────────────────",
-        "gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -maxwarn 2",
+        "gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr",
         "gmx mdrun -v -deffnm nvt",
         "",
         "# ── NPT equilibration ────────────────────────────────────────────────────────",
-        "gmx grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -maxwarn 2",
+        "gmx grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr",
         "gmx mdrun -v -deffnm npt",
         "",
         "# ── Production MD ────────────────────────────────────────────────────────────",
-        "gmx grompp -f prod.mdp -c npt.gro -t npt.cpt -p topol.top -o prod.tpr -maxwarn 2",
+        "gmx grompp -f prod.mdp -c npt.gro -t npt.cpt -p topol.top -o prod.tpr",
         "gmx mdrun -v -deffnm prod",
         "",
         "echo 'Done. Trajectory: prod.xtc  Final structure: prod.gro'",
@@ -212,6 +213,7 @@ def _bundle_ff(zf: zipfile.ZipFile) -> None:
 
 
 _DT = 0.002  # ps
+_NSTCALCENERGY = 100
 
 
 def _sub(text: str, key: str, value: str, comment: str = "") -> str:
@@ -219,13 +221,24 @@ def _sub(text: str, key: str, value: str, comment: str = "") -> str:
     return re.sub(rf'{key}\s*=\s*[^\n]+', f'{key:<16s}= {value}{suffix}', text)
 
 
+def _align_to_nstcalcenergy(out_steps: int) -> tuple[int, int]:
+    """Return (nstenergy, nstcalcenergy) so nstenergy is a multiple of nstcalcenergy.
+
+    Uses gcd(_NSTCALCENERGY, out_steps) as nstcalcenergy, ensuring the
+    divisibility constraint is always satisfied without inflating out_steps.
+    """
+    nstcalc = math.gcd(_NSTCALCENERGY, out_steps)
+    return out_steps, nstcalc
+
+
 def _nvt_mdp(equil_ps: float, temp_k: float, output_freq_ps: float) -> str:
     nsteps = int(equil_ps / _DT)
-    out_steps = max(1, int(output_freq_ps / _DT))
+    out_steps, nstcalc = _align_to_nstcalcenergy(max(1, int(output_freq_ps / _DT)))
     text = _read_tmpl("nvt.mdp")
     text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {equil_ps:g} ps', text)
     for key in ("nstxout", "nstvout", "nstenergy", "nstlog"):
         text = _sub(text, key, str(out_steps))
+    text = _sub(text, "nstcalcenergy", str(nstcalc))
     text = _sub(text, "ref_t", f"{temp_k:.2f}")
     text = _sub(text, "gen_temp", f"{temp_k:.2f}")
     return text
@@ -233,23 +246,25 @@ def _nvt_mdp(equil_ps: float, temp_k: float, output_freq_ps: float) -> str:
 
 def _npt_mdp(equil_ps: float, temp_k: float, output_freq_ps: float) -> str:
     nsteps = int(equil_ps / _DT)
-    out_steps = max(1, int(output_freq_ps / _DT))
+    out_steps, nstcalc = _align_to_nstcalcenergy(max(1, int(output_freq_ps / _DT)))
     text = _read_tmpl("npt.mdp")
     text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {equil_ps:g} ps', text)
     for key in ("nstxout", "nstvout", "nstenergy", "nstlog"):
         text = _sub(text, key, str(out_steps))
+    text = _sub(text, "nstcalcenergy", str(nstcalc))
     text = _sub(text, "ref_t", f"{temp_k:.2f}")
     return text
 
 
 def _prod_mdp(traj_ns: float, temp_k: float, output_freq_ps: float) -> str:
     nsteps = int(traj_ns * 1_000 / _DT)
-    out_steps = max(1, int(output_freq_ps / _DT))
+    out_steps, nstcalc = _align_to_nstcalcenergy(max(1, int(output_freq_ps / _DT)))
     text = _read_tmpl("prod.mdp")
     text = re.sub(r'nsteps\s*=\s*\d+[^\n]*', f'nsteps          = {nsteps:<14d}; {traj_ns:g} ns', text)
     text = re.sub(r'; \d[\d.]* ns at ', f'; {traj_ns:g} ns at ', text)
     for key in ("nstxout-compressed", "nstenergy", "nstlog"):
         text = _sub(text, key, str(out_steps))
+    text = _sub(text, "nstcalcenergy", str(nstcalc))
     text = _sub(text, "ref_t", f"{temp_k:.2f}")
     return text
 

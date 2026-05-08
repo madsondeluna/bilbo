@@ -9,6 +9,7 @@ nstvout         = 0
 nstfout         = 0
 nstenergy       = 5000
 nstlog          = 5000
+nstcalcenergy   = 100
 nstxout-compressed = 5000
 compressed-x-precision = 1000
 
