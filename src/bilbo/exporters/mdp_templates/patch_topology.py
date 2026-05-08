@@ -11,7 +11,7 @@ import pathlib
 _NON_PROT = {
     # lipids
     "POPE", "POPG", "POPC", "DPPC", "DPPE", "DPPG", "DPPS",
-    "POPS", "BSM", "CHOL", "SAPI", "CL",
+    "POPS", "BSM", "CHOL", "CHL1", "SAPI", "CL",
     # solvent / ions (CHARMM36 residue names)
     "SOL", "TIP3", "SOD", "CLA", "POT", "MG", "CAL", "ZN",
     "NA", "CL", "K",
