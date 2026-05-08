@@ -1019,10 +1019,10 @@ async def send_results(
             'interp_h': 'Interpretation note:',
             'disclaimer_h': 'Important notice:',
             'disclaimer': (
-                'BILBO is currently in beta preview and proof-of-concept stage. '
-                'The tool is under active testing, performance analysis, and requirements gathering. '
-                'All contributions are welcome. Errors, instabilities, or inconsistencies may occur; '
-                'should any be identified, we kindly ask that they be reported.'
+                'BILBO is under active development and is being used and tested by research groups '
+                'in theoretical chemistry and biophysics. The membrane builder, topology generator, '
+                'and GROMACS MD package export are functional, but edge cases and unsupported lipid '
+                'combinations may still produce unexpected results. Contributions and feedback are welcome.'
             ),
             'next': f'To start a new build, please visit: {site_url}',
             'feedback': f'To report an issue or suggest a feature, please open a ticket at {ISSUES_URL}.',
@@ -1036,10 +1036,11 @@ async def send_results(
             'interp_h': 'Note d\'interprétation:',
             'disclaimer_h': 'Avis important:',
             'disclaimer': (
-                'BILBO se trouve actuellement en phase de beta preview et de preuve de concept. '
-                'L\'outil est en phase de tests, d\'analyse des performances et de recueil des exigences. '
-                'Toute contribution est la bienvenue. Des erreurs, instabilités ou incohérences peuvent survenir; '
-                'si elles sont constatées, nous vous prions de les signaler.'
+                'BILBO est en développement actif et est utilisé et testé par des groupes de recherche '
+                'en chimie théorique et biophysique. Le constructeur de membranes, le générateur de topologies '
+                'et l\'export du paquet GROMACS sont fonctionnels, mais des cas limites ou des combinaisons '
+                'de lipides non prises en charge peuvent encore produire des résultats inattendus. '
+                'Toute contribution et tout retour sont les bienvenus.'
             ),
             'next': f'Pour lancer une nouvelle construction, rendez-vous sur: {site_url}',
             'feedback': f'Pour signaler un problème ou proposer une fonctionnalité, veuillez ouvrir une issue à l\'adresse {ISSUES_URL}.',
@@ -1053,10 +1054,11 @@ async def send_results(
             'interp_h': 'Nota de interpretación:',
             'disclaimer_h': 'Aviso importante:',
             'disclaimer': (
-                'BILBO se encuentra actualmente en fase de beta preview y prueba de concepto. '
-                'La herramienta está en fase de pruebas, análisis de rendimiento y relevamiento de requisitos. '
-                'Toda contribución es bienvenida. Pueden ocurrir errores, inestabilidades o inconsistencias; '
-                'en caso de detectarlos, solicitamos que sean reportados.'
+                'BILBO está en desarrollo activo y es utilizado y probado por grupos de investigación '
+                'en química teórica y biofísica. El constructor de membranas, el generador de topologías '
+                'y la exportación del paquete GROMACS son funcionales, pero casos límite o combinaciones '
+                'de lípidos no soportadas aún pueden producir resultados inesperados. '
+                'Se agradecen contribuciones y comentarios.'
             ),
             'next': f'Para iniciar una nueva construcción, visite: {site_url}',
             'feedback': f'Para reportar un problema o sugerir una funcionalidad, abra una issue en {ISSUES_URL}.',
@@ -1070,10 +1072,11 @@ async def send_results(
             'interp_h': 'Nota de interpretação:',
             'disclaimer_h': 'Aviso importante:',
             'disclaimer': (
-                'O BILBO encontra-se em fase de beta preview e prova de conceito. '
-                'A ferramenta está em fase de testes, análise de desempenho e levantamento de requisitos. '
-                'Toda contribuição é bem-vinda. Erros, instabilidades ou inconsistências podem ocorrer; '
-                'caso sejam identificados, solicitamos que sejam reportados.'
+                'O BILBO está em desenvolvimento ativo e é utilizado e testado por grupos de pesquisa '
+                'em química teórica e biofísica. O construtor de membranas, o gerador de topologias '
+                'e a exportação do pacote GROMACS são funcionais, mas casos limite e combinações de '
+                'lipídeos não suportadas podem ainda produzir resultados inesperados. '
+                'Contribuições e sugestões são bem-vindas.'
             ),
             'next': f'Para iniciar uma nova construção, acesse: {site_url}',
             'feedback': f'Para reportar um problema ou sugerir uma funcionalidade, abra uma issue em {ISSUES_URL}.',
@@ -1087,23 +1090,190 @@ async def send_results(
             'interp_h': '解释说明：',
             'disclaimer_h': '重要提示：',
             'disclaimer': (
-                'BILBO 目前处于 beta 预览和概念验证阶段。'
-                '该工具正处于测试、性能分析和需求收集阶段。'
-                '欢迎任何形式的贡献与反馈。在使用过程中可能出现错误、不稳定或不一致的情况，'
-                '如发现此类问题，敬请告知。'
+                'BILBO 正处于积极开发阶段，已被理论化学和生物物理学领域的研究团队使用和测试。'
+                '膜构建器、拓扑生成器和 GROMACS MD 包导出功能均可正常使用，'
+                '但边界情况或不支持的脂质组合仍可能产生意外结果。'
+                '欢迎贡献代码和提供反馈。'
             ),
             'next': f'如需启动新的构建，请访问: {site_url}',
             'feedback': f'如需报告问题或提出功能建议，请在 {ISSUES_URL} 提交 issue。',
             'contact': '如有问题、建议或反馈，请联系：bilbo@delunalab.dev',
         },
     }
+    has_gro = bool(gro)
+    has_topology = bool(topology)
+    has_plot = bool(plot_b64)
+
+    files_section = {
+        'en': (
+            '**Files attached to this email:**\n'
+            '- `bilbo_preview.pdb` — All-atom bilayer coordinates in PDB format. '
+            'Open in VMD, PyMOL, or UCSF ChimeraX, or use as input for `gmx editconf`.\n'
+            + (
+                '- `bilbo_preview.gro` — Same structure in GROMACS GRO format '
+                '(coordinates in nm, periodic box on the last line). '
+                'Use directly with `gmx grompp`.\n' if has_gro else ''
+            )
+            + (
+                '- `topol.top` — GROMACS topology with `#include` directives for each lipid species. '
+                'Requires the CHARMM36 force field directory placed alongside it, '
+                'or use the MD package (see below) which bundles the force field automatically.\n'
+                if has_topology else ''
+            )
+            + (
+                '- `leaflet_plot.png` — Top-view lateral distribution of lipids in each leaflet.\n'
+                if has_plot else ''
+            )
+        ),
+        'fr': (
+            '**Fichiers joints à cet e-mail:**\n'
+            '- `bilbo_preview.pdb` — Coordonnées atomistiques de la bicouche au format PDB. '
+            'Ouvrez dans VMD, PyMOL ou UCSF ChimeraX, ou utilisez comme entrée pour `gmx editconf`.\n'
+            + (
+                '- `bilbo_preview.gro` — Même structure au format GROMACS GRO '
+                '(coordonnées en nm, boîte périodique sur la dernière ligne). '
+                'Utilisable directement avec `gmx grompp`.\n' if has_gro else ''
+            )
+            + (
+                '- `topol.top` — Topologie GROMACS avec directives `#include` pour chaque espèce lipidique. '
+                'Nécessite le répertoire du champ de forces CHARMM36, '
+                'ou utilisez le paquet MD (voir ci-dessous) qui l\'inclut automatiquement.\n'
+                if has_topology else ''
+            )
+            + (
+                '- `leaflet_plot.png` — Distribution latérale des lipides dans chaque feuillet (vue de dessus).\n'
+                if has_plot else ''
+            )
+        ),
+        'es': (
+            '**Archivos adjuntos a este correo:**\n'
+            '- `bilbo_preview.pdb` — Coordenadas atómicas de la bicapa en formato PDB. '
+            'Abrir en VMD, PyMOL o UCSF ChimeraX, o usar como entrada para `gmx editconf`.\n'
+            + (
+                '- `bilbo_preview.gro` — Misma estructura en formato GROMACS GRO '
+                '(coordenadas en nm, caja periódica en la última línea). '
+                'Usar directamente con `gmx grompp`.\n' if has_gro else ''
+            )
+            + (
+                '- `topol.top` — Topología GROMACS con directivas `#include` para cada especie lipídica. '
+                'Requiere el directorio del campo de fuerza CHARMM36, '
+                'o use el paquete MD (ver abajo) que lo incluye automáticamente.\n'
+                if has_topology else ''
+            )
+            + (
+                '- `leaflet_plot.png` — Distribución lateral de los lípidos en cada capa (vista superior).\n'
+                if has_plot else ''
+            )
+        ),
+        'pt': (
+            '**Arquivos anexados a este e-mail:**\n'
+            '- `bilbo_preview.pdb` — Coordenadas atômicas da bicamada em formato PDB. '
+            'Abra no VMD, PyMOL ou UCSF ChimeraX, ou use como entrada para `gmx editconf`.\n'
+            + (
+                '- `bilbo_preview.gro` — Mesma estrutura no formato GROMACS GRO '
+                '(coordenadas em nm, caixa periódica na última linha). '
+                'Use diretamente com `gmx grompp`.\n' if has_gro else ''
+            )
+            + (
+                '- `topol.top` — Topologia GROMACS com diretivas `#include` para cada espécie lipídica. '
+                'Requer o diretório do campo de força CHARMM36, '
+                'ou use o pacote MD (veja abaixo) que o inclui automaticamente.\n'
+                if has_topology else ''
+            )
+            + (
+                '- `leaflet_plot.png` — Distribuição lateral dos lipídeos em cada folheto (vista superior).\n'
+                if has_plot else ''
+            )
+        ),
+        'zh': (
+            '**本邮件附件说明：**\n'
+            '- `bilbo_preview.pdb` — PDB 格式的全原子双层膜坐标文件。'
+            '可在 VMD、PyMOL 或 UCSF ChimeraX 中打开，或作为 `gmx editconf` 的输入。\n'
+            + (
+                '- `bilbo_preview.gro` — 同一结构的 GROMACS GRO 格式文件'
+                '（坐标单位为 nm，最后一行为周期性盒子参数）。'
+                '可直接用于 `gmx grompp`。\n' if has_gro else ''
+            )
+            + (
+                '- `topol.top` — GROMACS 拓扑文件，包含各脂质物种的 `#include` 指令。'
+                '需要将 CHARMM36 力场目录放置在同一路径下，'
+                '或使用下方说明的 MD 包（已自动包含力场）。\n'
+                if has_topology else ''
+            )
+            + (
+                '- `leaflet_plot.png` — 各层脂质的俯视侧向分布图。\n'
+                if has_plot else ''
+            )
+        ),
+    }[lang]
+
+    md_pkg_section = {
+        'en': (
+            '**Running MD simulations:**\n'
+            'On the BILBO website, use the "Download MD package" button after building to receive '
+            'a self-contained ZIP archive with everything needed to run GROMACS without additional downloads: '
+            'complete CHARMM36 force field (MacKerell lab, Feb 2026), MDP files for energy minimization, '
+            'NVT, NPT, and production stages, and an automated run script (`gmx.sh`).\n\n'
+            'After extracting the archive, run:\n\n'
+            '  chmod +x gmx.sh\n'
+            '  bash gmx.sh\n\n'
+            'Requirements: GROMACS 2021 or newer; `gmx` must be available in PATH.'
+        ),
+        'fr': (
+            '**Exécution des simulations MD:**\n'
+            'Sur le site BILBO, utilisez le bouton "Download MD package" après la construction pour obtenir '
+            'une archive ZIP autonome contenant tout le nécessaire pour GROMACS sans téléchargement supplémentaire: '
+            'champ de forces CHARMM36 complet (MacKerell lab, fév. 2026), fichiers MDP pour la minimisation, '
+            'équilibration NVT, NPT et production, ainsi qu\'un script automatisé (`gmx.sh`).\n\n'
+            'Après extraction de l\'archive:\n\n'
+            '  chmod +x gmx.sh\n'
+            '  bash gmx.sh\n\n'
+            'Prérequis: GROMACS 2021 ou plus récent; `gmx` doit être disponible dans le PATH.'
+        ),
+        'es': (
+            '**Ejecución de simulaciones MD:**\n'
+            'En el sitio web de BILBO, use el botón "Download MD package" después de construir para obtener '
+            'un archivo ZIP autónomo con todo lo necesario para GROMACS sin descargas adicionales: '
+            'campo de fuerza CHARMM36 completo (MacKerell lab, feb. 2026), archivos MDP para minimización, '
+            'equilibrado NVT, NPT y producción, y un script automatizado (`gmx.sh`).\n\n'
+            'Tras extraer el archivo:\n\n'
+            '  chmod +x gmx.sh\n'
+            '  bash gmx.sh\n\n'
+            'Requisitos: GROMACS 2021 o más reciente; `gmx` debe estar disponible en el PATH.'
+        ),
+        'pt': (
+            '**Executando simulações MD:**\n'
+            'No site do BILBO, use o botão "Download MD package" após a construção para receber '
+            'um arquivo ZIP autocontido com tudo o que é necessário para rodar o GROMACS sem downloads adicionais: '
+            'campo de força CHARMM36 completo (MacKerell lab, fev. 2026), arquivos MDP para minimização, '
+            'equilibração NVT, NPT e produção, e um script de execução automatizado (`gmx.sh`).\n\n'
+            'Após extrair o arquivo:\n\n'
+            '  chmod +x gmx.sh\n'
+            '  bash gmx.sh\n\n'
+            'Requisitos: GROMACS 2021 ou mais recente; `gmx` deve estar disponível no PATH.'
+        ),
+        'zh': (
+            '**运行 MD 模拟：**\n'
+            '在 BILBO 网站上，构建完成后点击"Download MD package"按钮，'
+            '即可获得一个自包含的 ZIP 压缩包，无需额外下载即可运行 GROMACS：'
+            '完整 CHARMM36 力场（MacKerell 实验室，2026 年 2 月版本）、'
+            '能量最小化、NVT、NPT 及生产阶段的 MDP 文件，以及自动化运行脚本（`gmx.sh`）。\n\n'
+            '解压后执行：\n\n'
+            '  chmod +x gmx.sh\n'
+            '  bash gmx.sh\n\n'
+            '环境要求：GROMACS 2021 或更高版本；`gmx` 命令须在 PATH 中可用。'
+        ),
+    }[lang]
+
     m = messages[lang]
     body_text = (
         f'{m["intro"]}\n\n'
+        f'{files_section}\n\n'
         f'**{m["summary_h"]}**\n'
         f'{m["date_label"]}: **{timestamp}**\n'
         f'{summary_block}\n\n'
         f'**{m["interp_h"]}**\n{interpretation}\n\n'
+        f'{md_pkg_section}\n\n'
         f'**{m["disclaimer_h"]}**\n{m["disclaimer"]}\n\n'
         f'{m["next"]}\n\n'
         f'{m["feedback"]}\n\n'
