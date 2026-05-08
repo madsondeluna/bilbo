@@ -38,6 +38,16 @@ def _gmx_sh(has_peptide: bool, solvated: bool) -> str:
         "    exit 1",
         "fi",
         "",
+        "# ── Force field path: bundled charmm36.ff/ takes priority ─────────────────────",
+        "# GROMACS may find its own charmm36.ff before the bundled one; setting GMXLIB",
+        "# to the package directory ensures the bundled files (e.g. CHL1.itp) are used.",
+        "# The system data path is appended so standard files (spc216.gro, etc.) remain",
+        "# accessible.",
+        'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+        '_GMX_SYS="$(gmx --version 2>/dev/null | awk \'/^Data prefix:/{print $3"/share/gromacs/top"}\')"',
+        'export GMXLIB="$SCRIPT_DIR${_GMX_SYS:+:$_GMX_SYS}"',
+        "unset _GMX_SYS",
+        "",
     ]
 
     if has_peptide:
