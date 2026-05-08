@@ -41,7 +41,7 @@ def _gmx_sh(has_peptide: bool, solvated: bool) -> str:
             "python3 - <<'PYEOF'",
             "import pathlib",
             "NON_PROT = {",
-            "    'POPE','POPG','POPC','DPPC','DPPE','DPPG','DPPS','BSM','CHOL','SAPI','CL',",
+            "    'POPE','POPG','POPC','DPPC','DPPE','DPPG','DPPS','POPS','BSM','CHOL','SAPI','CL',",
             "    'SOL','TIP3','SOD','CLA','POT','MG','CAL','ZN','NA','K',",
             "}",
             "lines = [ln for ln in pathlib.Path('system.pdb').read_text().splitlines()",
