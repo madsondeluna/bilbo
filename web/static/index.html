@@ -1424,7 +1424,8 @@ function renderResults(data) {
       <div class="md-pkg-note">
         These values are written into the MDP files inside the ZIP.
         Equilibration time applies to both NVT and NPT stages.
-        Run <code>bash gmx.sh</code> to execute the full workflow (EM &rarr; NVT &rarr; NPT &rarr; production).
+        Run <code>chmod +x gmx.sh &amp;&amp; bash gmx.sh</code> to execute the full workflow (EM &rarr; NVT &rarr; NPT &rarr; production).
+        The <code>chmod +x</code> step is required once to make the script executable.
         Requires GROMACS 2021+. CHARMM36 force field (Feb 2026) is bundled; no additional downloads needed.
       </div>
     </div>` : ''}

@@ -517,10 +517,11 @@ To run after extracting the ZIP:
 ```bash
 unzip bilbo_md_package.zip
 cd md_package
+chmod +x gmx.sh
 bash gmx.sh
 ```
 
-GROMACS 2021 or newer must be installed and `gmx` must be in `PATH`. No other dependencies are required.
+The `chmod +x gmx.sh` step is required once to make the script executable. GROMACS 2021 or newer must be installed and `gmx` must be in `PATH`. No other dependencies are required.
 
 ### Typical manual GROMACS pipeline
 
