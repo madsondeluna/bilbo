@@ -329,3 +329,46 @@ class TestGromacsTopology:
                     top_order.extend([parts[0]] * int(parts[1]))
         layout_order = [p.lipid_id for p in layouts["upper"].positions]
         assert top_order == layout_order
+
+
+class TestCharmm36Templates:
+    def test_pope_pdb_atom_count(self, charmm36_lipid_fixtures_dir):
+        pope = charmm36_lipid_fixtures_dir / "POPE.pdb"
+        atoms = [l for l in pope.read_text().splitlines() if l.startswith(("ATOM", "HETATM"))]
+        assert len(atoms) == 125
+
+    def test_popg_pdb_atom_count(self, charmm36_lipid_fixtures_dir):
+        popg = charmm36_lipid_fixtures_dir / "POPG.pdb"
+        atoms = [l for l in popg.read_text().splitlines() if l.startswith(("ATOM", "HETATM"))]
+        assert len(atoms) == 127
+
+    def test_pope_pdb_residue_name(self, charmm36_lipid_fixtures_dir):
+        pope = charmm36_lipid_fixtures_dir / "POPE.pdb"
+        residues = {l[17:21].strip() for l in pope.read_text().splitlines() if l.startswith("ATOM")}
+        assert residues == {"POPE"}
+
+    def test_pope_tail_is_at_min_z(self, charmm36_lipid_fixtures_dir):
+        pope = charmm36_lipid_fixtures_dir / "POPE.pdb"
+        zs = [float(l[46:54]) for l in pope.read_text().splitlines() if l.startswith("ATOM")]
+        n_atom_z = float([l for l in pope.read_text().splitlines()
+                          if l.startswith("ATOM") and l[12:16].strip() == "N"][0][46:54])
+        assert min(zs) < n_atom_z
+
+    def test_write_allatom_preview_with_charmm36_pope(self, charmm36_lipid_fixtures_dir, tmp_path):
+        from bilbo.builders.composition_expander import expand_composition
+        from bilbo.builders.leaflet_layout import build_leaflet_layout
+        from bilbo.exporters.allatom_preview import write_allatom_preview
+        from bilbo.models.preset import MembranePreset
+        from bilbo.models.reference import Reference
+
+        preset = MembranePreset(
+            id="t",
+            leaflets={"upper": {"POPE": 100}, "lower": {"POPE": 100}},
+            references=[Reference(id="r", manual_citation="t")],
+        )
+        layouts = build_leaflet_layout(expand_composition(preset, 4), "random", 42)
+        out = tmp_path / "preview.pdb"
+        template_index = {"POPE": charmm36_lipid_fixtures_dir / "POPE.pdb"}
+        n, warns = write_allatom_preview(layouts, tmp_path, out, template_index=template_index)
+        assert n == 8 * 125
+        assert out.exists()

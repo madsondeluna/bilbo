@@ -151,6 +151,15 @@
   .btn-upload:hover { background: #444444; }
   .btn-download { background: #059669; font-weight: normal; padding: 10px 20px; }
   .btn-download:hover { background: #047857; }
+  .md-pkg-block { margin-top: 14px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e8edf2; border-radius: 6px; }
+  .md-pkg-block-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 10px; }
+  .md-pkg-params { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .md-pkg-field { display: flex; flex-direction: column; gap: 4px; }
+  .md-pkg-field label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #aaa; }
+  .md-param-input { width: 72px; padding: 7px 8px; font-family: 'Roboto Mono', monospace; font-size: 0.8rem; border: 1px solid #dde3ea; border-radius: 4px; text-align: right; background: #fff; }
+  .md-param-input:focus { outline: none; border-color: #b0bec8; }
+  .md-pkg-note { margin-top: 10px; font-size: 0.68rem; color: #aaa; line-height: 1.6; }
+  .md-pkg-note code { background: #eef0f3; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
   .btn-log { background: #6b7280; font-weight: normal; padding: 10px 20px; }
   .btn-log:hover { background: #4b5563; }
   .log-panel {
@@ -413,6 +422,7 @@
   <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
   <p class="notice">
     CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
+    &nbsp;·&nbsp; Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
   </p>
 
   <div class="stats-section">
@@ -667,7 +677,7 @@
     <div class="asm-grid">
       <div class="asm-card asm-warn" style="grid-column: 1 / -1;">
         <strong>Important notice</strong>
-        BILBO is currently in beta preview and proof-of-concept stage. The tool is being extensively tested and used by researchers in theoretical chemistry and biology, with the goal of releasing a more consolidated final version in the near future. All contributions are welcome. Errors, instabilities, or inconsistencies may occur; should any be identified, we kindly ask that they be reported via the <button class="feedback-link" onclick="openBugModal()" style="font-size:inherit;">bug report form</button> or by opening an issue at <a href="https://github.com/madsondeluna/bilbo/issues" target="_blank" style="color:#92400e;">github.com/madsondeluna/bilbo/issues</a>.
+        BILBO is under active development and is being used and tested by research groups in theoretical chemistry and biophysics. The membrane builder, topology generator, and GROMACS MD package export are functional, but edge cases and unsupported lipid combinations may still produce unexpected results. Contributions and feedback are welcome. Please report issues via the <button class="feedback-link" onclick="openBugModal()" style="font-size:inherit;">bug report form</button> or at <a href="https://github.com/madsondeluna/bilbo/issues" target="_blank" style="color:#92400e;">github.com/madsondeluna/bilbo/issues</a>.
       </div>
       <div class="asm-card">
         <strong>Bilayer gap is a buffer, not experimental</strong>
@@ -679,7 +689,15 @@
       </div>
       <div class="asm-card">
         <strong>Lipid template names</strong>
-        Template PDB filenames must match the lipid names entered above (case-insensitive). Upload your own templates via the CLI (<code>bilbo membrane build --templates-dir</code>) for lipids not included in the default set.
+        Template PDB filenames must match the lipid residue name (case-insensitive). The preset lipids (POPE, POPG, POPC, DPPC, DPPE, DPPG, DPPS, POPS, CHOL, BSM, SAPI) are supported directly. For other lipids, upload a single-residue PDB via the custom template field or the CLI (<code>bilbo membrane build --templates-dir</code>). CHARMM-GUI PDB files with co-packaged water are handled automatically.
+      </div>
+      <div class="asm-card">
+        <strong>Inter-residue clashes are expected</strong>
+        Template-tiled membranes place lipids on a regular grid from single-molecule PDB templates. Short inter-residue distances (clashes) are normal in the initial structure and do not indicate a build error. Run energy minimization (EM) before NVT equilibration; the bundled <code>gmx.sh</code> handles this automatically.
+      </div>
+      <div class="asm-card">
+        <strong>MD package: what is included</strong>
+        The MD package ZIP contains a complete, self-contained GROMACS run directory: <code>system.pdb</code>, <code>topol.top</code>, MDP files (EM, NVT, NPT, production), an automated run script (<code>gmx.sh</code>), and the full CHARMM36 force field (MacKerell lab, Feb 2026 release with CGenFF 5.0). GROMACS 2021 or newer must be installed; no additional downloads are required. Simulation parameters (trajectory length, temperature, equilibration time, output frequency) are configurable before download.
       </div>
       <div class="asm-card">
         <strong>Atom count limit</strong>
@@ -690,8 +708,7 @@
 
   <footer>
     <p>
-      BILBO (preview) — Bilayer Lipid Builder and Organizer. This tool is under active development; results should be
-      validated before use in production simulations.
+      BILBO — Bilayer Lipid Builder and Organizer. Builds all-atom membrane models and exports self-contained GROMACS MD packages (CHARMM36 force field bundled). Results should be validated before use in production simulations.
       Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
     </p>
     <p style="margin-top:8px;">
@@ -699,7 +716,7 @@
       &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
       &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
       &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
-      &nbsp;·&nbsp; <span style="color:#bbb;">Preview Version v0.0.1</span>
+      &nbsp;·&nbsp; <span style="color:#bbb;">v0.1.0</span>
     </p>
     <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-evenly; gap:16px; width:100%;">
       <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
@@ -1378,8 +1395,40 @@ function renderResults(data) {
       ${data.leaflet_plot_b64 ? `<button class="btn-download" onclick="downloadLeafletPlot()">
         Download plot
       </button>` : ''}
+      ${data.topology ? `<button class="btn-download btn-md-package" onclick="downloadMdPackage()" title="Download self-contained GROMACS package (charmm36.ff included)">
+        Download MD package
+      </button>` : ''}
       <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
     </div>
+    ${data.topology ? `
+    <div class="md-pkg-block">
+      <div class="md-pkg-block-title">MD package simulation parameters</div>
+      <div class="md-pkg-params">
+        <div class="md-pkg-field">
+          <label for="trajNs">Production (ns)</label>
+          <input type="number" id="trajNs" value="100" min="1" max="10000" step="1" class="md-param-input">
+        </div>
+        <div class="md-pkg-field">
+          <label for="tempK">Temperature (K)</label>
+          <input type="number" id="tempK" value="310.15" min="200" max="500" step="0.01" class="md-param-input">
+        </div>
+        <div class="md-pkg-field">
+          <label for="equilPs">Equilibration (ps)</label>
+          <input type="number" id="equilPs" value="100" min="10" max="10000" step="10" class="md-param-input">
+        </div>
+        <div class="md-pkg-field">
+          <label for="outputFreqPs">Output freq. (ps)</label>
+          <input type="number" id="outputFreqPs" value="10" min="0.1" max="1000" step="1" class="md-param-input">
+        </div>
+      </div>
+      <div class="md-pkg-note">
+        These values are written into the MDP files inside the ZIP.
+        Equilibration time applies to both NVT and NPT stages.
+        Run <code>chmod +x gmx.sh &amp;&amp; bash gmx.sh</code> to execute the full workflow (EM &rarr; NVT &rarr; NPT &rarr; production).
+        The <code>chmod +x</code> step is required once to make the script executable.
+        Requires GROMACS 2021+. CHARMM36 force field (Feb 2026) is bundled; no additional downloads needed.
+      </div>
+    </div>` : ''}
     <pre class="log-panel" id="buildLogPanel"></pre>
 
     <div class="email-build-section">
@@ -1619,6 +1668,42 @@ function downloadLeafletPlot() {
   a.href = 'data:image/png;base64,' + currentLeafletPlotB64;
   a.download = 'leaflet_plot.png';
   a.click();
+}
+
+async function downloadMdPackage() {
+  if (!currentPdb || !currentTopology) return;
+  const btn = document.querySelector('.btn-md-package');
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparing...'; }
+  try {
+    let peptidePdbText = '';
+    if (peptideFile) {
+      peptidePdbText = await peptideFile.text();
+    }
+    const trajNs = parseFloat(document.getElementById('trajNs')?.value) || 100;
+    const tempK = parseFloat(document.getElementById('tempK')?.value) || 310.15;
+    const equilPs = parseFloat(document.getElementById('equilPs')?.value) || 100;
+    const outputFreqPs = parseFloat(document.getElementById('outputFreqPs')?.value) || 10;
+    const fd = new FormData();
+    fd.append('pdb', currentPdb);
+    fd.append('topology', currentTopology);
+    fd.append('has_peptide', peptidePdbText ? 'true' : 'false');
+    fd.append('peptide_pdb', peptidePdbText);
+    fd.append('solvated', (currentBuildData?.n_water > 0) ? 'true' : 'false');
+    fd.append('traj_ns', trajNs);
+    fd.append('temp_k', tempK);
+    fd.append('equil_ps', equilPs);
+    fd.append('output_freq_ps', outputFreqPs);
+    const resp = await fetch('/api/md_package', { method: 'POST', body: fd });
+    if (!resp.ok) { alert('Failed to generate MD package.'); return; }
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'bilbo_md_package.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Download MD package'; }
+  }
 }
 
 function copyLink() {

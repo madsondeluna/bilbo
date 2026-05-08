@@ -21,11 +21,21 @@ _Z_TAIL = 3.0
 
 
 def _load_template(pdb_path: Path) -> list[str]:
-    lines = []
-    for line in pdb_path.read_text(encoding="utf-8").splitlines():
-        if line.startswith(("ATOM", "HETATM")):
-            lines.append(line)
-    return lines
+    """Return ATOM/HETATM lines for the first residue only.
+
+    CHARMM-GUI PDB files sometimes package co-crystallized water (same residue
+    name, different residue sequence numbers 2-N) alongside the lipid (residue 1).
+    Keeping only the first residue sequence number ensures the template matches
+    the ITP atom count exactly.
+    """
+    all_lines = [
+        line for line in pdb_path.read_text(encoding="utf-8").splitlines()
+        if line.startswith(("ATOM", "HETATM"))
+    ]
+    if not all_lines:
+        return all_lines
+    first_seq = all_lines[0][22:26].strip()
+    return [ln for ln in all_lines if ln[22:26].strip() == first_seq]
 
 
 def _template_z_tail(atom_lines: list[str]) -> float:
