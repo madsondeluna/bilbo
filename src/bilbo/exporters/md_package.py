@@ -1,13 +1,15 @@
 """Build a ready-to-run GROMACS MD ZIP package from a BILBO membrane build."""
 
 import io
+import re
 import zipfile
-from importlib.resources import files
 from pathlib import Path
 
 
 _TMPL_DIR = Path(__file__).parent / "mdp_templates"
 _MDP_FILES = ("em.mdp", "nvt.mdp", "npt.mdp", "prod.mdp")
+
+_LIPID_ITP_DIR = Path(__file__).parent.parent.parent.parent / "data" / "ff" / "charmm36_lipids"
 
 
 def _read_tmpl(name: str) -> str:
@@ -126,17 +128,21 @@ def _readme(has_peptide: bool, solvated: bool) -> str:
         "- GROMACS 2021 or newer",
         "- CHARMM36 force field directory (charmm36.ff/) in the working directory",
         "  Download: https://mackerell.umaryland.edu/charmm_ff.shtml",
+        "  The lipid ITP files bundled in this package (charmm36.ff/*.itp) supplement",
+        "  the base CHARMM36 download and are derived from the CHARMM36 force field",
+        "  (MacKerell lab, UMaryland). If you use these parameters in a publication,",
+        "  cite: Klauda et al., J. Phys. Chem. B 114:7830 (2010) for lipid parameters.",
         "",
         "Files included",
         "--------------",
-        "  system.pdb   : membrane coordinates (and solvent/ions if solvated)",
-        "  topol.top    : GROMACS topology (lipids",
+        "  system.pdb        : membrane coordinates (and solvent/ions if solvated)",
+        "  topol.top         : GROMACS topology (lipids",
     ]
 
     if has_peptide:
         lines[-1] += ", peptide processed via pdb2gmx)"
         lines += [
-            "  peptide.pdb  : isolated peptide/protein coordinates (input to pdb2gmx)",
+            "  peptide.pdb       : isolated peptide/protein coordinates (input to pdb2gmx)",
         ]
     else:
         lines[-1] += ")"
@@ -145,15 +151,17 @@ def _readme(has_peptide: bool, solvated: bool) -> str:
         lines += ["  topol.top includes water and ion entries (SOL, SOD, CLA)"]
 
     lines += [
-        "  em.mdp       : energy minimization parameters",
-        "  nvt.mdp      : NVT equilibration (100 ps, 310.15 K)",
-        "  npt.mdp      : NPT equilibration (100 ps, 310.15 K, semiisotropic P)",
-        "  prod.mdp     : production MD (100 ns, 310.15 K, semiisotropic P)",
-        "  gmx.sh       : complete GROMACS workflow script",
+        "  charmm36.ff/*.itp : CHARMM36 lipid topology files for this system",
+        "  em.mdp            : energy minimization parameters",
+        "  nvt.mdp           : NVT equilibration (100 ps, 310.15 K)",
+        "  npt.mdp           : NPT equilibration (100 ps, 310.15 K, semiisotropic P)",
+        "  prod.mdp          : production MD (100 ns, 310.15 K, semiisotropic P)",
+        "  gmx.sh            : complete GROMACS workflow script",
         "",
         "Usage",
         "-----",
-        "  1. Place charmm36.ff/ in this directory.",
+        "  1. Place the base charmm36.ff/ directory here (from mackerell.umaryland.edu).",
+        "     The lipid ITP files in charmm36.ff/ from this package are already included.",
     ]
 
     if has_peptide:
@@ -179,6 +187,17 @@ def _readme(has_peptide: bool, solvated: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _lipid_itps_for_topology(topology_text: str) -> dict[str, bytes]:
+    """Return {filename: content} for every lipid ITP referenced in topology_text."""
+    includes = re.findall(r'#include\s+"charmm36\.ff/(\w+\.itp)"', topology_text)
+    result: dict[str, bytes] = {}
+    for fname in includes:
+        itp_path = _LIPID_ITP_DIR / fname
+        if itp_path.exists():
+            result[fname] = itp_path.read_bytes()
+    return result
+
+
 def build_md_package(
     pdb_text: str,
     topology_text: str,
@@ -200,6 +219,9 @@ def build_md_package(
 
         if has_peptide:
             zf.writestr("md_package/patch_topology.py", _read_tmpl("patch_topology.py"))
+
+        for fname, content in _lipid_itps_for_topology(topology_text).items():
+            zf.writestr(f"md_package/charmm36.ff/{fname}", content)
 
         zf.writestr("md_package/gmx.sh", _gmx_sh(has_peptide, solvated))
         zf.writestr("md_package/README.txt", _readme(has_peptide, solvated))
