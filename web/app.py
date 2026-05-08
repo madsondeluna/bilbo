@@ -30,9 +30,10 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
 
-# ── Gzip upload limits ─────────────────────────────────────────────────────────
-_MAX_GZ_UPLOAD_BYTES = 20 * 1024 * 1024      # 20 MB compressed
+# ── Upload size limits ─────────────────────────────────────────────────────────
+_MAX_GZ_UPLOAD_BYTES = 20 * 1024 * 1024       # 20 MB compressed
 _MAX_GZ_DECOMPRESS_BYTES = 100 * 1024 * 1024  # 100 MB decompressed
+_MAX_FORM_TEXT_BYTES = 100 * 1024 * 1024       # 100 MB plain text
 
 
 def _safe_gzip_decompress(data: bytes) -> bytes:
@@ -913,6 +914,12 @@ async def send_results(
             topology = _safe_gzip_decompress(raw).decode('utf-8')
         except Exception:
             return JSONResponse({'ok': False, 'error': 'Failed to decompress auxiliary data.'}, status_code=400)
+    if pdb and len(pdb.encode('utf-8')) > _MAX_FORM_TEXT_BYTES:
+        return JSONResponse({'ok': False, 'error': 'Build data too large.'}, status_code=413)
+    if gro and len(gro.encode('utf-8')) > _MAX_FORM_TEXT_BYTES:
+        return JSONResponse({'ok': False, 'error': 'GRO data too large.'}, status_code=413)
+    if topology and len(topology.encode('utf-8')) > _MAX_FORM_TEXT_BYTES:
+        return JSONResponse({'ok': False, 'error': 'Topology data too large.'}, status_code=413)
     if not pdb:
         return JSONResponse({'ok': False, 'error': 'No build data to send.'}, status_code=400)
 
