@@ -122,7 +122,16 @@ def _gmx_sh(has_peptide: bool, solvated: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _readme(has_peptide: bool, solvated: bool) -> str:
+def _readme(has_peptide: bool, solvated: bool, bundle_ff: bool = True) -> str:
+    if bundle_ff:
+        ff_req = "- No additional downloads required. The charmm36.ff/ directory is bundled."
+    else:
+        ff_req = (
+            "- Download the full MD package from the BILBO web interface to get the\n"
+            "  bundled charmm36.ff/ directory, or provide your own CHARMM36 installation.\n"
+            "  This email version does NOT include the force field files."
+        )
+
     lines = [
         "BILBO MD Package",
         "================",
@@ -130,11 +139,10 @@ def _readme(has_peptide: bool, solvated: bool) -> str:
         "Requirements",
         "------------",
         "- GROMACS 2021 or newer (gmx must be in PATH)",
-        "- No additional downloads required. The charmm36.ff/ directory is bundled.",
+        ff_req,
         "",
         "Force field attribution",
         "-----------------------",
-        "This package includes CHARMM36 parameters (MacKerell lab, UMaryland).",
         "If you publish results from these simulations, cite:",
         "  Klauda et al., J. Phys. Chem. B 114:7830 (2010)  -- lipid parameters",
         "  Best et al., JCTC 8:3257 (2012)                  -- protein parameters",
@@ -156,8 +164,10 @@ def _readme(has_peptide: bool, solvated: bool) -> str:
     if solvated:
         lines += ["  topol.top includes water and ion entries (SOL, SOD, CLA)"]
 
+    if bundle_ff:
+        lines += ["  charmm36.ff/      : complete CHARMM36 force field (Feb 2026, CGenFF 5.0)"]
+
     lines += [
-        "  charmm36.ff/      : complete CHARMM36 force field (Feb 2026, CGenFF 5.0)",
         "  em.mdp            : energy minimization parameters",
         "  nvt.mdp           : NVT equilibration (100 ps, 310.15 K)",
         "  npt.mdp           : NPT equilibration (100 ps, 310.15 K, semiisotropic P)",
@@ -254,8 +264,13 @@ def build_md_package(
     temp_k: float = 310.15,
     equil_ps: float = 100.0,
     output_freq_ps: float = 10.0,
+    bundle_ff: bool = True,
 ) -> bytes:
-    """Return a ZIP archive (bytes) with all files needed for a GROMACS MD run."""
+    """Return a ZIP archive (bytes) with all files needed for a GROMACS MD run.
+
+    Set bundle_ff=False to omit the charmm36.ff/ directory (e.g. for email
+    attachments where size is constrained; users must supply the FF separately).
+    """
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("md_package/system.pdb", pdb_text)
@@ -276,9 +291,10 @@ def build_md_package(
         if has_peptide:
             zf.writestr("md_package/patch_topology.py", _read_tmpl("patch_topology.py"))
 
-        _bundle_ff(zf)
+        if bundle_ff:
+            _bundle_ff(zf)
 
         zf.writestr("md_package/gmx.sh", _gmx_sh(has_peptide, solvated))
-        zf.writestr("md_package/README.txt", _readme(has_peptide, solvated))
+        zf.writestr("md_package/README.txt", _readme(has_peptide, solvated, bundle_ff=bundle_ff))
 
     return buf.getvalue()

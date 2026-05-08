@@ -746,22 +746,28 @@ async def md_package_endpoint(
     equil_ps: float = Form(100.0),
     output_freq_ps: float = Form(10.0),
 ) -> Response:
+    import logging
     from bilbo.exporters.md_package import build_md_package
     traj_ns = max(1.0, min(float(traj_ns), 10000.0))
     temp_k = max(200.0, min(float(temp_k), 500.0))
     equil_ps = max(10.0, min(float(equil_ps), 10000.0))
     output_freq_ps = max(0.1, min(float(output_freq_ps), 1000.0))
-    zip_bytes = build_md_package(
-        pdb_text=pdb,
-        topology_text=topology,
-        has_peptide=has_peptide,
-        peptide_pdb_text=peptide_pdb,
-        solvated=solvated,
-        traj_ns=traj_ns,
-        temp_k=temp_k,
-        equil_ps=equil_ps,
-        output_freq_ps=output_freq_ps,
-    )
+    try:
+        zip_bytes = build_md_package(
+            pdb_text=pdb,
+            topology_text=topology,
+            has_peptide=has_peptide,
+            peptide_pdb_text=peptide_pdb,
+            solvated=solvated,
+            traj_ns=traj_ns,
+            temp_k=temp_k,
+            equil_ps=equil_ps,
+            output_freq_ps=output_freq_ps,
+        )
+    except Exception as exc:
+        logging.exception("md_package build failed")
+        from fastapi.responses import JSONResponse as _JR
+        return _JR({"error": str(exc)}, status_code=500)
     return Response(
         content=zip_bytes,
         media_type="application/zip",
@@ -1103,6 +1109,7 @@ async def send_results(
     has_gro = bool(gro)
     has_topology = bool(topology)
     has_plot = bool(plot_b64)
+    has_md_pkg = bool(pdb and topology)
 
     files_section = {
         'en': (
@@ -1124,6 +1131,12 @@ async def send_results(
                 '- `leaflet_plot.png` — Top-view lateral distribution of lipids in each leaflet.\n'
                 if has_plot else ''
             )
+            + (
+                '- `bilbo_md_package.zip` — Ready-to-run GROMACS package: MDP files, run script (`gmx.sh`), '
+                'and README. Note: the CHARMM36 force field is NOT bundled in this email version. '
+                'Download the full package from the BILBO website to get the complete self-contained archive.\n'
+                if has_md_pkg else ''
+            )
         ),
         'fr': (
             '**Fichiers joints à cet e-mail:**\n'
@@ -1143,6 +1156,12 @@ async def send_results(
             + (
                 '- `leaflet_plot.png` — Distribution latérale des lipides dans chaque feuillet (vue de dessus).\n'
                 if has_plot else ''
+            )
+            + (
+                '- `bilbo_md_package.zip` — Package GROMACS prêt à l\'emploi: fichiers MDP, script de run (`gmx.sh`) '
+                'et README. Note: le champ de forces CHARMM36 n\'est PAS inclus dans cette version e-mail. '
+                'Téléchargez le package complet depuis le site BILBO pour obtenir l\'archive autonome.\n'
+                if has_md_pkg else ''
             )
         ),
         'es': (
@@ -1164,6 +1183,12 @@ async def send_results(
                 '- `leaflet_plot.png` — Distribución lateral de los lípidos en cada capa (vista superior).\n'
                 if has_plot else ''
             )
+            + (
+                '- `bilbo_md_package.zip` — Paquete GROMACS listo para ejecutar: archivos MDP, script de ejecución (`gmx.sh`) '
+                'y README. Nota: el campo de fuerza CHARMM36 NO está incluido en esta versión de correo. '
+                'Descargue el paquete completo desde el sitio BILBO para obtener el archivo autónomo.\n'
+                if has_md_pkg else ''
+            )
         ),
         'pt': (
             '**Arquivos anexados a este e-mail:**\n'
@@ -1184,6 +1209,12 @@ async def send_results(
                 '- `leaflet_plot.png` — Distribuição lateral dos lipídeos em cada folheto (vista superior).\n'
                 if has_plot else ''
             )
+            + (
+                '- `bilbo_md_package.zip` — Pacote GROMACS pronto para execução: arquivos MDP, script de execução (`gmx.sh`) '
+                'e README. Atenção: o campo de força CHARMM36 NÃO está incluído nesta versão de e-mail. '
+                'Baixe o pacote completo pelo site BILBO para obter o arquivo autônomo com tudo incluído.\n'
+                if has_md_pkg else ''
+            )
         ),
         'zh': (
             '**本邮件附件说明：**\n'
@@ -1203,6 +1234,12 @@ async def send_results(
             + (
                 '- `leaflet_plot.png` — 各层脂质的俯视侧向分布图。\n'
                 if has_plot else ''
+            )
+            + (
+                '- `bilbo_md_package.zip` — 可直接运行的 GROMACS 包：MDP 文件、运行脚本（`gmx.sh`）'
+                '和 README。注意：此邮件版本不包含 CHARMM36 力场文件。'
+                '如需包含完整力场的自包含归档，请从 BILBO 网站下载完整包。\n'
+                if has_md_pkg else ''
             )
         ),
     }[lang]
@@ -1292,6 +1329,19 @@ async def send_results(
         b64 = plot_b64.split(',', 1)[-1] if plot_b64.startswith('data:') else plot_b64
         try:
             raw_files.append(('leaflet_plot.png', base64.b64decode(b64)))
+        except Exception:
+            pass
+    if pdb and topology:
+        try:
+            from bilbo.exporters.md_package import build_md_package
+            _is_solvated = bool(gro)
+            _md_zip = build_md_package(
+                pdb_text=pdb,
+                topology_text=topology,
+                solvated=_is_solvated,
+                bundle_ff=False,
+            )
+            raw_files.append(('bilbo_md_package.zip', _md_zip))
         except Exception:
             pass
     attachments, zip_contents = _pack_attachments(raw_files)

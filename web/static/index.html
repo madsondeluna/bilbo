@@ -1694,7 +1694,11 @@ async function downloadMdPackage() {
     fd.append('equil_ps', equilPs);
     fd.append('output_freq_ps', outputFreqPs);
     const resp = await fetch('/api/md_package', { method: 'POST', body: fd });
-    if (!resp.ok) { alert('Failed to generate MD package.'); return; }
+    if (!resp.ok) {
+      let msg = 'Failed to generate MD package.';
+      try { const j = await resp.json(); if (j.error) msg += '\n' + j.error; } catch (_) {}
+      alert(msg); return;
+    }
     const blob = await resp.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
