@@ -1776,8 +1776,8 @@ async function sendBuildByEmail() {
     const fd = new FormData();
     fd.append('to_email', email);
     fd.append('lang', lang);
-    const totalSize = (currentPdb || '').length + (currentGro || '').length + (currentTopology || '').length;
-    const useGzip = totalSize > 1_000_000 && typeof CompressionStream !== 'undefined';
+    const totalBytes = new Blob([currentPdb || '', currentGro || '', currentTopology || '']).size;
+    const useGzip = totalBytes > 256 * 1024 && typeof CompressionStream !== 'undefined';
     if (useGzip) {
       const gzipString = async (str) => {
         const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
