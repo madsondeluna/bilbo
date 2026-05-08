@@ -1,6 +1,7 @@
 """Build a ready-to-run GROMACS MD ZIP package from a BILBO membrane build."""
 
 import io
+import os
 import re
 import zipfile
 from pathlib import Path
@@ -9,7 +10,11 @@ from pathlib import Path
 _TMPL_DIR = Path(__file__).parent / "mdp_templates"
 _MDP_FILES = ("em.mdp", "nvt.mdp", "npt.mdp", "prod.mdp")
 
-_FF_DATA_DIR = Path(__file__).parent.parent.parent.parent / "data" / "ff"
+# BILBO_DATA_DIR can be set to the project root when the package is installed
+# in non-editable mode (e.g. production Docker), where Path(__file__) resolves
+# inside site-packages rather than the project tree.
+_PROJECT_ROOT = Path(os.environ.get("BILBO_DATA_DIR", Path(__file__).parent.parent.parent.parent))
+_FF_DATA_DIR = _PROJECT_ROOT / "data" / "ff"
 _LIPID_ITP_DIR = _FF_DATA_DIR / "charmm36_lipids"
 _FF_BASE_DIR = _FF_DATA_DIR / "charmm36_base"
 

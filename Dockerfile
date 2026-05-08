@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir ".[web]"
 COPY data/ ./data/
 
 ENV BILBO_DB_PATH=/tmp/bilbo.db
+ENV BILBO_DATA_DIR=/app
 ENV PORT=8000
 
 EXPOSE 8000
