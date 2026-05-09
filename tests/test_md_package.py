@@ -218,6 +218,28 @@ def test_endpoint_with_peptide_includes_peptide_pdb():
         assert "md_package/peptide.pdb" in zf.namelist()
 
 
+def test_gmx_sh_gates_gmxlib_on_bundled_ff_directory():
+    """Regression for issue #4: gmx.sh must only export GMXLIB to the script dir
+    when a bundled charmm36.ff/ is actually present, otherwise grompp searches
+    the package dir for lipid ITPs that aren't there and fails."""
+    raw_bundled = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, bundle_ff=True)
+    raw_email = build_md_package(_MINIMAL_PDB, _MINIMAL_TOP, bundle_ff=False)
+    with _open_zip(raw_bundled) as zf:
+        bundled_script = zf.read("md_package/gmx.sh").decode()
+        assert "md_package/charmm36.ff/forcefield.itp" in zf.namelist()
+    with _open_zip(raw_email) as zf:
+        email_script = zf.read("md_package/gmx.sh").decode()
+        assert not any(n.startswith("md_package/charmm36.ff/") for n in zf.namelist())
+
+    for script in (bundled_script, email_script):
+        assert 'if [ -d "$SCRIPT_DIR/charmm36.ff" ]; then' in script
+        assert 'export GMXLIB="$SCRIPT_DIR' in script
+
+    assert "NOT bundled" in email_script
+    assert "WARNING: charmm36.ff/ not bundled" in email_script
+    assert "NOT bundled" not in bundled_script
+
+
 def test_endpoint_sim_params_reflected_in_mdp():
     resp = client.post(
         "/api/md_package",
