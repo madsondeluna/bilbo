@@ -1,0 +1,69 @@
+cff-version: 1.2.0
+message: "If you use BILBO in your research, please cite it using the metadata below."
+title: "BILBO: Bilayer Lipid Builder and Organizer for protein and peptide membrane systems"
+abstract: >-
+  BILBO is an end-to-end pipeline that builds flat lipid bilayer membranes
+  from all-atom PDB templates, places proteins or peptides on or inside the
+  bilayer, optionally solvates the system with explicit water and counter
+  ions, and exports a self-contained GROMACS molecular dynamics package.
+  The exported package bundles the CHARMM36 force field, MDP files, and a
+  run script, producing a ready-to-minimize starting structure. BILBO ships
+  as a Python CLI and an optional web interface, with deterministic outputs
+  and a complete provenance manifest of input, parameters, and generated
+  files.
+type: software
+version: "0.1.0"
+date-released: "2026-05-10"
+license: "LicenseRef-INPI-BR"
+license-url: "https://github.com/madsondeluna/bilbo/blob/main/LICENSE"
+repository-code: "https://github.com/madsondeluna/bilbo"
+url: "http://bilbo.delunalab.dev/"
+keywords:
+  - molecular dynamics
+  - lipid bilayer
+  - membrane builder
+  - GROMACS
+  - CHARMM36
+  - protein-membrane systems
+  - antimicrobial peptides
+  - command-line interface
+  - web interface
+  - bioinformatics
+authors:
+  - family-names: "Luna-Aragão"
+    given-names: "Madson Allan de"
+    affiliation: "Universidade Federal de Minas Gerais (UFMG)"
+  - family-names: "da Silva"
+    given-names: "Rafael Lucas"
+    affiliation: "Universidade Federal de Pernambuco (UFPE)"
+  - family-names: "Pacífico"
+    given-names: "João"
+    affiliation: "Universidade de Pernambuco (UPE)"
+  - family-names: "Santos"
+    given-names: "Denys Ewerton da Silva"
+    affiliation: "Universidade Federal de Pernambuco (UFPE)"
+  - family-names: "Monticelli"
+    given-names: "Luca"
+    affiliation: "Centre National de la Recherche Scientifique (CNRS)"
+  - family-names: "Benko-Iseppon"
+    given-names: "Ana Maria"
+    affiliation: "Universidade Federal de Pernambuco (UFPE)"
+preferred-citation:
+  type: software
+  title: "BILBO: Bilayer Lipid Builder and Organizer for protein and peptide membrane systems"
+  version: "0.1.0"
+  year: 2026
+  url: "http://bilbo.delunalab.dev/"
+  authors:
+    - family-names: "Luna-Aragão"
+      given-names: "Madson Allan de"
+    - family-names: "da Silva"
+      given-names: "Rafael Lucas"
+    - family-names: "Pacífico"
+      given-names: "João"
+    - family-names: "Santos"
+      given-names: "Denys Ewerton da Silva"
+    - family-names: "Monticelli"
+      given-names: "Luca"
+    - family-names: "Benko-Iseppon"
+      given-names: "Ana Maria"
