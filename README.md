@@ -1,21 +1,8 @@
 # BILBO: Bilayer Lipid Builder and Organizer
 
-```
-  · · · · · · · · · · · · · · · · · · · · · · ·
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-
-                  BILBO  v0.1.0
-     Bilayer  Lipid  Builder and  Organizer
-
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-  | | | | | | | | | | | | | | | | | | | | | | |
-  · · · · · · · · · · · · · · · · · · · · · · ·
-```
+<p align="center">
+  <img src="bilbo-brand-kit/logotypes/bilbo-logotype-amber.svg" alt="BILBO" width="320">
+</p>
 
 BILBO builds flat lipid bilayer membranes from all-atom PDB templates, places proteins or peptides on or inside them, optionally solvates the system with explicit water and ions, and exports a self-contained GROMACS MD package (CHARMM36 force field bundled, MDP files included, run script included). The output is a ready-to-minimize starting structure.
 

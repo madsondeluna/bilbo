@@ -14,7 +14,7 @@
   body { font-family: 'Roboto Mono', monospace; background: #ffffff; color: #1a1a1a; min-height: 100vh; padding: 48px 24px; }
   .wrap { max-width: 760px; margin: 0 auto; }
 
-  .title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; }
   h1 { font-size: 1.4rem; font-weight: normal; letter-spacing: 0.1em; color: #0f0f0f; }
   @keyframes dot-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.55); }
@@ -329,47 +329,7 @@
     border-radius: 0 4px 4px 0; line-height: 1.5;
   }
 
-  /* Share + Email features (Resend) */
-  .share-section {
-    margin-top: 20px; margin-bottom: 20px;
-    border: 1px solid #e0e0e0; border-left: 3px solid #1a1a1a;
-    border-radius: 4px; padding: 16px 20px; background: #f9f9f9;
-  }
-  .share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
-  .share-heading { font-size: 0.82rem; color: #1a1a1a; font-weight: bold; letter-spacing: 0.03em; }
-  .share-sub { font-size: 0.7rem; color: #aaa; margin-top: 3px; }
-  .share-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .share-btn {
-    border: none; font-family: 'Roboto Mono', monospace; font-size: 0.75rem;
-    padding: 8px 18px; border-radius: 4px; cursor: pointer; font-weight: normal;
-    letter-spacing: 0.03em; white-space: nowrap;
-  }
-  .share-btn.copy-btn { background: #1a1a1a; color: #fff; }
-  .share-btn.copy-btn:hover { background: #333; }
-  .share-btn.gmail-btn { background: #fff; color: #1a1a1a; border: 1px solid #d0d0d0; }
-  .share-btn.gmail-btn:hover { background: #f0f0f0; }
-  .share-url-box {
-    font-size: 0.72rem; color: #059669; background: #f0fdf4; border: 1px solid #bbf7d0;
-    border-radius: 4px; padding: 7px 12px; margin-top: 12px; word-break: break-all; display: none;
-  }
-  .share-form { display: none; margin-top: 12px; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .share-form.open { display: flex; }
-  .share-form input {
-    flex: 1; min-width: 220px; padding: 8px 12px; border: 1px solid #d0d0d0;
-    border-radius: 4px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem;
-    background: #fff; color: #1a1a1a;
-  }
-  .share-form input:focus { border-color: #1a1a1a; outline: none; }
-  .share-form select {
-    padding: 8px 28px 8px 10px; border: 1px solid #d0d0d0; border-radius: 4px;
-    font-family: 'Roboto Mono', monospace; font-size: 0.78rem;
-    background: #fff; color: #1a1a1a; cursor: pointer; appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23666' d='M0 0l5 6 5-6z'/></svg>");
-    background-repeat: no-repeat; background-position: right 10px center;
-  }
-  .share-form select:focus { border-color: #1a1a1a; outline: none; }
-  .share-form-status { font-size: 0.72rem; min-height: 16px; flex-basis: 100%; }
-  .share-form-status .err { color: #dc2626; }
+  /* Email features (Resend) */
 
   .email-build-section {
     border: 1px solid #e0e0e0; background: #fafafa;
@@ -416,13 +376,13 @@
 
   <!-- Header -->
   <div class="title-row">
-    <h1>BILBO <span class="beta-badge">PREVIEW</span></h1>
-    <span class="status-dot" id="statusDot" data-tip="Server status. Green (pulsing): online and ready. Red: unreachable or error. Gray: checking."></span>
+    <h1><img src="/static/bilbo-logotype-amber.svg" alt="BILBO" style="height:12rem;width:auto;vertical-align:middle;margin-right:0.5em;"></h1>
   </div>
-  <p class="sub"><strong>Bi</strong>layer <strong>L</strong>ipid <strong>B</strong>uilder and <strong>O</strong>rganizer</p>
+
   <p class="notice">
-    CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
-    &nbsp;·&nbsp; Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
+    This is a preview release under active development. Instabilities and breaking changes may occur. Results should be validated before use in production simulations.<br>
+    CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
+    Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
   </p>
 
   <div class="stats-section">
@@ -446,31 +406,6 @@
     </div>
   </div>
 
-  <div class="share-section">
-    <div class="share-inner">
-      <div class="share-text">
-        <div class="share-heading">Find BILBO useful?</div>
-        <div class="share-sub">Share it with your lab or collaborators.</div>
-      </div>
-      <div class="share-actions">
-        <button class="share-btn copy-btn" onclick="copyLink()" id="copyLinkBtn">Copy link</button>
-        <button class="share-btn gmail-btn" onclick="toggleShareForm()" id="shareEmailBtn">Share by email</button>
-      </div>
-    </div>
-    <div class="share-url-box" id="shareUrlBox"></div>
-    <div class="share-form" id="shareForm">
-      <select id="shareLang" title="Email language">
-        <option value="en">EN</option>
-        <option value="fr">FR</option>
-        <option value="es">ES</option>
-        <option value="pt">PT</option>
-        <option value="zh">ZH</option>
-      </select>
-      <input type="email" id="shareFriendEmail" placeholder="friend@example.com">
-      <button class="share-btn copy-btn" onclick="sendShareEmail()" id="sendShareBtn">Send</button>
-      <div class="share-form-status" id="shareFormStatus"></div>
-    </div>
-  </div>
 
   <!-- Upper leaflet -->
   <div class="section">
@@ -711,12 +646,13 @@
       BILBO — Bilayer Lipid Builder and Organizer. Builds all-atom membrane models and exports self-contained GROMACS MD packages (CHARMM36 force field bundled). Results should be validated before use in production simulations.
       Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
     </p>
-    <p style="margin-top:8px;">
-      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a>
-      &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
-      &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
-      &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
-      &nbsp;·&nbsp; <span style="color:#bbb;">v0.1.0</span>
+    <p style="margin-top:8px; line-height:2;">
+      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a><br>
+      <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a><br>
+      <a href="https://delunalab.dev" target="_blank">delunalab.dev</a><br>
+      <button class="feedback-link" onclick="openBugModal()">Report a bug</button><br>
+      <span style="color:#bbb;">v0.1.0</span>
+      &nbsp;<span class="status-dot" id="statusDot" data-tip="Server status. Green (pulsing): online and ready. Red: unreachable or error. Gray: checking." style="display:inline-block;vertical-align:middle;"></span>
     </p>
     <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-evenly; gap:16px; width:100%;">
       <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
