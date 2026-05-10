@@ -735,23 +735,48 @@ async def peptide_charge_endpoint(pdb_file: UploadFile = File(...)) -> JSONRespo
 
 
 @app.post("/api/md_package")
-async def md_package_endpoint(
-    pdb: str = Form(...),
-    topology: str = Form(...),
-    has_peptide: bool = Form(False),
-    peptide_pdb: str = Form(""),
-    solvated: bool = Form(False),
-    traj_ns: float = Form(100.0),
-    temp_k: float = Form(310.15),
-    equil_ps: float = Form(100.0),
-    output_freq_ps: float = Form(10.0),
-) -> Response:
+async def md_package_endpoint(request: Request) -> Response:
     import logging
     from bilbo.exporters.md_package import build_md_package
-    traj_ns = max(1.0, min(float(traj_ns), 10000.0))
-    temp_k = max(200.0, min(float(temp_k), 500.0))
-    equil_ps = max(10.0, min(float(equil_ps), 10000.0))
-    output_freq_ps = max(0.1, min(float(output_freq_ps), 1000.0))
+    # Override Starlette's default 1 MB per-part cap: assembled membranes routinely
+    # produce multi-MB PDB strings that would otherwise be rejected before reaching
+    # the handler.
+    try:
+        form = await request.form(max_part_size=_MAX_FORM_TEXT_BYTES)
+    except Exception as exc:
+        from fastapi.responses import JSONResponse as _JR
+        return _JR({"error": f"failed to parse form: {exc}"}, status_code=400)
+
+    async def _as_text(v) -> str:
+        if v is None:
+            return ""
+        if hasattr(v, "read"):
+            data = await v.read()
+            return data.decode("utf-8", errors="replace") if isinstance(data, (bytes, bytearray)) else str(data)
+        return str(v)
+
+    def _as_bool(v) -> bool:
+        if v is None:
+            return False
+        if hasattr(v, "filename"):
+            return False
+        return str(v).lower() in ("true", "1", "yes", "on")
+
+    def _as_float(v, default: float) -> float:
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return default
+
+    pdb = await _as_text(form.get("pdb"))
+    topology = await _as_text(form.get("topology"))
+    has_peptide = _as_bool(form.get("has_peptide", False))
+    peptide_pdb = await _as_text(form.get("peptide_pdb"))
+    solvated = _as_bool(form.get("solvated", False))
+    traj_ns = max(1.0, min(_as_float(form.get("traj_ns"), 100.0), 10000.0))
+    temp_k = max(200.0, min(_as_float(form.get("temp_k"), 310.15), 500.0))
+    equil_ps = max(10.0, min(_as_float(form.get("equil_ps"), 100.0), 10000.0))
+    output_freq_ps = max(0.1, min(_as_float(form.get("output_freq_ps"), 10.0), 1000.0))
     try:
         zip_bytes = build_md_package(
             pdb_text=pdb,
@@ -1918,17 +1943,17 @@ async def build_membrane(
                     "z": round(sum(zs_) / len(zs_), 2),
                 })
 
-        # Topology: insert solvent/ion ITP includes before [ system ] and
-        # append molecule counts at the end of [ molecules ]
+        # Topology: write_gromacs_topology already inserts charmm36.ff/tip3p.itp
+        # and ions.itp, so only swap the water-model include when the user picked
+        # something other than tip3p, then append SOD/CLA/SOL counts.
         if solvate_enabled and topology:
             wm_itp = {"tip3p": "tip3p", "spc": "spc", "spce": "spce", "tip4p": "tip4p"}.get(
                 water_model.lower(), "tip3p"
             )
-            itp_block = (
-                f'#include "charmm36.ff/{wm_itp}.itp"\n'
-                '#include "charmm36.ff/ions.itp"\n\n'
-            )
-            topology = topology.replace("[ system ]", itp_block + "[ system ]", 1)
+            if wm_itp != "tip3p":
+                topology = topology.replace(
+                    'charmm36.ff/tip3p.itp', f'charmm36.ff/{wm_itp}.itp', 1
+                )
             mol_counts = ""
             if n_sol_na > 0:
                 mol_counts += f"SOD              {n_sol_na}\n"

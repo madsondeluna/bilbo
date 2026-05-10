@@ -223,6 +223,8 @@ def write_allatom_preview(
     all_lines: list[str] = []
     resid_to_lipid: dict[int, str] = {}
 
+    from bilbo.exporters.gromacs_topology import grouped_positions
+
     for leaflet_name in ("upper", "lower"):
         if leaflet_name not in layouts:
             continue
@@ -230,7 +232,7 @@ def write_allatom_preview(
         chain = _CHAIN[leaflet_name]
         z_flip = 1.0 if leaflet_name == "upper" else -1.0
 
-        for pos in layout.positions:
+        for pos in grouped_positions(layout.positions):
             result = _get_template(pos.lipid_id)
             if result is None:
                 continue

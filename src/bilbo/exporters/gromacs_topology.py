@@ -5,15 +5,37 @@ from pathlib import Path
 from bilbo.builders.leaflet_layout import LeafletLayout
 
 
-def _rle(positions) -> list[tuple[str, int]]:
-    """Run-length encode a sequence of LipidPositions into (lipid_id, count) pairs."""
-    runs: list[tuple[str, int]] = []
+def grouped_positions(positions):
+    """Return positions reordered so adjacent entries share the same moleculetype.
+
+    Order of first appearance is preserved. Required because gmx genion expects
+    each moleculetype to appear at most once in [ molecules ]; with the original
+    interleaved order, lines like 'DPPC 4 / CHL1 1 / DPPC 1 / ...' are valid for
+    grompp but rejected by genion.
+    """
+    buckets: dict[str, list] = {}
+    order: list[str] = []
     for pos in positions:
-        if runs and runs[-1][0] == pos.lipid_id:
-            runs[-1] = (runs[-1][0], runs[-1][1] + 1)
-        else:
-            runs.append((pos.lipid_id, 1))
-    return runs
+        if pos.lipid_id not in buckets:
+            buckets[pos.lipid_id] = []
+            order.append(pos.lipid_id)
+        buckets[pos.lipid_id].append(pos)
+    out = []
+    for lid in order:
+        out.extend(buckets[lid])
+    return out
+
+
+def _grouped_counts(positions) -> list[tuple[str, int]]:
+    """Count moleculetypes in order of first appearance."""
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for pos in positions:
+        if pos.lipid_id not in counts:
+            counts[pos.lipid_id] = 0
+            order.append(pos.lipid_id)
+        counts[pos.lipid_id] += 1
+    return [(lid, counts[lid]) for lid in order]
 
 
 def write_gromacs_topology(
@@ -37,7 +59,7 @@ def write_gromacs_topology(
     for leaflet_name in ("upper", "lower"):
         if leaflet_name not in layouts:
             continue
-        runs = _rle(layouts[leaflet_name].positions)
+        runs = _grouped_counts(layouts[leaflet_name].positions)
         molecule_blocks.append((leaflet_name, leaflet_name + " leaflet", runs))
         for lipid_id, _ in runs:
             if lipid_id not in seen:
