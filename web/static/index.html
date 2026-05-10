@@ -381,6 +381,7 @@
 
   <p class="notice">
     This is a preview release under active development. Instabilities and breaking changes may occur. Results should be validated before use in production simulations.<br>
+    Found an issue? <button class="feedback-link" onclick="openBugModal()" style="font-size:inherit;">Report a bug</button><br>
     CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
     Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
   </p>
@@ -642,17 +643,14 @@
   </div>
 
   <footer>
-    <p>
-      BILBO — Bilayer Lipid Builder and Organizer. Builds all-atom membrane models and exports self-contained GROMACS MD packages (CHARMM36 force field bundled). Results should be validated before use in production simulations.
-      Source: <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a>
-    </p>
-    <p style="margin-top:8px; line-height:2;">
-      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a><br>
-      <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a><br>
-      <a href="https://delunalab.dev" target="_blank">delunalab.dev</a><br>
-      <button class="feedback-link" onclick="openBugModal()">Report a bug</button><br>
-      <span style="color:#bbb;">v0.1.0</span>
-      &nbsp;<span class="status-dot" id="statusDot" data-tip="Server status. Green (pulsing): online and ready. Red: unreachable or error. Gray: checking." style="display:inline-block;vertical-align:middle;"></span>
+    <p style="margin-top:8px;">
+      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a>
+      &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
+      &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
+      &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
+      &nbsp;·&nbsp; <span style="color:#bbb;">v0.1.0</span>
+      &nbsp;·&nbsp;<span id="statusLabel" style="color:#bbb;">Checking...</span>
+      &nbsp;<span class="status-dot" id="statusDot" style="display:inline-block;vertical-align:middle;"></span>
     </p>
     <div style="margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-evenly; gap:16px; width:100%;">
       <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
@@ -719,11 +717,22 @@ let libraryLipids = [];
 // ── Server health + library init ───────────────────────────────────────────────
 (async () => {
   const dot = document.getElementById('statusDot');
+  const lbl = document.getElementById('statusLabel');
   try {
     const r = await fetch('/health');
-    dot.className = 'status-dot ' + (r.ok ? 'online' : 'offline');
+    if (r.ok) {
+      dot.className = 'status-dot online';
+      lbl.textContent = 'Online';
+      lbl.style.color = '#059669';
+    } else {
+      dot.className = 'status-dot offline';
+      lbl.textContent = 'Offline';
+      lbl.style.color = '#dc2626';
+    }
   } catch {
     dot.className = 'status-dot offline';
+    lbl.textContent = 'Offline';
+    lbl.style.color = '#dc2626';
   }
 })();
 
