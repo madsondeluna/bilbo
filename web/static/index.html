@@ -329,7 +329,42 @@
     border-radius: 0 4px 4px 0; line-height: 1.5;
   }
 
-  /* Email features (Resend) */
+  /* Share + Email features (Resend) */
+  .share-section {
+    margin-top: 20px; margin-bottom: 20px;
+    border: 1px solid #D2BFAA; border-left: 3px solid #1a1a1a;
+    border-radius: 4px; padding: 16px 20px; background: #FDF2DF;
+  }
+  .share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .share-heading { font-size: 0.82rem; font-weight: bold; color: #1a1a1a; }
+  .share-sub { font-size: 0.72rem; color: #888; margin-top: 2px; }
+  .share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .share-btn {
+    font-family: 'Roboto Mono', monospace; font-size: 0.72rem;
+    padding: 6px 14px; border-radius: 4px; cursor: pointer; border: none;
+  }
+  .copy-btn { background: #D2BFAA; color: #1a1a1a; }
+  .copy-btn:hover { background: #F8C87D; }
+  .gmail-btn { background: #F8C87D; color: #1a1a1a; }
+  .gmail-btn:hover { background: #e0a850; }
+  .share-url-box {
+    margin-top: 10px; font-size: 0.72rem; color: #555;
+    background: #FEF9F2; border: 1px solid #D2BFAA; border-radius: 4px;
+    padding: 6px 10px; word-break: break-all; display: none;
+  }
+  .share-form {
+    margin-top: 12px; display: none;
+    align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .share-form select, .share-form input[type="email"] {
+    font-family: 'Roboto Mono', monospace; font-size: 0.72rem;
+    background: #FEF9F2; border: 1px solid #D2BFAA; color: #1a1a1a;
+    padding: 6px 10px; border-radius: 4px; outline: none;
+  }
+  .share-form select:focus, .share-form input[type="email"]:focus { border-color: #F8C87D; }
+  .share-form input[type="email"] { flex: 1; min-width: 160px; }
+  .share-form-status { font-size: 0.70rem; width: 100%; min-height: 14px; }
+  .share-form-status .err { color: #dc2626; }
 
   .email-build-section {
     border: 1px solid #D2BFAA; background: #FDF2DF;
@@ -407,6 +442,32 @@
     </div>
   </div>
 
+
+  <div class="share-section">
+    <div class="share-inner">
+      <div class="share-text">
+        <div class="share-heading">Find BILBO useful?</div>
+        <div class="share-sub">Share it with your lab or collaborators.</div>
+      </div>
+      <div class="share-actions">
+        <button class="share-btn copy-btn" onclick="copyLink()" id="copyLinkBtn">Copy link</button>
+        <button class="share-btn gmail-btn" onclick="toggleShareForm()" id="shareEmailBtn">Share by email</button>
+      </div>
+    </div>
+    <div class="share-url-box" id="shareUrlBox"></div>
+    <div class="share-form" id="shareForm">
+      <select id="shareLang" title="Email language">
+        <option value="en">EN</option>
+        <option value="fr">FR</option>
+        <option value="es">ES</option>
+        <option value="pt">PT</option>
+        <option value="zh">ZH</option>
+      </select>
+      <input type="email" id="shareFriendEmail" placeholder="friend@example.com">
+      <button class="share-btn copy-btn" onclick="sendShareEmail()" id="sendShareBtn">Send</button>
+      <div class="share-form-status" id="shareFormStatus"></div>
+    </div>
+  </div>
 
   <!-- Upper leaflet -->
   <div class="section">
