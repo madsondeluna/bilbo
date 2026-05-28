@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile version="21.0.0">
+  <diagram id="bilbo_workflow" name="Page-1">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="960" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- TITLE -->
+        <mxCell id="100" value="BILBO — Request Lifecycle and Feature Map"
+          style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;"
+          vertex="1" parent="1">
+          <mxGeometry x="30" y="10" width="710" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ── MAIN-FLOW STAGES ─────────────────────────────────────────────── -->
+
+        <!-- 1. CLIENT -->
+        <mxCell id="s1"
+          value="&lt;b&gt;1. CLIENT&lt;/b&gt;&lt;br/&gt;Browser SPA (index.html)&lt;br/&gt;JavaScript fetch() API calls"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="65" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- 2. INGRESS -->
+        <mxCell id="s2"
+          value="&lt;b&gt;2. INGRESS&lt;/b&gt;&lt;br/&gt;Render edge proxy, TLS termination&lt;br/&gt;bilbo.delunalab.dev"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="160" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- 3. APP ENTRY -->
+        <mxCell id="s3"
+          value="&lt;b&gt;3. APP ENTRY&lt;/b&gt;&lt;br/&gt;uvicorn (ASGI), FastAPI app&lt;br/&gt;static files, session cookie init"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="255" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- 4. ROUTING & VALIDATION -->
+        <mxCell id="s4"
+          value="&lt;b&gt;4. ROUTING &amp; VALIDATION&lt;/b&gt;&lt;br/&gt;FastAPI route dispatch&lt;br/&gt;upload size guards (20 MB gz / 100 MB text)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="350" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- 5. MEMBRANE BUILDER (left feature group) -->
+        <mxCell id="s5"
+          value="&lt;b&gt;5. MEMBRANE BUILDER&lt;/b&gt;&lt;br/&gt;POST /api/build: bilayer assembly,&lt;br/&gt;peptide placement, solvation, topology"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="30" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 6. LIBRARY & PRESETS (center feature group) -->
+        <mxCell id="s6"
+          value="&lt;b&gt;6. LIBRARY &amp; PRESETS&lt;/b&gt;&lt;br/&gt;GET /api/library: list &amp; fetch&lt;br/&gt;curated CHARMM-GUI PDB templates"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="260" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 7. EXPORT & EMAIL (right feature group) -->
+        <mxCell id="s7"
+          value="&lt;b&gt;7. EXPORT &amp; EMAIL&lt;/b&gt;&lt;br/&gt;POST /api/md_package, /send_results&lt;br/&gt;GROMACS ZIP, Resend email delivery"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="490" y="460" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 8. SERVICE / BUSINESS LOGIC -->
+        <mxCell id="s8"
+          value="&lt;b&gt;8. SERVICE / BUSINESS LOGIC&lt;/b&gt;&lt;br/&gt;bilbo.builders.* (layout, geometry, sorting)&lt;br/&gt;bilbo.exporters.* (PDB, GRO, topology, PNG)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="575" width="220" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- 9. DATA LAYER -->
+        <mxCell id="s9"
+          value="&lt;b&gt;9. DATA LAYER&lt;/b&gt;&lt;br/&gt;SQLite (dev) / PostgreSQL (prod)&lt;br/&gt;tables: stats, sessions"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="685" width="220" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- 10. RESPONSE -->
+        <mxCell id="s10"
+          value="&lt;b&gt;10. RESPONSE&lt;/b&gt;&lt;br/&gt;JSON 200 / binary ZIP / plain text&lt;br/&gt;PDB + GRO + topology + leaflet PNG (base64)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f5e3;strokeColor=#27ae60;arcSize=10;"
+          vertex="1" parent="1">
+          <mxGeometry x="250" y="790" width="220" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ── EDGES ───────────────────────────────────────────────────────── -->
+
+        <!-- 1 → 2 -->
+        <mxCell id="e12" value="HTTPS request"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s1" target="s2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 2 → 3 -->
+        <mxCell id="e23" value="TLS-terminated HTTP"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s2" target="s3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 3 → 4 -->
+        <mxCell id="e34" value="dispatched request + _bilbo_sid cookie"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s3" target="s4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 4 → 5  (fan-out left) -->
+        <mxCell id="e45" value="multipart/form-data (PDB files, build params)"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s4" target="s5" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="440" />
+              <mxPoint x="130" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4 → 6  (straight down) -->
+        <mxCell id="e46" value="GET /api/library/{id}"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s4" target="s6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 4 → 7  (fan-out right) -->
+        <mxCell id="e47" value="multipart/form-data (pdb, email, lang)"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s4" target="s7" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="440" />
+              <mxPoint x="590" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5 → 8  (fan-in left) -->
+        <mxCell id="e58" value="service args (layouts, templates, solvation config)"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s5" target="s8" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="130" y="560" />
+              <mxPoint x="250" y="560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6 → 10  (library bypasses service logic — direct response) -->
+        <mxCell id="e610" value="plain text PDB / JSON list"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s6" target="s10" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="560" />
+              <mxPoint x="480" y="807" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7 → 8  (fan-in right) -->
+        <mxCell id="e78" value="pdb_text + topology_text + params"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s7" target="s8" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="590" y="560" />
+              <mxPoint x="470" y="560" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8 → 9  (stats persistence) -->
+        <mxCell id="e89" value="SQL UPDATE stats (builds, atoms)"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s8" target="s9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 8 → 10  (main assembled output, routes left of s9) -->
+        <mxCell id="e810" value="assembled PDB, GRO, topology, leaflet PNG"
+          style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;"
+          edge="1" source="s8" target="s10" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="612" />
+              <mxPoint x="230" y="807" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ── SIDE PANELS ─────────────────────────────────────────────────── -->
+
+        <!-- Stack -->
+        <mxCell id="p1"
+          value="&lt;b&gt;Stack&lt;/b&gt;&lt;br/&gt;Framework: FastAPI (Python 3.11)&lt;br/&gt;Server: uvicorn (ASGI, single process)&lt;br/&gt;DB: SQLAlchemy 2 — SQLite (dev) / PostgreSQL (prod)&lt;br/&gt;Frontend: Vanilla JS SPA (single static HTML)&lt;br/&gt;Key libs: NumPy, pydantic, python-multipart,&lt;br/&gt;  psycopg2-binary, matplotlib&lt;br/&gt;Build: uv + hatchling"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;"
+          vertex="1" parent="1">
+          <mxGeometry x="740" y="65" width="270" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Deployment -->
+        <mxCell id="p2"
+          value="&lt;b&gt;Deployment&lt;/b&gt;&lt;br/&gt;Platform: Render web service (Docker, free tier)&lt;br/&gt;Region: Oregon&lt;br/&gt;Domain: bilbo.delunalab.dev&lt;br/&gt;Start: uvicorn web.app:app --host 0.0.0.0&lt;br/&gt;Health: GET /health → {status: ok}&lt;br/&gt;Env vars: DATABASE_URL, RESEND_API_KEY,&lt;br/&gt;  RESEND_FROM_EMAIL, TELEGRAM_BOT_TOKEN,&lt;br/&gt;  TELEGRAM_CHAT_ID, PORT (default 8000)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;"
+          vertex="1" parent="1">
+          <mxGeometry x="740" y="255" width="270" height="205" as="geometry" />
+        </mxCell>
+
+        <!-- Data Model -->
+        <mxCell id="p3"
+          value="&lt;b&gt;Data Model&lt;/b&gt;&lt;br/&gt;stats(key TEXT PK, value BIGINT)&lt;br/&gt;  keys: total_builds, total_atoms,&lt;br/&gt;         unique_sessions&lt;br/&gt;sessions(id TEXT PK)&lt;br/&gt;  UUID per browser (_bilbo_sid cookie)&lt;br/&gt;Note: bilayer data is never persisted;&lt;br/&gt;  all membrane computation is in-memory"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;"
+          vertex="1" parent="1">
+          <mxGeometry x="740" y="475" width="270" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- External APIs -->
+        <mxCell id="p4"
+          value="&lt;b&gt;External APIs&lt;/b&gt;&lt;br/&gt;Resend (api.resend.com/emails)&lt;br/&gt;  transactional email, RESEND_API_KEY bearer&lt;br/&gt;  plain text + HTML, ZIP attachments (&gt;2 MB)&lt;br/&gt;  5 languages: EN, FR, ES, PT, ZH&lt;br/&gt;Telegram Bot API&lt;br/&gt;  per-build lab notification&lt;br/&gt;  fire-and-forget (background thread)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;"
+          vertex="1" parent="1">
+          <mxGeometry x="740" y="665" width="270" height="175" as="geometry" />
+        </mxCell>
+
+        <!-- Auth / Security -->
+        <mxCell id="p5"
+          value="&lt;b&gt;Auth / Security&lt;/b&gt;&lt;br/&gt;No authentication — all endpoints fully public&lt;br/&gt;Session cookie: _bilbo_sid (analytics only)&lt;br/&gt;  HttpOnly, SameSite=Lax, TTL 1 year&lt;br/&gt;Upload limits: 20 MB gz / 100 MB plain text&lt;br/&gt;Admin /admin: publicly accessible (no gate)"
+          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;"
+          vertex="1" parent="1">
+          <mxGeometry x="740" y="855" width="270" height="140" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
