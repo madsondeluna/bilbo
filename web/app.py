@@ -10,6 +10,7 @@ import html as _html_lib
 import io
 import ipaddress
 import json
+import logging
 import math
 import os
 import random as _random
@@ -30,6 +31,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="BILBO web", docs_url=None, redoc_url=None)
+
+_geo_log = logging.getLogger("bilbo.geo")
 
 # ── Upload size limits ─────────────────────────────────────────────────────────
 _MAX_GZ_UPLOAD_BYTES = 20 * 1024 * 1024       # 20 MB compressed
@@ -210,10 +213,15 @@ def _send_telegram(text: str) -> None:
 
 
 def _client_ip(request) -> str:
-    """Best-effort client IP. Behind a proxy (Render) the real IP is the first
-    entry of X-Forwarded-For; fall back to the socket peer."""
+    """Best-effort client IP. The site is fronted by Cloudflare, which sets
+    CF-Connecting-IP to the true client; this is the reliable source. Behind a
+    proxy (Render) the real IP is the first entry of X-Forwarded-For; fall back
+    to X-Real-IP and finally the socket peer."""
     if request is None:
         return ""
+    cf = request.headers.get("cf-connecting-ip", "")
+    if cf:
+        return cf.strip()
     fwd = request.headers.get("x-forwarded-for", "")
     if fwd:
         return fwd.split(",")[0].strip()
@@ -232,34 +240,110 @@ def _is_private_ip(ip: str) -> bool:
     return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved
 
 
+def _fetch_json(url: str, timeout: int = 6) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": "bilbo-web/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _geolocate(ip: str) -> dict | None:
+    """Resolve an IP to (lat, lon, city, region, country, code) trying several
+    free no-key providers in order. Returns None when all fail. Each provider's
+    failure is logged so the real cause is visible in server logs (the previous
+    implementation swallowed every error, hiding why the map stayed empty).
+
+    Providers differ in JSON shape and in whether they answer from a datacenter
+    egress IP, so we normalize and fall through:
+      - ipapi.co        rate-limits/blocks many cloud egress IPs
+      - ipwho.is        HTTPS, no key, datacenter-friendly
+      - ip-api.com      HTTP-only on the free tier, datacenter-friendly
+    """
+
+    def _from_ipapi_co() -> dict | None:
+        d = _fetch_json(f"https://ipapi.co/{ip}/json/")
+        if d.get("error"):
+            raise RuntimeError(f"ipapi.co error: {d.get('reason')}")
+        lat, lon = d.get("latitude"), d.get("longitude")
+        if lat is None or lon is None:
+            return None
+        return {
+            "lat": float(lat), "lon": float(lon),
+            "city": (d.get("city") or "").strip(),
+            "region": (d.get("region") or "").strip(),
+            "country": (d.get("country_name") or "").strip(),
+            "code": (d.get("country_code") or "").strip(),
+        }
+
+    def _from_ipwho_is() -> dict | None:
+        d = _fetch_json(f"https://ipwho.is/{ip}")
+        if not d.get("success", False):
+            raise RuntimeError(f"ipwho.is error: {d.get('message')}")
+        lat, lon = d.get("latitude"), d.get("longitude")
+        if lat is None or lon is None:
+            return None
+        return {
+            "lat": float(lat), "lon": float(lon),
+            "city": (d.get("city") or "").strip(),
+            "region": (d.get("region") or "").strip(),
+            "country": (d.get("country") or "").strip(),
+            "code": (d.get("country_code") or "").strip(),
+        }
+
+    def _from_ip_api_com() -> dict | None:
+        d = _fetch_json(f"http://ip-api.com/json/{ip}")
+        if d.get("status") != "success":
+            raise RuntimeError(f"ip-api.com error: {d.get('message')}")
+        lat, lon = d.get("lat"), d.get("lon")
+        if lat is None or lon is None:
+            return None
+        return {
+            "lat": float(lat), "lon": float(lon),
+            "city": (d.get("city") or "").strip(),
+            "region": (d.get("regionName") or "").strip(),
+            "country": (d.get("country") or "").strip(),
+            "code": (d.get("countryCode") or "").strip(),
+        }
+
+    for name, fn in (
+        ("ipapi.co", _from_ipapi_co),
+        ("ipwho.is", _from_ipwho_is),
+        ("ip-api.com", _from_ip_api_com),
+    ):
+        try:
+            result = fn()
+            if result is not None:
+                return result
+            _geo_log.warning("geo provider %s returned no coordinates for ip", name)
+        except Exception as exc:
+            _geo_log.warning("geo provider %s failed: %s", name, exc)
+    return None
+
+
 def _record_location(ip: str, notify_text: str | None = None) -> None:
-    """Geolocate an IP to city level via ipapi.co and store the aggregated
-    location (never the raw IP). When notify_text is given, send it to Telegram
-    with the resolved location appended. Fire-and-forget."""
+    """Geolocate an IP to city level and store the aggregated location (never the
+    raw IP). When notify_text is given, send it to Telegram with the resolved
+    location appended. Fire-and-forget."""
 
     def _resolve() -> None:
         loc_line = ""
         try:
-            if ip and not _is_private_ip(ip):
-                req = urllib.request.Request(
-                    f"https://ipapi.co/{ip}/json/",
-                    headers={"User-Agent": "bilbo-web/1.0"},
-                )
-                with urllib.request.urlopen(req, timeout=6) as resp:
-                    data = json.loads(resp.read().decode())
-                lat = data.get("latitude")
-                lon = data.get("longitude")
-                if lat is not None and lon is not None:
-                    city = (data.get("city") or "").strip()
-                    region = (data.get("region") or "").strip()
-                    country = (data.get("country_name") or "").strip()
-                    code = (data.get("country_code") or "").strip()
+            if not ip:
+                _geo_log.warning("geo skipped: empty client IP")
+            elif _is_private_ip(ip):
+                _geo_log.warning("geo skipped: private/non-routable client IP %r", ip)
+            else:
+                geo = _geolocate(ip)
+                if geo is not None:
+                    city, region = geo["city"], geo["region"]
+                    country, code = geo["country"], geo["code"]
                     city_key = f"{city}|{code}" if city else f"|{code}"
-                    _upsert_location(city_key, city, country, float(lat), float(lon))
+                    _upsert_location(city_key, city, country, geo["lat"], geo["lon"])
                     place = ", ".join(p for p in (city, region, country) if p) or "Unknown"
                     loc_line = f"\nLocation: {place}"
+                else:
+                    _geo_log.warning("geo failed: all providers exhausted for client IP")
         except Exception:
-            pass
+            _geo_log.exception("geo resolve crashed")
         if notify_text is not None:
             if "{location}" in notify_text:
                 msg = notify_text.replace("{location}", loc_line)
@@ -2135,7 +2219,7 @@ async def build_membrane(
         try:
             _record_location(_client_ip(request), notify_text=notify_text)
         except Exception:
-            _send_telegram(notify_text)
+            _send_telegram(notify_text.replace("{location}", ""))
 
         return JSONResponse({
             "pdb": final_pdb,
