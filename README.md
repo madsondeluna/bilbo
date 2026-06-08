@@ -366,6 +366,10 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=r
 
 The app detects `DATABASE_URL` automatically on startup, creates the tables if they do not exist, and uses PostgreSQL from that point on. No code changes or migrations are required.
 
+### Usage location data
+
+Each web build resolves the request IP to an approximate location through [ipapi.co](https://ipapi.co) and stores only the aggregated city/country and a build count, never the raw IP. The single purpose is to gauge the reach of the tool, shown on the usage map at the bottom of the page; nothing else is derived from it. These locations are coarse estimates without geographic precision and can be wrong, especially behind VPNs or institutional networks. Private and local IPs are skipped, so builds run locally are not recorded.
+
 ### Species membrane presets
 
 The web interface provides 17 curated membrane presets accessible via the "Load membrane preset" selector. Compositions are in mol% of total phospholipid and represent symmetric bilayers unless noted. All acyl chain variants use generic CHARMM36 templates (POPE, POPC, etc.) as proxies for the in-vivo acyl chain diversity. Post-translational lipid modifications, glycolipids, LPS, membrane proteins, and asymmetric leaflet distributions are not modeled.

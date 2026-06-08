@@ -8,6 +8,7 @@ import hashlib
 import zlib
 import html as _html_lib
 import io
+import ipaddress
 import json
 import math
 import os
@@ -186,23 +187,87 @@ app.mount("/static", StaticFiles(directory=_STATIC), name="static")
 
 # ── Usage stats ────────────────────────────────────────────────────────────────
 
-def _send_telegram(text: str) -> None:
+def _telegram_post(text: str) -> None:
+    """Synchronous Telegram send. No-op when credentials are unset."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         return
-    def _post() -> None:
+    try:
+        payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
+
+
+def _send_telegram(text: str) -> None:
+    threading.Thread(target=lambda: _telegram_post(text), daemon=True).start()
+
+
+def _client_ip(request) -> str:
+    """Best-effort client IP. Behind a proxy (Render) the real IP is the first
+    entry of X-Forwarded-For; fall back to the socket peer."""
+    if request is None:
+        return ""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    real = request.headers.get("x-real-ip", "")
+    if real:
+        return real.strip()
+    client = getattr(request, "client", None)
+    return getattr(client, "host", "") or ""
+
+
+def _is_private_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return True
+    return addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved
+
+
+def _record_location(ip: str, notify_text: str | None = None) -> None:
+    """Geolocate an IP to city level via ipapi.co and store the aggregated
+    location (never the raw IP). When notify_text is given, send it to Telegram
+    with the resolved location appended. Fire-and-forget."""
+
+    def _resolve() -> None:
+        loc_line = ""
         try:
-            payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
-            req = urllib.request.Request(
-                f"https://api.telegram.org/bot{token}/sendMessage",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            urllib.request.urlopen(req, timeout=5)
+            if ip and not _is_private_ip(ip):
+                req = urllib.request.Request(
+                    f"https://ipapi.co/{ip}/json/",
+                    headers={"User-Agent": "bilbo-web/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=6) as resp:
+                    data = json.loads(resp.read().decode())
+                lat = data.get("latitude")
+                lon = data.get("longitude")
+                if lat is not None and lon is not None:
+                    city = (data.get("city") or "").strip()
+                    region = (data.get("region") or "").strip()
+                    country = (data.get("country_name") or "").strip()
+                    code = (data.get("country_code") or "").strip()
+                    city_key = f"{city}|{code}" if city else f"|{code}"
+                    _upsert_location(city_key, city, country, float(lat), float(lon))
+                    place = ", ".join(p for p in (city, region, country) if p) or "Unknown"
+                    loc_line = f"\nLocation: {place}"
         except Exception:
             pass
-    threading.Thread(target=_post, daemon=True).start()
+        if notify_text is not None:
+            if "{location}" in notify_text:
+                msg = notify_text.replace("{location}", loc_line)
+            else:
+                msg = notify_text + loc_line
+            _telegram_post(msg)
+
+    threading.Thread(target=_resolve, daemon=True).start()
 
 
 _db_lock = threading.Lock()
@@ -238,11 +303,21 @@ def _init_stats_db() -> None:
             if _is_pg():
                 conn.execute(text("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value BIGINT DEFAULT 0)"))
                 conn.execute(text("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)"))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS locations ("
+                    "city_key TEXT PRIMARY KEY, city TEXT, country TEXT, "
+                    "lat DOUBLE PRECISION, lon DOUBLE PRECISION, count BIGINT DEFAULT 0)"
+                ))
                 for k in ("total_builds", "total_atoms", "unique_sessions"):
                     conn.execute(text("INSERT INTO stats (key, value) VALUES (:k, 0) ON CONFLICT DO NOTHING"), {"k": k})
             else:
                 conn.execute(text("CREATE TABLE IF NOT EXISTS stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)"))
                 conn.execute(text("CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY)"))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS locations ("
+                    "city_key TEXT PRIMARY KEY, city TEXT, country TEXT, "
+                    "lat REAL, lon REAL, count INTEGER DEFAULT 0)"
+                ))
                 for k in ("total_builds", "total_atoms", "unique_sessions"):
                     conn.execute(text("INSERT OR IGNORE INTO stats VALUES (:k, 0)"), {"k": k})
 
@@ -276,6 +351,45 @@ def _get_stats() -> dict:
         with _get_engine().connect() as conn:
             rows = conn.execute(text("SELECT key, value FROM stats")).fetchall()
             return {k: v for k, v in rows}
+
+
+def _upsert_location(city_key: str, city: str, country: str, lat: float, lon: float) -> None:
+    with _db_lock:
+        with _get_engine().begin() as conn:
+            if _is_pg():
+                conn.execute(
+                    text(
+                        "INSERT INTO locations (city_key, city, country, lat, lon, count) "
+                        "VALUES (:k, :city, :country, :lat, :lon, 1) "
+                        "ON CONFLICT (city_key) DO UPDATE SET count = locations.count + 1"
+                    ),
+                    {"k": city_key, "city": city, "country": country, "lat": lat, "lon": lon},
+                )
+            else:
+                updated = conn.execute(
+                    text("UPDATE locations SET count = count + 1 WHERE city_key = :k"),
+                    {"k": city_key},
+                ).rowcount
+                if not updated:
+                    conn.execute(
+                        text(
+                            "INSERT INTO locations (city_key, city, country, lat, lon, count) "
+                            "VALUES (:k, :city, :country, :lat, :lon, 1)"
+                        ),
+                        {"k": city_key, "city": city, "country": country, "lat": lat, "lon": lon},
+                    )
+
+
+def _get_locations() -> list[dict]:
+    with _db_lock:
+        with _get_engine().connect() as conn:
+            rows = conn.execute(
+                text("SELECT city, country, lat, lon, count FROM locations ORDER BY count DESC")
+            ).fetchall()
+    return [
+        {"city": c, "country": ct, "lat": la, "lon": lo, "count": n}
+        for c, ct, la, lo, n in rows
+    ]
 
 
 _init_stats_db()
@@ -817,6 +931,11 @@ async def root(request: Request) -> HTMLResponse:
 @app.get("/stats")
 async def stats_endpoint() -> JSONResponse:
     return JSONResponse(_get_stats())
+
+
+@app.get("/locations")
+async def locations_endpoint() -> JSONResponse:
+    return JSONResponse(_get_locations())
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -2000,19 +2119,23 @@ async def build_membrane(
         upper_summary = ", ".join(f"{k}:{v}" for k, v in upper_counts_dict.items())
         lower_summary = ", ".join(f"{k}:{v}" for k, v in lower_counts_dict.items())
         totals = _get_stats()
-        _send_telegram(
+        notify_text = (
             f"[BILBO] New membrane built\n"
             f"Upper: {upper_summary}\n"
             f"Lower: {lower_summary}\n"
             f"Lipids: {n_upper + n_lower} | Atoms: {n_total_atoms:,}\n"
             f"Solvated: {'yes' if solvate_enabled else 'no'}\n"
-            f"Session: {session_id[:8]}...\n"
+            f"Session: {session_id[:8]}...{{location}}\n"
             f"\n"
             f"Totals\n"
             f"Builds: {totals.get('total_builds', 0):,}\n"
             f"Atoms assembled: {totals.get('total_atoms', 0):,}\n"
             f"Unique users: {totals.get('unique_sessions', 0):,}"
         )
+        try:
+            _record_location(_client_ip(request), notify_text=notify_text)
+        except Exception:
+            _send_telegram(notify_text)
 
         return JSONResponse({
             "pdb": final_pdb,

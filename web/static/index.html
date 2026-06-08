@@ -405,7 +405,18 @@
   .email-build-btn:disabled { background: #D2BFAA; color: #8a7a66; cursor: not-allowed; }
   .email-build-status { font-size: 0.72rem; margin-top: 10px; min-height: 16px; }
   .email-build-status .err { color: #dc2626; }
+  .usage-map-section { margin-top: 28px; }
+  .usage-map-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .usage-map-title { font-size: 0.58rem; letter-spacing: 0.10em; text-transform: uppercase; color: #8a7a66; }
+  .usage-map-sub { font-size: 0.58rem; color: #bbb; }
+  #usageMap { height: 320px; width: 100%; border: 1px solid #D2BFAA; border-radius: 4px; background: #FEF9F2; z-index: 0; }
+  #usageMap .leaflet-tile { filter: grayscale(35%) sepia(12%); }
+  .usage-map-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #bbb; font-size: 0.7rem; }
+  .leaflet-popup-content { font-family: 'Roboto Mono', monospace; font-size: 0.72rem; color: #1a1a1a; }
+  .map-continent-label { font-family: 'Roboto Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a66; opacity: 0.7; white-space: nowrap; text-shadow: 0 0 3px #FEF9F2, 0 0 3px #FEF9F2; pointer-events: none; }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 <body>
 <div class="wrap">
@@ -702,6 +713,14 @@
         PDB serial numbers wrap at 99,999 atoms; residue numbers wrap at 9,999. BILBO handles this automatically, but downstream tools that rely on unique serial numbers should use the GRO file instead.
       </div>
     </div>
+  </div>
+
+  <div class="usage-map-section">
+    <div class="usage-map-head">
+      <span class="usage-map-title">Where BILBO is used</span>
+      <span class="usage-map-sub" id="usageMapSub"></span>
+    </div>
+    <div id="usageMap"><div class="usage-map-empty" id="usageMapEmpty">Loading map...</div></div>
   </div>
 
   <footer>
@@ -1968,6 +1987,56 @@ function submitBugReport() {
   window.open(`https://github.com/madsondeluna/bilbo/issues/new?title=${title}&body=${body}`, '_blank');
   closeBugModal();
 }
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+async function loadUsageMap() {
+  const el = document.getElementById('usageMap');
+  const empty = document.getElementById('usageMapEmpty');
+  const sub = document.getElementById('usageMapSub');
+  if (!el || typeof L === 'undefined') return;
+  let points = [];
+  try {
+    const r = await fetch('/locations', { cache: 'no-cache' });
+    points = await r.json();
+  } catch (e) {}
+  if (!Array.isArray(points)) points = [];
+  if (empty) empty.remove();
+
+  const map = L.map(el, { scrollWheelZoom: false, worldCopyJump: true, attributionControl: true })
+               .setView([20, 0], 1);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 12,
+  }).addTo(map);
+
+  const continents = [
+    ['North America', 48, -100], ['South America', -15, -60], ['Europe', 52, 18],
+    ['Africa', 4, 20], ['Asia', 46, 95], ['Oceania', -25, 134],
+  ];
+  continents.forEach(([name, lat, lon]) => {
+    L.marker([lat, lon], {
+      interactive: false, keyboard: false,
+      icon: L.divIcon({ className: 'map-continent-label', html: name, iconSize: null }),
+    }).addTo(map);
+  });
+
+  if (points.length === 0) return;
+
+  points.forEach(p => {
+    if (p.lat == null || p.lon == null) return;
+    const n = p.count || 1;
+    const radius = Math.min(18, 4 + 2.2 * Math.sqrt(n));
+    const place = [p.city, p.country].filter(Boolean).join(', ') || 'Unknown';
+    L.circleMarker([p.lat, p.lon], {
+      radius, color: '#a85d3a', weight: 1.2, fillColor: '#F8C87D', fillOpacity: 0.7,
+    }).addTo(map).bindPopup(`<strong>${place}</strong><br>${n} build${n === 1 ? '' : 's'}`);
+  });
+  if (sub) sub.textContent = `${points.length} location${points.length === 1 ? '' : 's'}`;
+}
+loadUsageMap();
 </script>
 </body>
 </html>
