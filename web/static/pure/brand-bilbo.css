@@ -1,0 +1,145 @@
+/* bilbo / brand-bilbo.css
+   Camada de marca sobre a Pure Design 1.4.3.
+
+   tokens.css e patterns.css sao copias byte a byte do repositorio da
+   linguagem, para que uma re-copia futura nao apague nada daqui. Todo
+   valor proprio do BILBO vive neste arquivo e em nenhum outro: nao ha
+   hex, rgb nem literal de cor no CSS da pagina.
+
+   Ordem de importacao: tokens.css, brand-bilbo.css, patterns.css.
+   A marca entra entre os dois porque patterns.css so le semanticos,
+   e e aqui que os semanticos trocam de valor.
+
+   Modo unico: claro e quente. A estrutura de tokens fica intacta, entao
+   um modo escuro entra depois como bloco novo, sem tocar na pagina. */
+
+:root {
+  /* rampa quente do BILBO: mesma funcao que --slate-* tem na linguagem.
+     Os seis passos herdados da identidade estao marcados. */
+  --bilbo-50:  #FEFEFC;  /* identidade: fundo da pagina */
+  --bilbo-100: #FEF9F2;  /* identidade: superficie de campo e cartao */
+  --bilbo-150: #FDF2DF;  /* identidade: painel, nota, bloco destacado */
+  --bilbo-200: #F7E8D0;
+  --bilbo-250: #EBDCC4;
+  --bilbo-300: #D2BFAA;  /* identidade: borda */
+  --bilbo-400: #B9A48B;
+  --bilbo-500: #8A7A66;
+  --bilbo-700: #6B5B47;
+  --bilbo-800: #4A3F32;
+  --bilbo-950: #1A1A1A;  /* identidade: tinta */
+
+  /* ambar da marca. O preenchimento (300) e material de botao, nao
+     tinta: 1.4:1 sobre creme. A tinta ambar e o passo 700, 5.80:1
+     sobre --bg, e e ela que --accent recebe. */
+  --bilbo-amber-300: #F8C87D;  /* identidade: preenchimento primario */
+  --bilbo-amber-400: #F0B85A;  /* identidade: preenchimento em hover */
+  --bilbo-amber-700: #8A5B14;
+
+  /* semanticos da linguagem, reatribuidos. Contraste WCAG 2.1 medido
+     contra --bg / --surface:
+       --text      17.24 / 16.61
+       --muted      6.47 /  6.24
+       --accent     5.80 /  5.59
+       --secondary  4.11 /  3.96  (cor de borda, nunca texto)
+       --border     1.77 /  1.70  (decoracao) */
+  --bg:                  var(--bilbo-50);
+  --surface:             var(--bilbo-100);
+  --surface-hover:       var(--bilbo-150);
+  --surface-glass:       rgba(254, 249, 242, 0.96);
+  --surface-hover-glass: rgba(253, 242, 223, 0.98);
+  --dim:                 var(--bilbo-200);
+  --border:              var(--bilbo-300);
+  --border-hover:        var(--bilbo-500);
+  --text:                var(--bilbo-950);
+  --muted:               var(--bilbo-700);
+  --accent:              var(--bilbo-amber-700);
+  --secondary:           var(--bilbo-500);
+
+  /* vidro tingido: e por aqui que o botao primario fica ambar. A tinta
+     do texto continua --text, 11.23:1 sobre o ambar cheio. */
+  --glass-tint-accent: linear-gradient(
+                         180deg,
+                         rgba(248, 200, 125, 0.94),
+                         rgba(248, 200, 125, 0.74));
+  --glass-edge-accent: rgba(224, 168, 80, 0.62);
+  /* sombra da conta de vidro do mapa: ambar escurecido, nao cinza */
+  --glass-tint-shadow: rgba(138, 91, 20, 0.35);
+
+  /* o vidro precisa de algo para refratar. Sobre creme liso o material
+     nao aparece, entao o fundo da pagina ganha duas manchas quentes,
+     tiradas da propria rampa. */
+  --bilbo-wash:
+    radial-gradient(60rem 40rem at 12% -8%,  var(--bilbo-150), transparent 62%),
+    radial-gradient(48rem 36rem at 96% 12%,  var(--bilbo-100), transparent 58%),
+    radial-gradient(52rem 44rem at 50% 108%, var(--bilbo-200), transparent 64%);
+
+  /* cor de dado. Os oito slots categoricos da linguagem ficam como
+     estao e sao atribuidos em sequencia. Os quatro seguintes existem
+     porque o visualizador 3D precisa de uma cor por especie lipidica e
+     a biblioteca tem doze: a saida que a linguagem oferece acima de
+     oito (agrupar em "outros", facetar) nao serve para um render
+     molecular, onde as especies dividem o mesmo volume.
+     Construidos pelo mesmo metodo dos oito: OKLCH, L 0.545 e 0.620,
+     C 0.114, matizes 121, 185, 275 e 321, escolhidas nos maiores vaos
+     do circulo ja ocupado. Pior par adjacente 8.9 em visao normal e
+     4.3 em deuteranopia (Machado 2009, severidade 1.0), contra 4.5 e
+     2.3 da paleta que estava aqui antes. */
+  --mol-1:  var(--chart-1);
+  --mol-2:  var(--chart-2);
+  --mol-3:  var(--chart-3);
+  --mol-4:  var(--chart-4);
+  --mol-5:  var(--chart-5);
+  --mol-6:  var(--chart-6);
+  --mol-7:  var(--chart-7);
+  --mol-8:  var(--chart-8);
+  --mol-9:  #677A22;
+  --mol-10: #008579;
+  --mol-11: #7280CA;
+  --mol-12: #A56EB0;
+
+  /* marcas de significado fixo no visualizador. A especie lipidica toma
+     a cabeca da sequencia (mol-1 em diante) e a entidade nomeada toma a
+     cauda, entao so colidem num sistema com oito especies na mesma
+     caixa, acima de qualquer preset. A agua fica fora da sequencia
+     categorica de proposito: sao dezenas de milhares de atomos e a
+     marca precisa recuar, entao ela vem da rampa sequencial. */
+  --mol-peptide: var(--mol-10);
+  --mol-ion:     var(--mol-9);
+  --mol-sodium:  var(--mol-11);
+  --mol-chlor:   var(--mol-8);
+  --mol-water:        var(--seq-1);
+  --mol-water-bond:   var(--seq-2);
+  --mol-water-h:      var(--div-4);
+
+  --chart-grid:      var(--border);
+  --chart-ink:       var(--text);
+  --chart-ink-muted: var(--muted);
+
+  /* medidas de tela que so existem nesta aplicacao. Nao sao escala
+     nova: sao larguras e alturas de caixa, o mesmo papel que
+     --photo-sm e --container-md tem na linguagem. */
+  --bilbo-logo:          12rem;   /* logotipo do topo */
+  --bilbo-viewer-h:      500px;   /* canvas 3Dmol */
+  --bilbo-map-h:         320px;   /* mapa de uso */
+  --bilbo-modal-w:       420px;
+  --bilbo-tip-min:       180px;
+  --bilbo-tip-max:       260px;
+  --bilbo-stat-label:    120px;
+  --bilbo-stat-min:      148px;
+  --bilbo-field-min:     280px;
+  --bilbo-replica-min:   200px;
+  --bilbo-count-w:       80px;
+  --bilbo-lib-w:         110px;
+  --bilbo-ion-w:         96px;
+  --bilbo-ion-count-w:   72px;
+  --bilbo-md-field-min:  148px;
+  --bilbo-lang-w:        120px;
+  --bilbo-email-w:       160px;
+
+  /* alturas do rodape, ajustadas a mao arquivo por arquivo. Enquanto os
+     PNGs nao forem recortados ate a tinta, a caixa e que manda e um
+     valor unico deixa buraco na fileira. */
+  --bilbo-logo-sm: 34px;
+  --bilbo-logo-md: 36px;
+  --bilbo-logo-lg: 38px;
+}

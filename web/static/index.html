@@ -3,432 +3,809 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#FEFEFC">
 <title>BILBO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,300..400&family=Public+Sans:wght@300;400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+
+<!-- Pure Design 1.4.3. Ordem obrigatoria: tokens, marca, patterns. -->
+<link rel="stylesheet" href="/static/pure/tokens.css">
+<link rel="stylesheet" href="/static/pure/brand-bilbo.css">
+<link rel="stylesheet" href="/static/pure/patterns.css">
 <style>
-  html { font-size: 17px; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Roboto Mono', monospace; background: #FEFEFC; color: #1a1a1a; min-height: 100vh; padding: 48px 24px; }
-  .wrap { max-width: 760px; margin: 0 auto; }
+/* =========================================================
+   BILBO / regras de pagina.
 
-  .title-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; }
-  h1 { font-size: 1.4rem; font-weight: normal; letter-spacing: 0.1em; color: #0f0f0f; }
-  @keyframes dot-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.55); }
-    50%       { box-shadow: 0 0 0 5px rgba(5, 150, 105, 0); }
-  }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #D2BFAA; flex-shrink: 0; transition: background 0.4s; cursor: help; position: relative; }
-  .status-dot.online  { background: #059669; animation: dot-pulse 1.6s ease-in-out infinite; }
-  .status-dot.offline { background: #dc2626; }
-  .status-dot::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1a1a1a;
-    color: #e5e5e5;
-    font-size: 0.63rem;
-    line-height: 1.5;
-    padding: 6px 10px;
-    border-radius: 4px;
-    min-width: 200px;
-    max-width: 280px;
-    z-index: 300;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-    white-space: normal;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    font-family: 'Roboto Mono', monospace;
-    font-weight: normal;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-  .status-dot:hover::after { opacity: 1; }
-  .sub { font-size: 0.78rem; color: #888; margin-bottom: 20px; line-height: 1.6; }
-  .beta-badge { font-size: 0.55em; font-weight: 600; letter-spacing: 0.1em; color: #1a1a1a; background: #F8C87D; padding: 3px 8px; border-radius: 4px; vertical-align: middle; position: relative; top: -4px; }
-  .notice { font-size: 0.75rem; color: #999; border-left: 2px solid #D2BFAA; padding: 8px 12px; margin-bottom: 36px; line-height: 1.7; }
-  .notice a { color: #555; text-decoration: underline; }
-  .notice a:hover { color: #111; }
-  .notice code { background: #FDF2DF; color: #444; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; }
-  .stats-section { margin-top: 12px; margin-bottom: 16px; }
-  .stats-grid { display: flex; flex-direction: row; flex-wrap: wrap; gap: 20px 32px; }
-  .stats-item { display: flex; flex-direction: row; align-items: center; gap: 10px; }
-  .stats-val { font-size: 1.8rem; font-weight: 600; color: #1a1a1a; font-variant-numeric: tabular-nums; line-height: 1; flex-shrink: 0; }
-  .stats-lbl { font-size: 0.62rem; color: #bbb; text-transform: uppercase; letter-spacing: 0.08em; text-align: left; max-width: 120px; line-height: 1.3; }
+   Nenhum valor literal de cor, tipo, raio, sombra ou curva abaixo
+   desta linha: tudo vem de tokens.css ou de brand-bilbo.css. Os
+   componentes que a linguagem ja tem (.pill, .surface, .card-glass,
+   .field, .input, .select, .check, .empty, .overlay, .modal, .tag,
+   .status, .viz-legend, .num, .sr-only, .skip-link) sao importados,
+   nunca reescritos. O que sobra aqui e o que so existe no BILBO.
 
-  /* Section labels */
-  .section-label { font-size: 0.75rem; color: #999; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
-  .section { margin-bottom: 24px; }
+   Espaco: tres degraus, 24 aproxima, 48 separa bloco, 96 separa secao.
+   Raio por papel: superficie 12, campo 8, controle full.
+   Sentence case em tudo.
+   ========================================================= */
 
-  /* Lipid entry rows */
-  .lipid-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  .lipid-entry { display: flex; gap: 8px; align-items: center; }
-  .lipid-entry .file-label {
-    flex: 1; background: #FEF9F2; border: 1px solid #D2BFAA; border-radius: 4px;
-    padding: 10px 14px; font-size: 0.82rem; color: #999; cursor: pointer;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .lipid-entry .file-label.has-file { color: #1a1a1a; }
-  .lipid-entry input[type="file"] { display: none; }
-  .lipid-entry input[type="number"] {
-    width: 80px; background: #FEF9F2; border: 1px solid #D2BFAA; color: #1a1a1a;
-    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; padding: 10px 10px;
-    border-radius: 4px; outline: none; text-align: center;
-  }
-  .lipid-entry input[type="number"]:focus { border-color: #F8C87D; }
-  .remove-btn {
-    background: none; border: none; color: #ccc; font-size: 1.1rem; cursor: pointer;
-    padding: 4px 6px; line-height: 1; border-radius: 4px; font-family: inherit;
-  }
-  .remove-btn:hover { color: #dc2626; background: #fff5f5; }
-  .lib-select {
-    background: #FEF9F2; border: 1px solid #D2BFAA; color: #888;
-    font-family: 'Roboto Mono', monospace; font-size: 0.75rem; padding: 10px 8px;
-    border-radius: 4px; outline: none; min-width: 90px; max-width: 110px;
-  }
-  .lib-select:focus { border-color: #F8C87D; }
-  .lib-select.has-selection { color: #1a1a1a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .add-btn {
-    background: none; border: 1px dashed #D2BFAA; color: #8a7a66;
-    font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 8px 16px;
-    border-radius: 4px; cursor: pointer; letter-spacing: 0.05em; width: 100%;
-  }
-  .add-btn:hover { border-color: #F8C87D; color: #1a1a1a; background: #FEF9F2; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: var(--bilbo-wash);
+  background-attachment: fixed;
+  min-height: 100vh;
+  padding: var(--space-48) var(--space-24);
+}
 
-  .preset-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .preset-select { flex: 1; background: #FEF9F2; border: 1px solid #D2BFAA; color: #888; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 8px 10px; border-radius: 4px; outline: none; }
-  .preset-select:focus { border-color: #F8C87D; }
-  .preset-select.has-selection { color: #1a1a1a; }
-  .btn-preset { background: #D2BFAA; color: #1a1a1a; border: none; padding: 8px 18px; font-family: 'Roboto Mono', monospace; font-size: 0.78rem; border-radius: 4px; cursor: pointer; white-space: nowrap; }
-  .btn-preset:hover { background: #F8C87D; }
-  .preset-notice { display: none; margin-bottom: 12px; padding: 10px 14px; background: #FDF2DF; border-left: 2px solid #D2BFAA; border-radius: 0 4px 4px 0; color: #555; font-size: 0.62rem; line-height: 1.7; }
+.wrap { max-width: var(--container-md); margin: 0 auto; }
 
-  /* Symmetric toggle */
-  .toggle-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
-  .toggle-row input[type="checkbox"] { accent-color: #F8C87D; width: 14px; height: 14px; cursor: pointer; }
-  .toggle-label { font-size: 0.78rem; color: #888; cursor: pointer; }
+/* ---------- cabecalho ---------- */
 
-  /* Parameters grid */
-  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .param-field { display: flex; flex-direction: column; gap: 6px; }
-  .param-field label { font-size: 0.72rem; color: #999; letter-spacing: 0.06em; text-transform: uppercase; }
-  .param-field input, .param-field select {
-    background: #FEF9F2; border: 1px solid #D2BFAA; color: #1a1a1a;
-    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; padding: 10px 12px;
-    border-radius: 4px; outline: none;
-  }
-  .param-field input:focus, .param-field select:focus { border-color: #F8C87D; }
-  .param-field input::placeholder { color: #bbb; }
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-10);
+  margin-bottom: var(--space-4);
+}
 
-  /* Upload single file (protein) */
-  .file-upload-row { display: flex; gap: 8px; align-items: center; }
-  .upload-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
-  .upload-label {
-    flex: 1; background: #FEF9F2; border: 1px solid #D2BFAA; border-radius: 4px;
-    padding: 10px 14px; font-size: 0.82rem; color: #999; cursor: pointer;
-  }
-  .upload-label.has-file { color: #1a1a1a; }
+h1 { font-weight: var(--weight-regular); line-height: var(--leading-none); }
+h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
-  /* Buttons */
-  button {
-    background: #F8C87D; color: #1a1a1a; border: none; padding: 10px 28px;
-    font-family: 'Roboto Mono', monospace; font-size: 0.82rem; cursor: pointer;
-    border-radius: 4px; font-weight: bold; letter-spacing: 0.05em;
-  }
-  button:hover { background: #f0b85a; color: #1a1a1a; }
-  button:disabled { background: #D2BFAA; color: #8a7a66; cursor: not-allowed; }
-  .btn-clear { background: #a85d3a; color: #FEFEFC; }
-  .btn-clear:hover { background: #8a4a2c; color: #FEFEFC; }
-  .btn-example { background: #D2BFAA; color: #1a1a1a; font-weight: normal; }
-  .btn-example:hover { background: #F8C87D; color: #1a1a1a; }
-  .btn-upload { background: #D2BFAA; color: #1a1a1a; font-weight: normal; }
-  .btn-upload:hover { background: #F8C87D; color: #1a1a1a; }
-  .btn-download { background: #F8C87D; color: #1a1a1a; font-weight: normal; padding: 10px 20px; }
-  .btn-download:hover { background: #f0b85a; color: #1a1a1a; }
-  .md-pkg-block { margin-top: 14px; padding: 12px 14px; background: #FDF2DF; border: 1px solid #D2BFAA; border-radius: 6px; }
-  .md-pkg-block-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #999; margin-bottom: 10px; }
-  .md-pkg-params { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-  .md-pkg-field { display: flex; flex-direction: column; gap: 4px; }
-  .md-pkg-field label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #aaa; }
-  .md-param-input { width: 72px; padding: 7px 8px; font-family: 'Roboto Mono', monospace; font-size: 0.8rem; border: 1px solid #D2BFAA; border-radius: 4px; text-align: right; background: #FEF9F2; }
-  .md-param-input:focus { outline: none; border-color: #F8C87D; }
-  .md-pkg-note { margin-top: 10px; font-size: 0.68rem; color: #aaa; line-height: 1.6; }
-  .md-pkg-note code { background: #D2BFAA; color: #1a1a1a; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; }
-  .btn-log { background: #a85d3a; color: #FEFEFC; font-weight: normal; padding: 10px 20px; }
-  .btn-log:hover { background: #8a4a2c; color: #FEFEFC; }
-  .log-panel {
-    background: #1a1a1a; color: #d1d5db; border-radius: 4px;
-    padding: 16px 20px; margin-top: 12px; font-size: 0.72rem; line-height: 1.8;
-    white-space: pre; overflow-x: auto; display: none;
-  }
+/* ponto de estado do servico: cor com rotulo ao lado, nunca sozinha */
+@keyframes bilbo-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-good) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 var(--space-6) color-mix(in srgb, var(--status-good) 0%, transparent); }
+}
+.status-dot {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-circle);
+  background: var(--border);
+  flex-shrink: 0;
+  cursor: help;
+  position: relative;
+  transition: background var(--duration-4) var(--ease-standard);
+}
+.status-dot.online  { background: var(--status-good); animation: bilbo-dot-pulse 1.6s var(--ease-standard) infinite; }
+.status-dot.offline { background: var(--status-critical); }
 
-  .action-row { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
-  .action-row button { flex: 1; }
+.notice {
+  font-size: var(--text-13);
+  color: var(--muted);
+  border-left: var(--stroke) solid var(--border);
+  padding: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-48);
+  line-height: var(--leading-relaxed);
+}
+.notice a { color: var(--accent); text-decoration: underline; }
+.notice a:hover { color: var(--text); }
+.notice code {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  background: var(--dim);
+  color: var(--text);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-mark);
+}
 
-  /* Status */
-  #status { font-size: 0.78rem; color: #999; margin-top: 14px; min-height: 18px; }
-  #status.error { color: #dc2626; }
-  #status.running { color: #b8842c; }
-  #status.done { color: #92400e; }
+/* ---------- numeros de uso ---------- */
 
-  /* Results */
-  #results { margin-top: 24px; }
-  .summary-card {
-    background: #FEF9F2; border: 1px solid #D2BFAA; border-radius: 4px;
-    padding: 20px; margin-bottom: 16px;
-  }
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 12px; }
-  .stat { text-align: center; }
-  .stat-val { font-size: 1.5rem; color: #0f0f0f; }
-  .stat-label { font-size: 0.68rem; color: #aaa; margin-top: 2px; letter-spacing: 0.06em; text-transform: uppercase; }
+/* mesma diagramacao do resumo de build: numero em cima, rotulo embaixo,
+   todos na mesma borda esquerda. Em fileira com rotulo ao lado, o quarto
+   item cai de linha e o rotulo quebra no meio. */
+.stats-section {
+  margin-top: var(--space-24);
+  margin-bottom: var(--space-48);
+  padding: var(--space-20) 0;
+  border-top: var(--hairline) solid var(--border);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-stat-min), 1fr));
+  gap: var(--space-20) var(--space-24);
+}
+.stats-item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6); min-width: 0; }
+.stats-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-32);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  line-height: var(--leading-none);
+}
+.stats-lbl {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  line-height: var(--leading-snug);
+}
 
-  .viewer-wrap {
-    border: 1px solid #D2BFAA; border-radius: 4px; overflow: hidden;
-    height: 500px; margin-bottom: 0; position: relative; background: #FEF9F2;
-  }
-  .atom-info {
-    min-height: 26px; padding: 5px 12px; margin-bottom: 16px;
-    background: #FEF9F2; border: 1px solid #D2BFAA; border-top: none;
-    border-radius: 0 0 4px 4px; font-size: 0.63rem; color: #555;
-    font-family: 'Roboto Mono', monospace; line-height: 1.5;
-    display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
-    overflow: hidden; white-space: nowrap;
-  }
-  .atom-info span { color: #999; }
-  .atom-info strong { color: #1a1a1a; font-weight: 500; }
-  #viewer { width: 100%; height: 100%; }
-  .viewer-controls {
-    position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
-  }
-  .viewer-btn {
-    background: rgba(255,255,255,0.92); border: 1px solid #D2BFAA; color: #555;
-    font-family: 'Roboto Mono', monospace; font-size: 0.7rem; padding: 5px 10px;
-    border-radius: 4px; cursor: pointer; letter-spacing: 0.04em; font-weight: normal;
-  }
-  .viewer-btn:hover { background: #FEF9F2; color: #1a1a1a; border-color: #F8C87D; }
-  .viewer-btn.active { background: #F8C87D; color: #1a1a1a; border-color: #F8C87D; }
+/* ---------- secao ---------- */
 
-  .dl-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .dl-row button { flex: 1; min-width: 0; }
+.section-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  margin-bottom: var(--space-8);
+}
+.section { margin-bottom: var(--space-24); }
 
-  .lipid-legend {
-    display: flex; flex-wrap: wrap; gap: 10px 20px;
-    margin-top: 10px; margin-bottom: 14px;
-    font-size: 0.72rem; color: #555;
-  }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+/* dois blocos curtos lado a lado: sozinho, cada um ocupava a largura
+   inteira com um controle de 300px dentro */
+.section-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-24) var(--space-48);
+  align-items: start;
+}
+.section-pair > .section { margin-bottom: 0; }
 
-  .warn-list { margin-top: 12px; }
-  .warn-item {
-    font-size: 0.73rem; color: #92400e; border-left: 2px solid #fcd34d;
-    padding: 6px 10px; margin-bottom: 6px; line-height: 1.5; background: #fffbeb;
-    border-radius: 0 4px 4px 0;
-  }
-  .md-note {
-    margin-top: 12px; font-size: 0.70rem; color: #555; line-height: 1.7;
-    border-left: 2px solid #D2BFAA; padding: 8px 12px; background: #FDF2DF;
-    border-radius: 0 4px 4px 0;
-  }
-  .md-note code { font-family: 'Roboto Mono', monospace; font-size: 0.68rem; color: #1a1a1a; }
+/* ---------- linha de lipidio ---------- */
 
-  /* Solvation section */
-  .solv-body { display: none; margin-top: 14px; }
-  .solv-body.visible { display: block; }
-  .solv-report {
-    margin-top: 14px; background: #FDF2DF; border: 1px solid #D2BFAA;
-    border-radius: 4px; padding: 14px 18px; font-size: 0.72rem;
-    line-height: 1.9; font-family: 'Roboto Mono', monospace;
-  }
-  .solv-report .sr-head { font-size: 0.68rem; color: #8a6d3a; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
-  .solv-report .sr-row { display: flex; justify-content: space-between; gap: 16px; color: #3a3a3a; }
-  .solv-report .sr-key { color: #8a7a66; }
-  .solv-report .sr-val { color: #1a1a1a; font-weight: 500; }
-  .solv-report .sr-charge-ok  { color: #059669; font-weight: bold; }
-  .solv-report .sr-charge-neg { color: #dc2626; font-weight: bold; }
-  .solv-report .sr-sep { border-top: 1px solid #D2BFAA; margin: 6px 0; }
-  .replica-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .replica-row-label { grid-column: 1 / -1; font-size: 0.68rem; color: #aaa; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+.lipid-list { display: flex; flex-direction: column; gap: var(--space-8); margin-bottom: var(--space-8); }
+.lipid-entry { display: flex; gap: var(--space-8); align-items: center; }
+.lipid-entry .select-shell { flex-shrink: 0; }
 
-  /* Divider */
-  .divider { border: none; border-top: 1px solid #D2BFAA; margin: 28px 0; }
+/* rotulo de arquivo: nao e campo de texto, e alvo de upload, mas divide
+   a caixa com os campos vizinhos, entao herda o raio de campo */
+.file-label {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  min-height: var(--field-height);
+  display: flex;
+  align-items: center;
+  padding: var(--space-10) var(--space-12);
+  font-size: var(--text-13);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color var(--duration-3) var(--ease-standard),
+              color var(--duration-3) var(--ease-standard);
+}
+.file-label:hover { border-color: var(--border-hover); }
+.file-label.has-file { color: var(--text); }
+.lipid-entry input[type="file"] { display: none; }
 
-  /* Assembly notes */
-  .asm-notes { margin-top: 28px; border-top: 1px solid #D2BFAA; padding-top: 20px; }
-  .asm-notes-title { font-size: 0.65rem; letter-spacing: 0.10em; text-transform: uppercase; color: #8a7a66; margin-bottom: 12px; }
-  .asm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 600px) { .asm-grid { grid-template-columns: 1fr; } }
-  .asm-card { background: #FDF2DF; border: 1px solid #D2BFAA; border-radius: 6px; padding: 12px 14px; font-size: 0.70rem; line-height: 1.7; color: #555; text-align: justify; }
-  .asm-card strong { display: block; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: #1a1a1a; margin-bottom: 4px; }
-  .asm-card code { font-family: 'Roboto Mono', monospace; font-size: 0.85em; background: #D2BFAA; color: #1a1a1a; padding: 1px 4px; border-radius: 3px; }
-  .asm-warn { border-left: 3px solid #f59e0b; background: #fffbeb; }
-  .asm-warn strong { color: #92400e; }
+.count-input { width: var(--bilbo-count-w); text-align: center; }
+.lib-select { min-width: var(--bilbo-lib-w); max-width: var(--bilbo-lib-w); font-size: var(--text-13); }
+.lib-select.has-selection { color: var(--text); }
 
-  /* Footer */
-  footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #D2BFAA; font-size: 0.63rem; color: #aaa; line-height: 1.8; }
-  footer p { text-align: justify; }
-  .footer-note { margin-top: 12px; padding: 10px 14px; background: #FDF2DF; border-left: 2px solid #D2BFAA; border-radius: 0 4px 4px 0; color: #666; line-height: 1.8; text-align: justify; }
-  .footer-note strong { color: #444; }
-  .footer-note code { font-family: 'Roboto Mono', monospace; font-size: 0.85em; background: #D2BFAA; color: #1a1a1a; padding: 1px 5px; border-radius: 3px; }
-  footer a { color: #999; text-decoration: underline; }
-  footer a:hover { color: #333; }
-  .feedback-link { color: #999; text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; font-size: inherit; font-weight: normal; padding: 0; letter-spacing: normal; }
-  .feedback-link:hover { color: #333; background: none; }
-  .bug-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
-  .bug-overlay.open { display: flex; }
-  .bug-modal { background: #FEFEFC; border-radius: 8px; padding: 28px 28px 22px; width: 420px; max-width: 95vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); font-size: 0.78rem; color: #333; }
-  .bug-modal h3 { margin: 0 0 4px; font-size: 0.88rem; font-weight: 600; color: #1a1a1a; }
-  .bug-modal p { margin: 0 0 14px; color: #777; font-size: 0.72rem; }
-  .bug-modal textarea { width: 100%; box-sizing: border-box; height: 110px; resize: vertical; border: 1px solid #D2BFAA; border-radius: 5px; padding: 8px 10px; font-family: inherit; font-size: 0.78rem; color: #222; outline: none; background: #FEF9F2; }
-  .bug-modal textarea:focus { border-color: #F8C87D; }
-.bug-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-  .bug-submit { background: #F8C87D; color: #1a1a1a; border: none; border-radius: 5px; padding: 7px 18px; font-size: 0.75rem; cursor: pointer; font-family: inherit; }
-  .bug-submit:hover { background: #f0b85a; }
-  .bug-cancel { background: none; border: 1px solid #D2BFAA; border-radius: 5px; padding: 7px 14px; font-size: 0.75rem; cursor: pointer; color: #666; font-family: inherit; }
-  .bug-cancel:hover { border-color: #F8C87D; color: #1a1a1a; }
-  .bug-status { margin-top: 10px; font-size: 0.72rem; min-height: 1.2em; }
+.remove-btn {
+  width: var(--hit-min);
+  height: var(--hit-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-circle);
+  color: var(--muted);
+  font-size: var(--text-16);
+  line-height: var(--leading-none);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: color var(--duration-3) var(--ease-standard),
+              background-color var(--duration-3) var(--ease-standard);
+}
+.remove-btn:hover { color: var(--status-critical); background-color: var(--surface-hover); }
 
-  /* Tooltips */
-  .has-tip { position: relative; cursor: help; }
-  label.has-tip { display: inline-block; }
-  .has-tip::after {
-    content: attr(data-tip);
-    position: absolute;
-    left: 0;
-    top: calc(100% + 5px);
-    background: #1a1a1a;
-    color: #e5e5e5;
-    font-size: 0.63rem;
-    line-height: 1.5;
-    padding: 6px 10px;
-    border-radius: 4px;
-    min-width: 180px;
-    max-width: 260px;
-    z-index: 300;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: normal;
-    white-space: normal;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  }
-  .has-tip:hover::after { opacity: 1; }
+.add-btn {
+  width: 100%;
+  background: none;
+  border: var(--hairline) dashed var(--border);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-10) var(--space-16);
+  cursor: pointer;
+  transition: border-color var(--duration-3) var(--ease-standard),
+              color var(--duration-3) var(--ease-standard),
+              background-color var(--duration-3) var(--ease-standard);
+}
+.add-btn:hover { border-color: var(--border-hover); color: var(--text); background-color: var(--surface); }
 
-  /* Counter-ion note */
-  .ion-note {
-    display: none; margin-top: 6px; font-size: 0.72rem; color: #92400e;
-    border-left: 2px solid #fcd34d; padding: 5px 10px; background: #fffbeb;
-    border-radius: 0 4px 4px 0; line-height: 1.5;
-  }
+/* ---------- preset ---------- */
 
-  /* Share + Email features (Resend) */
-  .share-section {
-    margin-top: 20px; margin-bottom: 20px;
-    border: 1px solid #D2BFAA; border-left: 3px solid #1a1a1a;
-    border-radius: 4px; padding: 16px 20px; background: #FDF2DF;
-  }
-  .share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
-  .share-heading { font-size: 0.82rem; font-weight: bold; color: #1a1a1a; }
-  .share-sub { font-size: 0.72rem; color: #888; margin-top: 2px; }
-  .share-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .share-btn {
-    font-family: 'Roboto Mono', monospace; font-size: 0.72rem;
-    padding: 6px 14px; border-radius: 4px; cursor: pointer; border: none;
-  }
-  .copy-btn { background: #D2BFAA; color: #1a1a1a; }
-  .copy-btn:hover { background: #F8C87D; }
-  .gmail-btn { background: #F8C87D; color: #1a1a1a; }
-  .gmail-btn:hover { background: #e0a850; }
-  .share-url-box {
-    margin-top: 10px; font-size: 0.72rem; color: #555;
-    background: #FEF9F2; border: 1px solid #D2BFAA; border-radius: 4px;
-    padding: 6px 10px; word-break: break-all; display: none;
-  }
-  .share-form {
-    margin-top: 12px; display: none;
-    align-items: center; gap: 8px; flex-wrap: wrap;
-  }
-  .share-form.open { display: flex; }
-  .share-form select, .share-form input[type="email"] {
-    font-family: 'Roboto Mono', monospace; font-size: 0.72rem;
-    background: #FEF9F2; border: 1px solid #D2BFAA; color: #1a1a1a;
-    padding: 6px 10px; border-radius: 4px; outline: none;
-  }
-  .share-form select:focus, .share-form input[type="email"]:focus { border-color: #F8C87D; }
-  .share-form input[type="email"] { flex: 1; min-width: 160px; }
-  .share-form-status { font-size: 0.70rem; width: 100%; min-height: 14px; }
-  .share-form-status .err { color: #dc2626; }
+.preset-row { display: flex; align-items: center; gap: var(--space-10); margin-bottom: var(--space-10); }
+.preset-row .select-shell { flex: 1; }
+.preset-select.has-selection { color: var(--text); }
+.preset-notice {
+  display: none;
+  margin-bottom: var(--space-12);
+  padding: var(--space-10) var(--space-16);
+  background: var(--dim);
+  border-left: var(--stroke) solid var(--border);
+  border-radius: var(--radius-field);
+  color: var(--muted);
+  font-size: var(--text-12);
+  line-height: var(--leading-relaxed);
+}
+.preset-notice strong { color: var(--text); font-weight: var(--weight-semibold); }
 
-  .email-build-section {
-    border: 1px solid #D2BFAA; background: #FDF2DF;
-    border-radius: 4px; padding: 16px 20px; margin-top: 16px;
-  }
-  .email-build-title { font-size: 0.78rem; color: #444; font-weight: bold; letter-spacing: 0.04em; }
-  .email-build-desc { font-size: 0.72rem; color: #aaa; margin-top: 3px; }
-  .email-build-fields {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 10px;
-    align-items: end; margin-top: 14px;
-  }
-  @media (max-width: 540px) {
-    .email-build-fields { grid-template-columns: 1fr !important; }
-  }
-  .email-build-field label {
-    font-size: 0.65rem; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em;
-    display: block; margin-bottom: 5px;
-  }
-  .email-build-field input, .email-build-field select {
-    width: 100%; background: #FEF9F2; border: 1px solid #D2BFAA; color: #1a1a1a;
-    font-family: 'Roboto Mono', monospace; font-size: 0.8rem; padding: 9px 11px;
-    border-radius: 4px; outline: none;
-  }
-  .email-build-field select {
-    padding: 9px 28px 9px 11px; appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23666' d='M0 0l5 6 5-6z'/></svg>");
-    background-repeat: no-repeat; background-position: right 10px center;
-  }
-  .email-build-field input:focus, .email-build-field select:focus { border-color: #F8C87D; }
-  .email-build-btn {
-    background: #F8C87D; color: #1a1a1a; border: none;
-    font-family: 'Roboto Mono', monospace; font-size: 0.78rem; padding: 9px 20px;
-    border-radius: 4px; cursor: pointer; font-weight: normal; white-space: nowrap;
-    align-self: end;
-  }
-  .email-build-btn:hover { background: #f0b85a; }
-  .email-build-btn:disabled { background: #D2BFAA; color: #8a7a66; cursor: not-allowed; }
-  .email-build-status { font-size: 0.72rem; margin-top: 10px; min-height: 16px; }
-  .email-build-status .err { color: #dc2626; }
-  .usage-map-section { margin-top: 28px; }
-  .usage-map-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-  .usage-map-title { font-size: 0.58rem; letter-spacing: 0.10em; text-transform: uppercase; color: #8a7a66; }
-  .usage-map-sub { font-size: 0.58rem; color: #bbb; }
-  #usageMap { height: 320px; width: 100%; border: 1px solid #D2BFAA; border-radius: 4px; background: #FEF9F2; z-index: 0; }
-  #usageMap .leaflet-tile { filter: grayscale(35%) sepia(12%); }
-  .usage-map-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #bbb; font-size: 0.7rem; }
-  .leaflet-popup-content { font-family: 'Roboto Mono', monospace; font-size: 0.72rem; color: #1a1a1a; }
-  .map-continent-label { font-family: 'Roboto Mono', monospace; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a66; opacity: 0.7; white-space: nowrap; text-shadow: 0 0 3px #FEF9F2, 0 0 3px #FEF9F2; pointer-events: none; }
+/* ---------- controles em linha ---------- */
+
+.toggle-row { display: flex; align-items: center; gap: var(--space-10); margin: var(--space-12) 0; }
+.toggle-label { font-size: var(--text-13); color: var(--muted); cursor: pointer; }
+.inline-row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; margin-bottom: var(--space-8); }
+/* os controles do contra-ion pendem do rotulo que os liga, alinhados
+   com o texto da caixa de marcacao acima */
+.inline-row-indent { margin-left: calc(var(--space-16) + var(--space-10)); }
+.inline-label { font-size: var(--text-13); color: var(--muted); white-space: nowrap; }
+.inline-note { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); white-space: nowrap; }
+.ion-select { min-width: var(--bilbo-ion-w); max-width: var(--bilbo-ion-w); font-size: var(--text-13); }
+.ion-count { width: var(--bilbo-ion-count-w); text-align: center; font-size: var(--text-13); background: var(--dim); }
+
+/* ---------- parametros ---------- */
+
+.params-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-field-min), 1fr)); gap: var(--space-12); }
+.replica-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-replica-min), 1fr)); gap: var(--space-8); margin-top: var(--space-8); }
+.replica-row-label {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  margin-top: var(--space-4);
+}
+
+.peptide-options { margin-top: var(--space-16); }
+.upload-row { display: flex; align-items: center; gap: var(--space-10); margin-top: var(--space-4); }
+.upload-name { font-size: var(--text-13); color: var(--muted); }
+.upload-name.has-file { color: var(--text); }
+
+/* ---------- acao ---------- */
+
+.action-row { display: flex; gap: var(--space-10); margin-top: var(--space-24); align-items: center; }
+.action-row .pill { flex: 1; }
+.dl-row { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+.dl-row .pill { flex: 1; min-width: 0; }
+
+/* acao destrutiva e leitura de log: mesma forma de vidro, tinta de
+   estado. A cor nunca vai sozinha, o rotulo diz o que o botao faz. */
+.pill-serious { color: var(--status-serious); }
+
+/* elo em forma de texto dentro de prosa: nao e botao, nao vira pilula */
+.feedback-link {
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+  transition: color var(--duration-3) var(--ease-standard);
+}
+.feedback-link:hover { color: var(--text); }
+
+/* ---------- estado da execucao ---------- */
+
+#status { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-16); min-height: var(--space-20); }
+#status.error   { color: var(--status-critical); }
+#status.running { color: var(--status-warning); }
+#status.done    { color: var(--status-good); }
+
+/* ---------- resultado ---------- */
+
+#results { margin-top: var(--space-24); }
+
+.summary-card { padding: var(--space-20); margin-bottom: var(--space-16); }
+.summary-card .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-stat-min), 1fr));
+  gap: var(--space-20) var(--space-24);
+  margin-top: var(--space-16);
+}
+/* escalares alinhados pela esquerda: a borda comum e que faz a fileira
+   ler como tabela, e nao como quatro blocos soltos */
+.stat { text-align: left; min-width: 0; }
+.stat-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-24);
+  line-height: var(--leading-none);
+  color: var(--text);
+}
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+  margin-top: var(--space-6);
+}
+
+/* a geometria da caixa nao e um escalar: sai da grade e vira uma linha
+   propria, separada por um fio, com o valor inteiro sem quebra */
+.stat-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-6) var(--space-12);
+  margin-top: var(--space-20);
+  padding-top: var(--space-12);
+  border-top: var(--hairline) solid var(--border);
+}
+.stat-box-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.stat-box-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-16);
+  color: var(--text);
+  white-space: nowrap;
+}
+.pep-pos { margin-top: var(--space-10); font-size: var(--text-13); color: var(--muted); line-height: var(--leading-relaxed); }
+.pep-pos .head { font-family: var(--font-mono); font-size: var(--text-12); letter-spacing: var(--tracking-wide); }
+.pep-pos .box  { font-family: var(--font-mono); font-size: var(--text-12); }
+
+/* ---------- visualizador 3D ---------- */
+
+/* o unico fundo variado da pagina, e por isso o unico lugar onde o
+   vidro tem o que refratar */
+.viewer-wrap {
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+  overflow: hidden;
+  height: var(--bilbo-viewer-h);
+  position: relative;
+  background: var(--surface);
+}
+#viewer { width: 100%; height: 100%; }
+.viewer-controls {
+  position: absolute;
+  top: var(--space-10);
+  right: var(--space-10);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-6);
+  z-index: 10;
+}
+
+.atom-info {
+  min-height: var(--space-32);
+  padding: var(--space-6) var(--space-12);
+  margin-bottom: var(--space-16);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-surface) var(--radius-surface);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+  line-height: var(--leading-snug);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.atom-info strong { color: var(--text); font-weight: var(--weight-medium); }
+
+.lipid-legend { margin-top: var(--space-10); margin-bottom: var(--space-16); }
+
+.leaflet-plot { margin-bottom: var(--space-16); }
+.leaflet-plot img {
+  width: 100%;
+  display: block;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-media);
+  image-rendering: pixelated;
+}
+
+/* ---------- avisos e notas ---------- */
+
+.warn-list { margin-top: var(--space-12); }
+.warn-item {
+  font-size: var(--text-13);
+  color: var(--status-warning);
+  border-left: var(--stroke) solid var(--status-warning);
+  padding: var(--space-6) var(--space-10);
+  margin-bottom: var(--space-6);
+  line-height: var(--leading-snug);
+  background: var(--dim);
+  border-radius: var(--radius-field);
+}
+.md-note {
+  margin-top: var(--space-12);
+  font-size: var(--text-13);
+  color: var(--muted);
+  line-height: var(--leading-relaxed);
+  border-left: var(--stroke) solid var(--border);
+  padding: var(--space-8) var(--space-12);
+  background: var(--dim);
+  border-radius: var(--radius-field);
+}
+.ion-note {
+  display: none;
+  margin-top: var(--space-6);
+  font-size: var(--text-13);
+  color: var(--status-warning);
+  border-left: var(--stroke) solid var(--status-warning);
+  padding: var(--space-6) var(--space-10);
+  background: var(--dim);
+  border-radius: var(--radius-field);
+  line-height: var(--leading-snug);
+}
+
+/* ---------- pacote MD ---------- */
+
+.md-pkg-block { margin-top: var(--space-16); padding: var(--space-12) var(--space-16); }
+.md-pkg-block-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  margin-bottom: var(--space-10);
+}
+.md-pkg-params { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-md-field-min), 1fr)); gap: var(--space-12) var(--space-16); align-items: end; }
+.md-pkg-field { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.md-param-input { width: 100%; text-align: right; }
+.md-pkg-note { margin-top: var(--space-10); font-size: var(--text-12); color: var(--muted); line-height: var(--leading-normal); }
+.md-pkg-note code,
+.asm-card code,
+.footer-note code {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  background: var(--dim);
+  color: var(--text);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-mark);
+}
+
+/* log de build: terminal, e um terminal continua escuro no modo claro */
+.log-panel {
+  background: var(--bilbo-950);
+  color: var(--bilbo-150);
+  border-radius: var(--radius-surface);
+  padding: var(--space-16) var(--space-20);
+  margin-top: var(--space-12);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  line-height: var(--leading-relaxed);
+  white-space: pre;
+  overflow-x: auto;
+  display: none;
+}
+
+/* ---------- solvatacao ---------- */
+
+.solv-body { display: none; margin-top: var(--space-16); }
+.solv-body.visible { display: block; }
+.solv-report {
+  margin-top: var(--space-16);
+  padding: var(--space-16) var(--space-20);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  line-height: var(--leading-relaxed);
+}
+.solv-report .sr-head {
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  margin-bottom: var(--space-6);
+}
+.solv-report .sr-row { display: flex; justify-content: space-between; gap: var(--space-16); }
+.solv-report .sr-key { color: var(--muted); }
+.solv-report .sr-val { color: var(--text); font-variant-numeric: tabular-nums; }
+.solv-report .sr-charge-ok  { color: var(--status-good); }
+.solv-report .sr-charge-neg { color: var(--status-critical); }
+.solv-report .sr-sep { border-top: var(--hairline) solid var(--border); margin: var(--space-6) 0; }
+
+/* ---------- divisor ---------- */
+
+.divider { border: none; border-top: var(--hairline) solid var(--border); margin: var(--space-24) 0 var(--space-48); }
+
+/* ---------- notas de montagem ---------- */
+
+.asm-notes { margin-top: var(--space-48); border-top: var(--hairline) solid var(--border); padding-top: var(--space-24); }
+.asm-notes-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+  margin-bottom: var(--space-12);
+}
+.asm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-10); }
+.asm-grid > .bleed { grid-column: 1 / -1; }
+.asm-card {
+  padding: var(--space-12) var(--space-16);
+  font-size: var(--text-13);
+  line-height: var(--leading-relaxed);
+  color: var(--muted);
+}
+.asm-card strong {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--weight-medium);
+  color: var(--text);
+  margin-bottom: var(--space-4);
+}
+.asm-card a { color: var(--accent); }
+.asm-warn { border-left: var(--stroke) solid var(--status-warning); }
+.asm-warn strong { color: var(--status-warning); }
+
+/* ---------- compartilhar e enviar ---------- */
+
+.share-section { margin: var(--space-24) 0; padding: var(--space-16) var(--space-20); }
+.share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-16); }
+.share-heading { font-size: var(--text-15); font-weight: var(--weight-medium); color: var(--text); }
+.share-sub { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-2); }
+.share-actions { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+.share-url-box {
+  margin-top: var(--space-10);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  padding: var(--space-6) var(--space-10);
+  word-break: break-all;
+  display: none;
+}
+.share-form { margin-top: var(--space-12); display: none; align-items: center; gap: var(--space-8); flex-wrap: wrap; }
+.share-form.open { display: flex; }
+.share-form .select-shell { flex-shrink: 0; }
+.share-lang { min-width: var(--bilbo-lang-w); max-width: var(--bilbo-lang-w); }
+.share-email { flex: 1; min-width: var(--bilbo-email-w); }
+.share-form-status { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); width: 100%; min-height: var(--space-16); }
+.share-form-status .err,
+.email-build-status .err { color: var(--status-critical); }
+.share-form-status.done,
+.email-build-status.done { color: var(--status-good); }
+
+.email-build-section { padding: var(--space-16) var(--space-20); margin-top: var(--space-16); }
+.email-build-title { font-size: var(--text-15); font-weight: var(--weight-medium); color: var(--text); }
+.email-build-desc { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-2); }
+.email-build-fields { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-10); align-items: end; margin-top: var(--space-16); }
+.email-build-status { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); margin-top: var(--space-10); min-height: var(--space-16); }
+
+/* ---------- mapa de uso ---------- */
+
+.usage-map-section { margin-top: var(--space-48); }
+.usage-map-head { display: flex; align-items: baseline; gap: var(--space-10); margin-bottom: var(--space-10); }
+.usage-map-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+}
+.usage-map-sub { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); }
+#usageMap {
+  height: var(--bilbo-map-h);
+  width: 100%;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow: hidden;
+  z-index: 0;
+}
+#usageMap .leaflet-tile { filter: grayscale(35%) sepia(12%); }
+.usage-map-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: var(--text-13);
+}
+.leaflet-popup-content { font-family: var(--font-mono); font-size: var(--text-12); color: var(--text); }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background-image: var(--glass-fill-frost);
+  background-color: var(--surface-glass);
+  -webkit-backdrop-filter: blur(var(--glass-blur-frost)) saturate(130%);
+  backdrop-filter: blur(var(--glass-blur-frost)) saturate(130%);
+  border: var(--hairline) solid var(--glass-edge);
+  box-shadow: var(--shadow-glass-rest);
+  color: var(--text);
+}
+.leaflet-popup-content-wrapper { border-radius: var(--radius-surface); }
+
+/* conta de vidro: o brilho vem do gradiente, a sombra separa do mapa */
+.usage-bead {
+  filter: drop-shadow(0 var(--nudge-1) var(--space-4) var(--glass-tint-shadow));
+  transition: filter var(--duration-5) var(--ease-out-soft);
+}
+.usage-bead:hover { filter: drop-shadow(0 var(--nudge-2) var(--space-8) var(--glass-tint-shadow)); }
+
+/* controle de zoom no mesmo material dos outros controles da pagina */
+.leaflet-touch .leaflet-bar,
+.leaflet-bar { border: none; box-shadow: none; }
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background-image: var(--glass-fill);
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: var(--hairline) solid var(--glass-edge);
+  box-shadow: var(--shadow-glass-rest);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+.leaflet-bar a:first-child { border-radius: var(--radius-field) var(--radius-field) 0 0; }
+.leaflet-bar a:last-child  { border-radius: 0 0 var(--radius-field) var(--radius-field); }
+.leaflet-bar a:hover { background-image: var(--glass-fill-hover); border-color: var(--glass-edge-hover); }
+.map-continent-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+  white-space: nowrap;
+  text-shadow: 0 0 var(--nudge-2) var(--bg), 0 0 var(--nudge-2) var(--bg);
+  pointer-events: none;
+}
+
+/* ---------- rodape ---------- */
+
+footer {
+  margin-top: var(--space-48);
+  padding-top: var(--space-24);
+  border-top: var(--hairline) solid var(--border);
+  font-size: var(--text-12);
+  color: var(--muted);
+  line-height: var(--leading-relaxed);
+}
+footer a { color: var(--muted); text-decoration: underline; }
+footer a:hover { color: var(--text); }
+.footer-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-10); padding-bottom: var(--space-8); }
+.footer-meta .sep { color: var(--secondary); }
+.footer-note {
+  margin-top: var(--space-12);
+  padding: var(--space-10) var(--space-16);
+  background: var(--dim);
+  border-left: var(--stroke) solid var(--border);
+  border-radius: var(--radius-field);
+  color: var(--muted);
+  line-height: var(--leading-relaxed);
+}
+.footer-note strong { color: var(--text); }
+
+.credits {
+  margin-top: var(--space-24);
+  padding-top: var(--space-24);
+  border-top: var(--hairline) solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-evenly;
+  gap: var(--space-16);
+  width: 100%;
+}
+.credits-group { display: flex; flex-direction: column; align-items: center; gap: var(--space-10); }
+.credits-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+}
+.credits-row { display: flex; align-items: center; gap: var(--space-12); }
+.credits-row img {
+  width: auto;
+  object-fit: contain;
+  filter: grayscale(30%);
+  opacity: 0.75;
+  /* os PNGs vem com chapa branca. multiply derruba o branco no fundo da
+     pagina sem tocar no arquivo; so vale porque a pagina e clara. */
+  mix-blend-mode: multiply;
+}
+.credits-row img.logo-sm { height: var(--bilbo-logo-sm); }
+.credits-row img.logo-md { height: var(--bilbo-logo-md); }
+.credits-row img.logo-lg { height: var(--bilbo-logo-lg); }
+
+/* ---------- relato de bug ---------- */
+
+.bug-overlay { display: none; }
+.bug-overlay.open { display: grid; }
+.bug-modal {
+  padding: var(--space-24);
+  width: var(--bilbo-modal-w);
+  max-width: 95vw;
+  font-size: var(--text-13);
+  color: var(--muted);
+}
+.bug-modal h3 { font-size: var(--text-16); font-weight: var(--weight-semibold); color: var(--text); margin-bottom: var(--space-4); }
+.bug-modal p { margin-bottom: var(--space-16); font-size: var(--text-13); color: var(--muted); }
+.bug-modal-actions { justify-content: flex-end; margin-top: var(--space-16); }
+.bug-status { margin-top: var(--space-10); font-family: var(--font-mono); font-size: var(--text-12); min-height: var(--space-16); }
+.bug-status.err  { color: var(--status-critical); }
+.bug-status.done { color: var(--status-good); }
+
+/* ---------- dica ----------
+
+   A linguagem tem .tip, que exige um filho com role="tooltip". Aqui a
+   dica vem em data-tip num rotulo que ja existe, entao o desenho e o
+   mesmo material (frost, o unico que carrega texto proprio) sobre o
+   pseudo-elemento. Abre no foco tambem, nao so no ponteiro. */
+
+.has-tip { position: relative; cursor: help; }
+label.has-tip { display: inline-block; }
+.has-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + var(--space-4));
+  z-index: 300;
+  min-width: var(--bilbo-tip-min);
+  max-width: var(--bilbo-tip-max);
+  padding: var(--space-8) var(--space-10);
+  border-radius: var(--radius-surface);
+  background-image: var(--glass-fill-frost);
+  backdrop-filter: blur(var(--glass-blur-frost)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--glass-blur-frost)) saturate(130%);
+  border: var(--hairline) solid var(--glass-edge);
+  box-shadow: var(--shadow-glass-rest);
+  isolation: isolate;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-12);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-normal);
+  white-space: normal;
+  text-transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-2) var(--ease-standard);
+}
+.has-tip:hover::after,
+.has-tip:focus-visible::after { opacity: 1; }
+.status-dot.has-tip::after { left: var(--space-12); top: 50%; transform: translateY(-50%); }
+
+/* ---------- empilhamento ---------- */
+
+@media (max-width: 768px) {
+  .section-pair { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .asm-grid,
+  .summary-card .stats-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 540px) {
+  .email-build-fields { grid-template-columns: 1fr; }
+}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
+
 <body>
-<div class="wrap">
+<a class="skip-link pill" href="#main">Skip to the builder</a>
+<div class="wrap" id="main">
 
   <!-- Header -->
   <div class="title-row">
-    <h1><img src="/static/bilbo-logotype-amber.svg" alt="BILBO" style="height:12rem;width:auto;vertical-align:middle;margin-right:0.5em;"></h1>
+    <h1><img src="/static/bilbo-logotype-amber.svg" alt="BILBO"></h1>
   </div>
 
   <p class="notice">
     This is a preview release under active development. Instabilities and breaking changes may occur. Results should be validated before use in production simulations.<br>
-    Found an issue? <button class="feedback-link" onclick="openBugModal()" style="font-size:inherit;">Report a bug</button><br>
+    Found an issue? <button class="feedback-link" onclick="openBugModal()">Report a bug</button><br>
     CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
     Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
   </p>
@@ -436,108 +813,115 @@
   <div class="stats-section">
     <div class="stats-grid">
       <div class="stats-item">
-        <span class="stats-val" id="statBuilds">—</span>
-        <span class="stats-lbl">membrane builds</span>
+        <span class="stats-val num" id="statBuilds">—</span>
+        <span class="stats-lbl">Membrane builds</span>
       </div>
       <div class="stats-item">
-        <span class="stats-val" id="statAtoms">—</span>
-        <span class="stats-lbl">atoms assembled</span>
+        <span class="stats-val num" id="statAtoms">—</span>
+        <span class="stats-lbl">Atoms assembled</span>
       </div>
       <div class="stats-item">
-        <span class="stats-val" id="statUsers">—</span>
-        <span class="stats-lbl">unique users</span>
+        <span class="stats-val num" id="statUsers">—</span>
+        <span class="stats-lbl">Unique users</span>
       </div>
       <div class="stats-item">
-        <span class="stats-val">12</span>
-        <span class="stats-lbl">lipid types supported</span>
+        <span class="stats-val num">12</span>
+        <span class="stats-lbl">Lipid types supported</span>
       </div>
     </div>
   </div>
 
-
-  <div class="share-section">
+  <div class="share-section glass glass-frost glass-sq">
     <div class="share-inner">
       <div class="share-text">
         <div class="share-heading">Find BILBO useful?</div>
         <div class="share-sub">Share it with your lab or collaborators.</div>
       </div>
       <div class="share-actions">
-        <button class="share-btn copy-btn" onclick="copyLink()" id="copyLinkBtn">Copy link</button>
-        <button class="share-btn gmail-btn" onclick="toggleShareForm()" id="shareEmailBtn">Share by email</button>
+        <button class="share-btn copy-btn pill pill-sm" onclick="copyLink()" id="copyLinkBtn">Copy link</button>
+        <button class="share-btn gmail-btn pill pill-sm glass-accent" onclick="toggleShareForm()" id="shareEmailBtn">Share by email</button>
       </div>
     </div>
     <div class="share-url-box" id="shareUrlBox"></div>
     <div class="share-form" id="shareForm">
-      <select id="shareLang" title="Email language">
-        <option value="en">EN</option>
-        <option value="fr">FR</option>
-        <option value="es">ES</option>
-        <option value="pt">PT</option>
-        <option value="zh">ZH</option>
-      </select>
-      <input type="email" id="shareFriendEmail" placeholder="friend@example.com">
-      <button class="share-btn copy-btn" onclick="sendShareEmail()" id="sendShareBtn">Send</button>
+      <label class="sr-only" for="shareLang">Email language</label>
+      <span class="select-shell">
+        <select id="shareLang" class="select share-lang">
+          <option value="en">English</option>
+          <option value="fr">French</option>
+          <option value="es">Spanish</option>
+          <option value="pt">Portuguese</option>
+          <option value="zh">Chinese</option>
+        </select>
+      </span>
+      <label class="sr-only" for="shareFriendEmail">Recipient address</label>
+      <input type="email" id="shareFriendEmail" class="input share-email" placeholder="friend@example.com">
+      <button class="share-btn copy-btn pill pill-sm" onclick="sendShareEmail()" id="sendShareBtn">Send</button>
       <div class="share-form-status" id="shareFormStatus"></div>
     </div>
   </div>
 
   <!-- Upper leaflet -->
   <div class="section">
-    <div class="section-label has-tip" data-tip="Lipids placed in the upper (extracellular) leaflet of the bilayer.">Upper leaflet</div>
+    <div class="section-label has-tip" tabindex="0" data-tip="Lipids placed in the upper (extracellular) leaflet of the bilayer.">Upper leaflet</div>
     <div class="lipid-list" id="upperList"></div>
-    <button class="add-btn" onclick="addLipidEntry('upper')">+ add lipid</button>
+    <button class="add-btn" onclick="addLipidEntry('upper')">Add lipid</button>
   </div>
 
   <!-- Symmetric toggle -->
-  <div class="toggle-row">
+  <label class="check toggle-row has-tip" for="symCheck" data-tip="When enabled, the lower leaflet mirrors the upper leaflet composition exactly.">
     <input type="checkbox" id="symCheck" checked onchange="toggleSymmetric()">
-    <label class="toggle-label has-tip" for="symCheck" data-tip="When enabled, the lower leaflet mirrors the upper leaflet composition exactly.">Mirror upper leaflet to lower (symmetric bilayer)</label>
-  </div>
+    <span class="toggle-label">Mirror upper leaflet to lower (symmetric bilayer)</span>
+  </label>
 
   <!-- Lower leaflet (hidden when symmetric) -->
-  <div class="section" id="lowerSection" style="display:none;">
-    <div class="section-label has-tip" data-tip="Lipids placed in the lower (cytoplasmic) leaflet. Available when symmetric mode is off.">Lower leaflet</div>
+  <div class="section" id="lowerSection" hidden>
+    <div class="section-label has-tip" tabindex="0" data-tip="Lipids placed in the lower (cytoplasmic) leaflet. Available when symmetric mode is off.">Lower leaflet</div>
     <div class="lipid-list" id="lowerList"></div>
-    <button class="add-btn" onclick="addLipidEntry('lower')">+ add lipid</button>
+    <button class="add-btn" onclick="addLipidEntry('lower')">Add lipid</button>
   </div>
 
   <hr class="divider">
 
+  <div class="section-pair">
+
   <!-- Surface peptide (optional) -->
   <div class="section">
-    <div class="section-label has-tip" data-tip="Attach a peptide PDB to the membrane surface. Multiple replicas are distributed across the XY plane.">Surface peptide (optional)</div>
+    <div class="section-label has-tip" tabindex="0" data-tip="Attach a peptide PDB to the membrane surface. Multiple replicas are distributed across the XY plane.">Surface peptide (optional)</div>
     <div class="upload-row">
-      <input type="file" id="peptideInput" accept=".pdb" onchange="handlePeptideUpload(event)" style="display:none;">
-      <button class="btn-upload" onclick="document.getElementById('peptideInput').click()">Upload .pdb</button>
-      <span id="peptideLabel" style="font-size:0.82rem; color:#999;">no file selected</span>
+      <input type="file" id="peptideInput" accept=".pdb" onchange="handlePeptideUpload(event)" hidden>
+      <button class="btn-upload pill" onclick="document.getElementById('peptideInput').click()">Upload .pdb</button>
+      <span id="peptideLabel" class="upload-name">No file selected</span>
     </div>
-    <div id="peptideOptions" style="display:none; margin-top:14px;">
+    <div id="peptideOptions" class="peptide-options" hidden>
       <div class="params-grid">
-        <div class="param-field">
-          <label class="has-tip" data-tip="Number of copies of the peptide placed on the membrane surface.">Replicas</label>
-          <input type="number" id="peptideReplicas" value="1" min="1" max="200" oninput="updateReplicaPositionFields()">
+        <div class="field">
+          <label class="field-label has-tip" for="peptideReplicas" data-tip="Number of copies of the peptide placed on the membrane surface.">Replicas</label>
+          <input type="number" id="peptideReplicas" class="input num" value="1" min="1" max="200" oninput="updateReplicaPositionFields()">
         </div>
-        <div class="param-field">
-          <label class="has-tip" data-tip="Leaflet face to place the peptide on. 'Both' distributes replicas across both surfaces.">Surface</label>
-          <select id="peptideSurface">
-            <option value="upper">Upper</option>
-            <option value="lower">Lower</option>
-            <option value="both">Both</option>
-          </select>
+        <div class="field">
+          <label class="field-label has-tip" for="peptideSurface" data-tip="Leaflet face to place the peptide on. 'Both' distributes replicas across both surfaces.">Surface</label>
+          <span class="select-shell">
+            <select id="peptideSurface" class="select">
+              <option value="upper">Upper</option>
+              <option value="lower">Lower</option>
+              <option value="both">Both</option>
+            </select>
+          </span>
         </div>
-        <div class="param-field">
-          <label class="has-tip" data-tip="Minimum distance in angstroms between the peptide and the nearest lipid headgroup.">Z gap from surface (Å)</label>
-          <input type="number" id="peptideZGap" value="5.0" step="0.5" min="0">
+        <div class="field">
+          <label class="field-label has-tip" for="peptideZGap" data-tip="Minimum distance in angstroms between the peptide and the nearest lipid headgroup.">Z gap from surface (Å)</label>
+          <input type="number" id="peptideZGap" class="input num" value="5.0" step="0.5" min="0">
         </div>
       </div>
       <div class="replica-grid" id="replicaPositionFields">
-        <div class="param-field">
-          <label>X center (Å)</label>
-          <input type="number" id="pep_x_0" placeholder="auto" step="0.5">
+        <div class="field">
+          <label class="field-label" for="pep_x_0">X center (Å)</label>
+          <input type="number" id="pep_x_0" class="input num" placeholder="auto" step="0.5">
         </div>
-        <div class="param-field">
-          <label>Y center (Å)</label>
-          <input type="number" id="pep_y_0" placeholder="auto" step="0.5">
+        <div class="field">
+          <label class="field-label" for="pep_y_0">Y center (Å)</label>
+          <input type="number" id="pep_y_0" class="input num" placeholder="auto" step="0.5">
         </div>
       </div>
     </div>
@@ -545,125 +929,136 @@
 
   <!-- Solvation -->
   <div class="section">
-    <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; margin:0 0 8px 0;">
+    <div class="section-label">Solvation</div>
+    <label class="check has-tip" for="counterIonCheck" data-tip="Place cations at anionic lipid headgroups to neutralize membrane charge before solvation. Only enabled when anionic lipids are present.">
       <input type="checkbox" id="counterIonCheck" onchange="updateIonCount()" disabled>
-      <label for="counterIonCheck" class="has-tip" style="font-size:0.82rem; color:#555; white-space:nowrap;" data-tip="Place cations at anionic lipid headgroups to neutralize membrane charge before solvation. Only enabled when anionic lipids are present.">
-        Counter-ions at headgroup
-      </label>
-      <select id="ionType" onchange="updateIonCount()"
-        style="font-size:0.78rem; padding:2px 4px; border:1px solid #D2BFAA; border-radius:3px; background:#FEF9F2;">
-        <option value="NA">Na&#8314;</option>
-        <option value="CA">Ca&#178;&#8314;</option>
-        <option value="MG">Mg&#178;&#8314;</option>
-        <option value="K">K&#8314;</option>
-      </select>
-      <input type="number" id="ionCount" value="0" min="0" max="10000" readonly
-        style="width:48px; font-size:0.78rem; padding:2px 4px; border:1px solid #D2BFAA;
-               border-radius:3px; background:#FDF2DF; color:#555; text-align:center;"
+      <span class="inline-label">Counter-ions at headgroup</span>
+    </label>
+    <div class="inline-row inline-row-indent">
+      <label class="sr-only" for="ionType">Counter-ion species</label>
+      <span class="select-shell">
+        <select id="ionType" class="select ion-select" onchange="updateIonCount()">
+          <option value="NA">Na&#8314;</option>
+          <option value="CA">Ca&#178;&#8314;</option>
+          <option value="MG">Mg&#178;&#8314;</option>
+          <option value="K">K&#8314;</option>
+        </select>
+      </span>
+      <label class="sr-only" for="ionCount">Counter-ion count</label>
+      <input type="number" id="ionCount" class="input num ion-count" value="0" min="0" max="10000" readonly
         title="Auto-calculated from anionic lipid count.">
-      <span style="font-size:0.72rem; color:#888; white-space:nowrap;" id="ionCountLabel"></span>
+      <span class="inline-note" id="ionCountLabel"></span>
     </div>
     <div class="ion-note" id="counterIonNote">
       No anionic lipids in this composition. Counter-ions at headgroup are not required.
     </div>
-    <div class="toggle-row" style="margin:8px 0 0 0;">
+    <label class="check toggle-row has-tip" for="solvateCheck" data-tip="Fill the simulation box with explicit water and ions using GROMACS gmx solvate.">
       <input type="checkbox" id="solvateCheck" onchange="document.getElementById('solvBody').classList.toggle('visible', this.checked)">
-      <label class="toggle-label has-tip" for="solvateCheck" style="font-size:0.82rem; color:#555; font-weight:normal;" data-tip="Fill the simulation box with explicit water and ions using GROMACS gmx solvate.">Solvate (add water + ions)</label>
-    </div>
+      <span class="toggle-label">Solvate (add water + ions)</span>
+    </label>
     <div class="solv-body" id="solvBody">
-      <div class="params-grid" style="margin-top:14px;">
-        <div class="param-field">
-          <label class="has-tip" data-tip="Explicit solvent model. TIP3P is standard for the CHARMM36 lipid force field.">Water model</label>
-          <select id="waterModel">
-            <option value="tip3p">TIP3P</option>
-            <option value="spc">SPC</option>
-            <option value="spce">SPC/E</option>
-            <option value="tip4p">TIP4P</option>
-          </select>
+      <div class="params-grid">
+        <div class="field">
+          <label class="field-label has-tip" for="waterModel" data-tip="Explicit solvent model. TIP3P is standard for the CHARMM36 lipid force field.">Water model</label>
+          <span class="select-shell">
+            <select id="waterModel" class="select">
+              <option value="tip3p">TIP3P</option>
+              <option value="spc">SPC</option>
+              <option value="spce">SPC/E</option>
+              <option value="tip4p">TIP4P</option>
+            </select>
+          </span>
         </div>
-        <div class="param-field">
-          <label class="has-tip" data-tip="Total simulation box height in nm. Leave blank for automatic sizing (3 nm water per side of the membrane).">Box Z (nm)</label>
-          <input type="number" id="boxZNm" placeholder="auto" step="1.0" min="5.0"
+        <div class="field">
+          <label class="field-label has-tip" for="boxZNm" data-tip="Total simulation box height in nm. Leave blank for automatic sizing (3 nm water per side of the membrane).">Box Z (nm)</label>
+          <input type="number" id="boxZNm" class="input num" placeholder="auto" step="1.0" min="5.0"
             title="Total simulation box height (nm). Must exceed membrane thickness. Leave blank to default to 3 nm water layer each side.">
         </div>
-        <div class="param-field">
-          <label class="has-tip" data-tip="Bulk NaCl concentration added after charge neutralization. Physiological value is 150 mM.">[NaCl] (mM)</label>
-          <input type="number" id="solIonConc" value="150" step="10" min="0">
+        <div class="field">
+          <label class="field-label has-tip" for="solIonConc" data-tip="Bulk NaCl concentration added after charge neutralization. Physiological value is 150 mM.">[NaCl] (mM)</label>
+          <input type="number" id="solIonConc" class="input num" value="150" step="10" min="0">
         </div>
-        <div class="param-field">
-          <label class="has-tip" data-tip="Net charge of the peptide in elementary charges. Auto-filled from the uploaded PDB; override if needed.">Peptide net charge (e, auto)</label>
-          <input type="number" id="peptideNetCharge" value="0" step="1" title="Auto-filled when peptide is uploaded. Override if needed.">
+        <div class="field">
+          <label class="field-label has-tip" for="peptideNetCharge" data-tip="Net charge of the peptide in elementary charges. Auto-filled from the uploaded PDB; override if needed.">Peptide net charge (e, auto)</label>
+          <input type="number" id="peptideNetCharge" class="input num" value="0" step="1" title="Auto-filled when peptide is uploaded. Override if needed.">
         </div>
       </div>
     </div>
+  </div>
+
   </div>
 
   <hr class="divider">
 
   <!-- Parameters -->
   <div class="section">
-    <div class="section-label has-tip" data-tip="Global parameters controlling bilayer geometry and lipid placement.">Parameters</div>
+    <div class="section-label has-tip" tabindex="0" data-tip="Global parameters controlling bilayer geometry and lipid placement.">Parameters</div>
     <div class="params-grid">
-      <div class="param-field">
-        <label class="has-tip" data-tip="Random seed controlling lipid placement. Same seed always reproduces the same configuration.">Seed</label>
-        <input type="number" id="seed" value="42" min="0" title="Random seed: controls lipid arrangement. Same seed = same structure. Change to get a different valid configuration.">
+      <div class="field">
+        <label class="field-label has-tip" for="seed" data-tip="Random seed controlling lipid placement. Same seed always reproduces the same configuration.">Seed</label>
+        <input type="number" id="seed" class="input num" value="42" min="0" title="Random seed: controls lipid arrangement. Same seed = same structure. Change to get a different valid configuration.">
       </div>
-      <div class="param-field">
-        <label class="has-tip" data-tip="Target center-to-center lateral spacing between lipids in nm. Defaults to the APL-weighted average when blank.">Spacing (nm)</label>
-        <input type="number" id="spacing" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
+      <div class="field">
+        <label class="field-label has-tip" for="spacing" data-tip="Target center-to-center lateral spacing between lipids in nm. Defaults to the APL-weighted average when blank.">Spacing (nm)</label>
+        <input type="number" id="spacing" class="input num" placeholder="auto (APL-weighted)" step="0.01" min="0.1">
       </div>
-      <div class="param-field">
-        <label class="has-tip" data-tip="Fixed lateral box edge (X = Y) in nm. Overrides the spacing parameter when set.">Box XY (nm)</label>
-        <input type="number" id="boxSide" placeholder="auto" step="0.5" min="1.0" title="Lateral box dimensions (X = Y). Overrides spacing.">
+      <div class="field">
+        <label class="field-label has-tip" for="boxSide" data-tip="Fixed lateral box edge (X = Y) in nm. Overrides the spacing parameter when set.">Box XY (nm)</label>
+        <input type="number" id="boxSide" class="input num" placeholder="auto" step="0.5" min="1.0" title="Lateral box dimensions (X = Y). Overrides spacing.">
       </div>
-      <div class="param-field">
-        <label class="has-tip" data-tip="Vertical distance in angstroms between the two leaflet midplanes.">Bilayer gap (Å)</label>
-        <input type="number" id="bilayerGap" value="2.5" step="0.5" min="0">
+      <div class="field">
+        <label class="field-label has-tip" for="bilayerGap" data-tip="Vertical distance in angstroms between the two leaflet midplanes.">Bilayer gap (Å)</label>
+        <input type="number" id="bilayerGap" class="input num" value="2.5" step="0.5" min="0">
       </div>
-      <div class="param-field">
-        <label class="has-tip" data-tip="Global tilt of each lipid away from the membrane normal (degrees). 0 = upright. Use 10-30° for gel-phase or tilt-defect studies. Each lipid receives a random azimuthal tilt direction.">Tilt angle (°)</label>
-        <input type="number" id="tiltAngle" value="0" step="1" min="-45" max="45">
+      <div class="field">
+        <label class="field-label has-tip" for="tiltAngle" data-tip="Global tilt of each lipid away from the membrane normal (degrees). 0 = upright. Use 10-30° for gel-phase or tilt-defect studies. Each lipid receives a random azimuthal tilt direction.">Tilt angle (°)</label>
+        <input type="number" id="tiltAngle" class="input num" value="0" step="1" min="-45" max="45">
       </div>
-      <div class="param-field">
-        <label class="has-tip" data-tip="Random: lipids placed in random order. Domain enriched: lipid species cluster together to form lateral domains. Stripe: species arranged in alternating horizontal bands (A-B-A-B), useful for Lo/Ld phase separation.">Sorting</label>
-        <select id="sorting">
-          <option value="random">Random</option>
-          <option value="domain_enriched">Domain enriched</option>
-          <option value="stripe">Stripe</option>
-        </select>
+      <div class="field">
+        <label class="field-label has-tip" for="sorting" data-tip="Random: lipids placed in random order. Domain enriched: lipid species cluster together to form lateral domains. Stripe: species arranged in alternating horizontal bands (A-B-A-B), useful for Lo/Ld phase separation.">Sorting</label>
+        <span class="select-shell">
+          <select id="sorting" class="select">
+            <option value="random">Random</option>
+            <option value="domain_enriched">Domain enriched</option>
+            <option value="stripe">Stripe</option>
+          </select>
+        </span>
       </div>
     </div>
   </div>
 
   <!-- Membrane presets -->
   <div class="preset-row">
-    <select id="presetSelect" class="preset-select" onchange="this.classList.toggle('has-selection', this.value !== '')">
-      <option value="">— load membrane preset —</option>
-      <optgroup label="Gram-negative bacteria">
-        <option value="ecoli">Escherichia coli K-12</option>
-        <option value="salmonella">Salmonella Typhimurium</option>
-        <option value="klebsiella">Klebsiella pneumoniae</option>
-        <option value="paeruginosa">Pseudomonas aeruginosa PAO1</option>
-        <option value="psyringae">Pseudomonas syringae DC3000</option>
-        <option value="xanthomonas">Xanthomonas campestris</option>
-        <option value="ralstonia">Ralstonia pseudosolanacearum</option>
-        <option value="acineto">Acinetobacter baumannii</option>
-        <option value="hpylori">Helicobacter pylori</option>
-      </optgroup>
-      <optgroup label="Gram-positive bacteria">
-        <option value="bsubtilis">Bacillus subtilis (phospholipids only)</option>
-        <option value="mtb">Mycobacterium tuberculosis (inner membrane)</option>
-      </optgroup>
-      <optgroup label="Mammalian membranes">
-        <option value="plasma_sym">Mammalian plasma (simplified symmetric)</option>
-        <option value="erythrocyte">Human erythrocyte (average bilayer)</option>
-        <option value="mom">Mitochondrial outer membrane (MOM)</option>
-        <option value="mim">Mitochondrial inner membrane (MIM)</option>
-        <option value="er">Endoplasmic reticulum</option>
-        <option value="yeast">S. cerevisiae plasma membrane</option>
-      </optgroup>
-    </select>
-    <button class="btn-preset" onclick="loadPreset()">Load preset</button>
+    <label class="sr-only" for="presetSelect">Membrane preset</label>
+    <span class="select-shell">
+      <select id="presetSelect" class="select preset-select" onchange="this.classList.toggle('has-selection', this.value !== '')">
+        <option value="">Load membrane preset</option>
+        <optgroup label="Gram-negative bacteria">
+          <option value="ecoli">Escherichia coli K-12</option>
+          <option value="salmonella">Salmonella Typhimurium</option>
+          <option value="klebsiella">Klebsiella pneumoniae</option>
+          <option value="paeruginosa">Pseudomonas aeruginosa PAO1</option>
+          <option value="psyringae">Pseudomonas syringae DC3000</option>
+          <option value="xanthomonas">Xanthomonas campestris</option>
+          <option value="ralstonia">Ralstonia pseudosolanacearum</option>
+          <option value="acineto">Acinetobacter baumannii</option>
+          <option value="hpylori">Helicobacter pylori</option>
+        </optgroup>
+        <optgroup label="Gram-positive bacteria">
+          <option value="bsubtilis">Bacillus subtilis (phospholipids only)</option>
+          <option value="mtb">Mycobacterium tuberculosis (inner membrane)</option>
+        </optgroup>
+        <optgroup label="Mammalian membranes">
+          <option value="plasma_sym">Mammalian plasma (simplified symmetric)</option>
+          <option value="erythrocyte">Human erythrocyte (average bilayer)</option>
+          <option value="mom">Mitochondrial outer membrane (MOM)</option>
+          <option value="mim">Mitochondrial inner membrane (MIM)</option>
+          <option value="er">Endoplasmic reticulum</option>
+          <option value="yeast">S. cerevisiae plasma membrane</option>
+        </optgroup>
+      </select>
+    </span>
+    <button class="btn-preset pill" onclick="loadPreset()">Load preset</button>
   </div>
   <div class="preset-notice" id="presetNotice">
     <strong>Simplified model.</strong> Preset compositions are based on published averages and use a reduced set of generic phospholipid species as proxies for the acyl chain diversity found in native membranes. The following are not represented: post-translational lipid modifications (glycosylation, acylation, methylation), asymmetric leaflet distributions, membrane proteins, and LPS in Gram-negative bacteria. Species-specific simplifications: <em>B. subtilis</em> omits glycolipids (~30% of native total lipid) and L-PG; <em>M. tuberculosis</em> uses SAPI as a proxy for phosphatidylinositol mannosides (PIM2/PIM6); <em>H. pylori</em> approximates cholesterol glucosides as free CHOL; <em>S. cerevisiae</em> uses CHOL as a proxy for ergosterol. These presets are starting points for simulation setup and should be validated against organism- and condition-specific experimental data before drawing conclusions.
@@ -671,12 +1066,12 @@
 
   <!-- Actions -->
   <div class="action-row">
-    <button id="buildBtn" onclick="runBuild()">Build</button>
-    <button class="btn-clear" onclick="clearAll()">Clear</button>
-    <button class="btn-example" onclick="loadExample()">Load example</button>
+    <button id="buildBtn" class="pill glass-accent" onclick="runBuild()">Build</button>
+    <button class="btn-clear pill pill-serious" onclick="clearAll()">Clear</button>
+    <button class="btn-example pill" onclick="loadExample()">Load example</button>
   </div>
 
-  <div id="status"></div>
+  <div id="status" role="status"></div>
 
   <!-- Results -->
   <div id="results"></div>
@@ -684,31 +1079,31 @@
   <div class="asm-notes">
     <div class="asm-notes-title">Assembly notes and recommendations</div>
     <div class="asm-grid">
-      <div class="asm-card asm-warn" style="grid-column: 1 / -1;">
+      <div class="asm-card asm-warn glass glass-frost glass-sq bleed">
         <strong>Important notice</strong>
-        BILBO is under active development and is being used and tested by research groups in theoretical chemistry and biophysics. The membrane builder, topology generator, and GROMACS MD package export are functional, but edge cases and unsupported lipid combinations may still produce unexpected results. Contributions and feedback are welcome. Please report issues via the <button class="feedback-link" onclick="openBugModal()" style="font-size:inherit;">bug report form</button> or at <a href="https://github.com/madsondeluna/bilbo/issues" target="_blank" style="color:#92400e;">github.com/madsondeluna/bilbo/issues</a>.
+        BILBO is under active development and is being used and tested by research groups in theoretical chemistry and biophysics. The membrane builder, topology generator, and GROMACS MD package export are functional, but edge cases and unsupported lipid combinations may still produce unexpected results. Contributions and feedback are welcome. Please report issues via the <button class="feedback-link" onclick="openBugModal()">bug report form</button> or at <a href="https://github.com/madsondeluna/bilbo/issues" target="_blank">github.com/madsondeluna/bilbo/issues</a>.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>Bilayer gap is a buffer, not experimental</strong>
         The inter-leaflet half-gap (default 2.5 A per leaflet) prevents tail overlap in the template-tiled structure. It does not represent measured bilayer thickness. Adjust and re-minimize as needed.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>Asymmetric bilayers</strong>
         When upper and lower leaflets differ in composition, check that the lipid area per molecule is compatible between leaflets. A large area mismatch produces curvature stress that persists even after minimization.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>Lipid template names</strong>
         Template PDB filenames must match the lipid residue name (case-insensitive). The preset lipids (POPE, POPG, POPC, DPPC, DPPE, DPPG, DPPS, POPS, CHOL, BSM, SAPI, CL) are supported directly. For other lipids, upload a single-residue PDB via the custom template field or the CLI (<code>bilbo membrane build --templates-dir</code>). CHARMM-GUI PDB files with co-packaged water are handled automatically.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>Inter-residue clashes are expected</strong>
         Template-tiled membranes place lipids on a regular grid from single-molecule PDB templates. Short inter-residue distances (clashes) are normal in the initial structure and do not indicate a build error. Run energy minimization (EM) before NVT equilibration; the bundled <code>gmx.sh</code> handles this automatically.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>MD package: what is included</strong>
         The MD package ZIP contains a complete, self-contained GROMACS run directory: <code>system.pdb</code>, <code>topol.top</code>, MDP files (EM, NVT, NPT, production), an automated run script (<code>gmx.sh</code>), and the full CHARMM36 force field (MacKerell lab, Feb 2026 release with CGenFF 5.0). GROMACS 2021 or newer must be installed; no additional downloads are required. Simulation parameters (trajectory length, temperature, equilibration time, output frequency) are configurable before download.
       </div>
-      <div class="asm-card">
+      <div class="asm-card glass glass-frost glass-sq">
         <strong>Atom count limit</strong>
         PDB serial numbers wrap at 99,999 atoms; residue numbers wrap at 9,999. BILBO handles this automatically, but downstream tools that rely on unique serial numbers should use the GRO file instead.
       </div>
@@ -720,47 +1115,47 @@
       <span class="usage-map-title">Where BILBO is used</span>
       <span class="usage-map-sub" id="usageMapSub"></span>
     </div>
-    <div id="usageMap"><div class="usage-map-empty" id="usageMapEmpty">Loading map...</div></div>
+    <div id="usageMap"><div class="usage-map-empty" id="usageMapEmpty">Loading map</div></div>
   </div>
 
   <footer>
-    <p style="margin-top:8px;">
-      Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a>
-      &nbsp;·&nbsp; <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
-      &nbsp;·&nbsp; <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
-      &nbsp;·&nbsp; <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
-      &nbsp;·&nbsp; <span style="color:#bbb;">v0.1.0</span>
-      &nbsp;·&nbsp;<span id="statusLabel" style="color:#bbb;">Checking...</span>
-      &nbsp;<span class="status-dot" id="statusDot" style="display:inline-block;vertical-align:middle;"></span>
+    <p class="footer-meta">
+      <span>Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a></span>
+      <span class="sep" aria-hidden="true">·</span> <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
+      <span class="sep" aria-hidden="true">·</span> <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
+      <span class="sep" aria-hidden="true">·</span> <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
+      <span class="sep" aria-hidden="true">·</span> <span class="num">v0.1.0</span>
+      <span class="sep" aria-hidden="true">·</span> <span id="statusLabel">Checking</span>
+      <span class="status-dot has-tip" id="statusDot"></span>
     </p>
-    <div style="margin-top:20px; padding-top:16px; border-top:1px solid #D2BFAA; display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-evenly; gap:16px; width:100%;">
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#8a7a66;">Institutions</span>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img src="/static/ufpe.png"     alt="Universidade Federal de Pernambuco" style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
-          <img src="/static/ufmg.png"     alt="Universidade Federal de Minas Gerais" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
-          <img src="/static/upe-logo.png" alt="Universidade de Pernambuco" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+    <div class="credits">
+      <div class="credits-group">
+        <span class="credits-title">Institutions</span>
+        <div class="credits-row">
+          <img src="/static/ufpe.png"     class="logo-md" alt="Universidade Federal de Pernambuco">
+          <img src="/static/ufmg.png"     class="logo-sm" alt="Universidade Federal de Minas Gerais">
+          <img src="/static/upe-logo.png" class="logo-sm" alt="Universidade de Pernambuco">
         </div>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#8a7a66;">Departments</span>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img src="/static/dqf.png"     alt="Departamento de Química Fundamental" style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
-          <img src="/static/dgen.jpeg"   alt="Departamento de Genética"            style="height:36px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+      <div class="credits-group">
+        <span class="credits-title">Departments</span>
+        <div class="credits-row">
+          <img src="/static/dqf.png"   class="logo-md" alt="Departamento de Química Fundamental">
+          <img src="/static/dgen.jpeg" class="logo-md" alt="Departamento de Genética">
         </div>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#8a7a66;">Funding</span>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img src="/static/fapemig.png" alt="FAPEMIG" style="height:38px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
-          <img src="/static/capes.png"   alt="CAPES"   style="height:38px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+      <div class="credits-group">
+        <span class="credits-title">Funding</span>
+        <div class="credits-row">
+          <img src="/static/fapemig.png" class="logo-lg" alt="FAPEMIG">
+          <img src="/static/capes.png"   class="logo-lg" alt="CAPES">
         </div>
       </div>
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-        <span style="font-size:0.58rem; letter-spacing:0.10em; text-transform:uppercase; color:#8a7a66;">Research groups</span>
-        <div style="display:flex; align-items:center; gap:12px;">
-          <img src="/static/lgbv.png" alt="Laboratório de Genética e Biotecnologia Vegetal" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
-          <img src="/static/lcm3.png" alt="LCM3" style="height:34px; width:auto; object-fit:contain; filter:grayscale(30%); opacity:0.75;">
+      <div class="credits-group">
+        <span class="credits-title">Research groups</span>
+        <div class="credits-row">
+          <img src="/static/lgbv.png" class="logo-sm" alt="Laboratório de Genética e Biotecnologia Vegetal">
+          <img src="/static/lcm3.png" class="logo-sm" alt="LCM3">
         </div>
       </div>
     </div>
@@ -768,20 +1163,27 @@
 </div>
 
 <!-- Bug report modal -->
-<div class="bug-overlay" id="bugOverlay" onclick="if(event.target===this)closeBugModal()">
-  <div class="bug-modal">
-    <h3>Report a bug</h3>
+<div class="bug-overlay overlay" id="bugOverlay" onclick="if(event.target===this)closeBugModal()">
+  <div class="bug-modal modal glass glass-frost glass-sq" role="dialog" aria-modal="true" aria-labelledby="bugTitle">
+    <h3 id="bugTitle">Report a bug</h3>
     <p>Describe the problem. Clicking "Open GitHub" will open a pre-filled issue on the BILBO repository — you can attach screenshots directly on GitHub before submitting.</p>
-    <textarea id="bugMessage" placeholder="Describe what happened and what you expected..."></textarea>
+    <label class="sr-only" for="bugMessage">Bug description</label>
+    <textarea id="bugMessage" class="textarea" placeholder="Describe what happened and what you expected"></textarea>
     <div class="bug-status" id="bugStatus"></div>
-    <div class="bug-modal-actions">
-      <button class="bug-cancel" onclick="closeBugModal()">Cancel</button>
-      <button class="bug-submit" onclick="submitBugReport()">Open GitHub</button>
+    <div class="bug-modal-actions form-actions">
+      <button class="bug-cancel pill" onclick="closeBugModal()">Cancel</button>
+      <button class="bug-submit pill glass-accent" onclick="submitBugReport()">Open GitHub</button>
     </div>
   </div>
 </div>
 
 <script>
+// ── Design tokens ─────────────────────────────────────────────────────
+// The 3D viewer and Leaflet take colours as strings, so the values are read
+// from the stylesheet instead of being written twice.
+const _CSS = getComputedStyle(document.documentElement);
+const tok = name => _CSS.getPropertyValue(name).trim();
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const lipidFiles = { upper: [], lower: [] };
 let peptideFile = null;
@@ -802,18 +1204,18 @@ let libraryLipids = [];
   try {
     const r = await fetch('/health');
     if (r.ok) {
-      dot.className = 'status-dot online';
+      dot.className = 'status-dot has-tip online';
       lbl.textContent = 'Online';
-      lbl.style.color = '#059669';
+      lbl.className = 'status-good';
     } else {
-      dot.className = 'status-dot offline';
+      dot.className = 'status-dot has-tip offline';
       lbl.textContent = 'Offline';
-      lbl.style.color = '#dc2626';
+      lbl.className = 'status-critical';
     }
   } catch {
-    dot.className = 'status-dot offline';
+    dot.className = 'status-dot has-tip offline';
     lbl.textContent = 'Offline';
-    lbl.style.color = '#dc2626';
+    lbl.className = 'status-critical';
   }
 })();
 
@@ -937,11 +1339,13 @@ function addLipidEntry(leaflet) {
   entry.innerHTML = `
     <input type="file" id="${fileId}" accept=".pdb" onchange="handleLipidFile(event, '${leaflet}', ${idx})">
     <span class="file-label" id="${leaflet}_label_${idx}" onclick="document.getElementById('${fileId}').click()">
-      No file — click to upload .pdb
+      No file selected — click to upload .pdb
     </span>
-    <select class="lib-select" id="${leaflet}_lib_${idx}" onchange="selectFromLibrary('${leaflet}', ${idx})">${_libOptions()}</select>
-    <input type="number" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids" onchange="updateIonCount()">
-    <button class="remove-btn" onclick="removeLipidEntry('${leaflet}', ${idx})" title="Remove">×</button>
+    <span class="select-shell">
+      <select class="select lib-select" id="${leaflet}_lib_${idx}" onchange="selectFromLibrary('${leaflet}', ${idx})" aria-label="Lipid from library">${_libOptions()}</select>
+    </span>
+    <input type="number" class="input num count-input" id="${leaflet}_count_${idx}" value="50" min="1" max="9999" title="Number of lipids" aria-label="Number of lipids" onchange="updateIonCount()">
+    <button class="remove-btn hit" onclick="removeLipidEntry('${leaflet}', ${idx})" title="Remove" aria-label="Remove lipid">×</button>
   `;
   list.appendChild(entry);
 }
@@ -988,7 +1392,7 @@ function removeLipidEntry(leaflet, idx) {
 
 function toggleSymmetric() {
   const checked = document.getElementById('symCheck').checked;
-  document.getElementById('lowerSection').style.display = checked ? 'none' : 'block';
+  document.getElementById('lowerSection').hidden = checked;
 }
 
 // ── Replica position fields (per-replica X/Y) ─────────────────────────────────
@@ -998,25 +1402,25 @@ function updateReplicaPositionFields() {
   if (!container) return;
   if (n === 1) {
     container.innerHTML = `
-      <div class="param-field">
-        <label>X center (Å)</label>
-        <input type="number" id="pep_x_0" placeholder="center" step="0.5">
+      <div class="field">
+        <label class="field-label" for="pep_x_0">X center (Å)</label>
+        <input type="number" id="pep_x_0" class="input num" placeholder="center" step="0.5">
       </div>
-      <div class="param-field">
-        <label>Y center (Å)</label>
-        <input type="number" id="pep_y_0" placeholder="center" step="0.5">
+      <div class="field">
+        <label class="field-label" for="pep_y_0">Y center (Å)</label>
+        <input type="number" id="pep_y_0" class="input num" placeholder="center" step="0.5">
       </div>`;
   } else {
     let html = `<div class="replica-row-label">Replica positions (Å) — blank = random</div>`;
     for (let i = 0; i < n; i++) {
       html += `
-        <div class="param-field">
-          <label>Rep. ${i + 1} X</label>
-          <input type="number" id="pep_x_${i}" placeholder="auto" step="0.5">
+        <div class="field">
+          <label class="field-label" for="pep_x_${i}">Rep. ${i + 1} X</label>
+          <input type="number" id="pep_x_${i}" class="input num" placeholder="auto" step="0.5">
         </div>
-        <div class="param-field">
-          <label>Rep. ${i + 1} Y</label>
-          <input type="number" id="pep_y_${i}" placeholder="auto" step="0.5">
+        <div class="field">
+          <label class="field-label" for="pep_y_${i}">Rep. ${i + 1} Y</label>
+          <input type="number" id="pep_y_${i}" class="input num" placeholder="auto" step="0.5">
         </div>`;
     }
     container.innerHTML = html;
@@ -1030,8 +1434,8 @@ async function handlePeptideUpload(event) {
   peptideFile = file;
   const label = document.getElementById('peptideLabel');
   label.textContent = file.name;
-  label.style.color = '#1a1a1a';
-  document.getElementById('peptideOptions').style.display = 'block';
+  label.classList.add('has-file');
+  document.getElementById('peptideOptions').hidden = false;
 
   // Auto-calculate net charge from residue composition
   try {
@@ -1051,8 +1455,8 @@ function clearPeptide() {
   document.getElementById('peptideInput').value = '';
   const label = document.getElementById('peptideLabel');
   label.textContent = 'no file selected';
-  label.style.color = '#999';
-  document.getElementById('peptideOptions').style.display = 'none';
+  label.classList.remove('has-file');
+  document.getElementById('peptideOptions').hidden = true;
 }
 
 // ── PDB helpers ───────────────────────────────────────────────────────────────
@@ -1321,7 +1725,8 @@ function _renderSolvReport(data) {
                  : nP > 0   ? ` (${nP} pairs)` : '';
 
   return `
-    <div class="solv-report">
+    <div class="solv-report surface">
+      <div class="sr-head">Solvation</div>
       <div class="sr-row"><span class="sr-key">Charge</span><span class="sr-val">${arrow}</span></div>
       <div class="sr-row"><span class="sr-key">Water</span><span class="sr-val">${data.n_water.toLocaleString()} SOL (${wm})</span></div>
       <div class="sr-row"><span class="sr-key">Na⁺ (SOD)</span><span class="sr-val">${data.n_sol_na}${naDetail}</span></div>
@@ -1339,7 +1744,7 @@ function renderResults(data) {
   ).join('');
 
   res.innerHTML = `
-    <div class="summary-card">
+    <div class="summary-card glass glass-frost glass-sq">
       <div class="section-label">Build summary</div>
       <div class="stats-grid">
         <div class="stat">
@@ -1370,18 +1775,18 @@ function renderResults(data) {
           <div class="stat-val">${data.n_water.toLocaleString()}</div>
           <div class="stat-label">SOL (${data.water_model?.toUpperCase()})</div>
         </div>` : ''}
-        <div class="stat">
-          <div class="stat-val" style="font-size:0.88rem;">${data.box_x_nm} × ${data.box_y_nm}${data.box_z_nm ? ' × ' + data.box_z_nm : ''}</div>
-          <div class="stat-label">Box X × Y${data.box_z_nm ? ' × Z' : ''} (nm)</div>
-        </div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-box-label">Box X × Y${data.box_z_nm ? ' × Z' : ''} (nm)</span>
+        <span class="stat-box-val">${data.box_x_nm} × ${data.box_y_nm}${data.box_z_nm ? ' × ' + data.box_z_nm : ''}</span>
       </div>
       ${(data.pep_centroids && data.pep_centroids.length > 0) ? `
-        <div style="margin-top:10px; font-size:0.72rem; color:#555; line-height:1.8;">
-          <span style="color:#999; text-transform:uppercase; letter-spacing:0.06em;">Peptide positions (Å)</span><br>
+        <div class="pep-pos">
+          <span class="head">Peptide positions (Å)</span><br>
           ${data.pep_centroids.map(c =>
             `chain ${c.chain}: X=${c.x} &nbsp; Y=${c.y} &nbsp; Z=${c.z}`
           ).join('<br>')}
-          <span style="color:#aaa; font-size:0.68rem;"> &nbsp; (box: 0–${Math.round(data.box_x_nm*10)} × 0–${Math.round(data.box_y_nm*10)} Å)</span>
+          <span class="box"> &nbsp; (box: 0–${Math.round(data.box_x_nm*10)} × 0–${Math.round(data.box_y_nm*10)} Å)</span>
         </div>` : ''}
       ${data.n_water > 0 ? _renderSolvReport(data) : ''}
       ${warns ? '<div class="warn-list">' + warns + '</div>' : ''}
@@ -1390,61 +1795,60 @@ function renderResults(data) {
     <div class="viewer-wrap">
       <div id="viewer"></div>
       <div class="viewer-controls">
-        <button class="viewer-btn active" id="btnStick" onclick="setViewMode('stick')">Stick</button>
-        <button class="viewer-btn" id="btnSphere" onclick="setViewMode('sphere')">Sphere</button>
-        <button class="viewer-btn" id="btnLine" onclick="setViewMode('line')">Line</button>
-        <button class="viewer-btn" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
-        ${data.n_peptide_atoms > 0 ? `<button class="viewer-btn" id="btnCartoon" onclick="setViewMode('cartoon')" title="Protein as cartoon, lipids as lines">Cartoon</button>` : ''}
-        ${data.n_water > 0 ? `<button class="viewer-btn" id="btnWaterH" onclick="toggleWaterH()">Water H</button>` : ''}
+        <button class="viewer-btn pill pill-sm glass-accent" id="btnStick" onclick="setViewMode('stick')">Stick</button>
+        <button class="viewer-btn pill pill-sm" id="btnSphere" onclick="setViewMode('sphere')">Sphere</button>
+        <button class="viewer-btn pill pill-sm" id="btnLine" onclick="setViewMode('line')">Line</button>
+        <button class="viewer-btn pill pill-sm" id="btnSurface" onclick="setViewMode('surface')">Surface</button>
+        ${data.n_peptide_atoms > 0 ? `<button class="viewer-btn pill pill-sm" id="btnCartoon" onclick="setViewMode('cartoon')" title="Protein as cartoon, lipids as lines">Cartoon</button>` : ''}
+        ${data.n_water > 0 ? `<button class="viewer-btn pill pill-sm" id="btnWaterH" onclick="toggleWaterH()">Water H</button>` : ''}
       </div>
     </div>
-    <div class="atom-info" id="atomInfoBar">click an atom to inspect</div>
-    <div class="lipid-legend" id="lipidLegend"></div>
+    <div class="atom-info" id="atomInfoBar">Click an atom to inspect</div>
+    <div class="lipid-legend viz-legend" id="lipidLegend"></div>
 
     ${data.leaflet_plot_b64 ? `
-    <div style="margin-bottom:16px;">
-      <div class="section-label" style="margin-bottom:8px;">Leaflet distribution</div>
-      <img id="leafletPlotImg" src="data:image/png;base64,${data.leaflet_plot_b64}"
-        style="width:100%; border:1px solid #D2BFAA; border-radius:4px; display:block; image-rendering:pixelated;">
+    <div class="leaflet-plot">
+      <div class="section-label">Leaflet distribution</div>
+      <img id="leafletPlotImg" alt="Lipid distribution per leaflet" src="data:image/png;base64,${data.leaflet_plot_b64}">
     </div>` : ''}
 
     <div class="dl-row">
-      <button class="btn-download" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
+      <button class="btn-download pill" onclick="downloadFile(currentPdb, 'bilbo_preview.pdb', 'chemical/x-pdb')">
         Download PDB
       </button>
-      ${data.gro ? `<button class="btn-download" onclick="downloadFile(currentGro, 'bilbo_preview.gro', 'text/plain')">
+      ${data.gro ? `<button class="btn-download pill" onclick="downloadFile(currentGro, 'bilbo_preview.gro', 'text/plain')">
         Download GRO
       </button>` : ''}
-      ${data.topology ? `<button class="btn-download" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
+      ${data.topology ? `<button class="btn-download pill" onclick="downloadFile(currentTopology, 'topol.top', 'text/plain')">
         Download topology
       </button>` : ''}
-      ${data.leaflet_plot_b64 ? `<button class="btn-download" onclick="downloadLeafletPlot()">
+      ${data.leaflet_plot_b64 ? `<button class="btn-download pill" onclick="downloadLeafletPlot()">
         Download plot
       </button>` : ''}
-      ${data.topology ? `<button class="btn-download btn-md-package" onclick="downloadMdPackage()" title="Download self-contained GROMACS package (charmm36.ff included)">
+      ${data.topology ? `<button class="btn-download btn-md-package pill glass-accent" onclick="downloadMdPackage()" title="Download self-contained GROMACS package (charmm36.ff included)">
         Download MD package
       </button>` : ''}
-      <button class="btn-log" onclick="toggleBuildLog()">Build log</button>
+      <button class="btn-log pill pill-serious" onclick="toggleBuildLog()">Build log</button>
     </div>
     ${data.topology ? `
-    <div class="md-pkg-block">
+    <div class="md-pkg-block glass glass-frost glass-sq">
       <div class="md-pkg-block-title">MD package simulation parameters</div>
       <div class="md-pkg-params">
-        <div class="md-pkg-field">
-          <label for="trajNs">Production (ns)</label>
-          <input type="number" id="trajNs" value="100" min="1" max="10000" step="1" class="md-param-input">
+        <div class="md-pkg-field field">
+          <label class="field-label" for="trajNs">Production (ns)</label>
+          <input type="number" id="trajNs" value="100" min="1" max="10000" step="1" class="input num md-param-input">
         </div>
-        <div class="md-pkg-field">
-          <label for="tempK">Temperature (K)</label>
-          <input type="number" id="tempK" value="310.15" min="200" max="500" step="0.01" class="md-param-input">
+        <div class="md-pkg-field field">
+          <label class="field-label" for="tempK">Temperature (K)</label>
+          <input type="number" id="tempK" value="310.15" min="200" max="500" step="0.01" class="input num md-param-input">
         </div>
-        <div class="md-pkg-field">
-          <label for="equilPs">Equilibration (ps)</label>
-          <input type="number" id="equilPs" value="100" min="10" max="10000" step="10" class="md-param-input">
+        <div class="md-pkg-field field">
+          <label class="field-label" for="equilPs">Equilibration (ps)</label>
+          <input type="number" id="equilPs" value="100" min="10" max="10000" step="10" class="input num md-param-input">
         </div>
-        <div class="md-pkg-field">
-          <label for="outputFreqPs">Output freq. (ps)</label>
-          <input type="number" id="outputFreqPs" value="10" min="0.1" max="1000" step="1" class="md-param-input">
+        <div class="md-pkg-field field">
+          <label class="field-label" for="outputFreqPs">Output freq. (ps)</label>
+          <input type="number" id="outputFreqPs" value="10" min="0.1" max="1000" step="1" class="input num md-param-input">
         </div>
       </div>
       <div class="md-pkg-note">
@@ -1457,25 +1861,27 @@ function renderResults(data) {
     </div>` : ''}
     <pre class="log-panel" id="buildLogPanel"></pre>
 
-    <div class="email-build-section">
+    <div class="email-build-section glass glass-frost glass-sq">
       <div class="email-build-title">Receive build by email</div>
       <div class="email-build-desc">PDB${data.gro ? ', GRO' : ''}${data.topology ? ', topology' : ''}${data.leaflet_plot_b64 ? ', leaflet plot' : ''} attached, with full build summary. Large builds are delivered as a single bilbo_results.zip archive.</div>
       <div class="email-build-fields">
-        <div class="email-build-field">
-          <label for="buildEmailLang">Lang</label>
-          <select id="buildEmailLang">
-            <option value="en">EN</option>
-            <option value="fr">FR</option>
-            <option value="es">ES</option>
-            <option value="pt">PT</option>
-            <option value="zh">ZH</option>
-          </select>
+        <div class="email-build-field field">
+          <label class="field-label" for="buildEmailLang">Language</label>
+          <span class="select-shell">
+            <select id="buildEmailLang" class="select">
+              <option value="en">English</option>
+              <option value="fr">French</option>
+              <option value="es">Spanish</option>
+              <option value="pt">Portuguese</option>
+              <option value="zh">Chinese</option>
+            </select>
+          </span>
         </div>
-        <div class="email-build-field">
-          <label for="buildEmail">Your email</label>
-          <input type="email" id="buildEmail" placeholder="you@example.com">
+        <div class="email-build-field field">
+          <label class="field-label" for="buildEmail">Your email</label>
+          <input type="email" id="buildEmail" class="input" placeholder="you@example.com">
         </div>
-        <button class="email-build-btn" id="sendBuildBtn" onclick="sendBuildByEmail()">Send</button>
+        <button class="email-build-btn pill glass-accent" id="sendBuildBtn" onclick="sendBuildByEmail()">Send</button>
       </div>
       <div class="email-build-status" id="emailBuildStatus"></div>
     </div>
@@ -1488,11 +1894,19 @@ let _pdbData = '';
 let _lipidColorMap = {};   // resn (3-char or 4-char, whichever 3Dmol uses) → color
 let _resnLegend = [];      // [{name, color}] built from raw PDB for the legend
 
-const _PALETTE = [
-  '#4f83cc', '#e07b39', '#10b981', '#a855f7', '#f43f5e',
-  '#06b6d4', '#eab308', '#f97316', '#6366f1', '#14b8a6',
-  '#84cc16', '#ec4899',
-];
+// Twelve categorical slots for lipid species, assigned in sequence and never
+// cycled, plus the named entities, which take the tail of the same sequence.
+const _PALETTE = Array.from({ length: 12 }, (_, i) => tok(`--mol-${i + 1}`));
+const _MOL = {
+  peptide:   tok('--mol-peptide'),
+  ion:       tok('--mol-ion'),
+  sodium:    tok('--mol-sodium'),
+  chlorine:  tok('--mol-chlor'),
+  water:     tok('--mol-water'),
+  waterBond: tok('--mol-water-bond'),
+  waterH:    tok('--mol-water-h'),
+  surface:   tok('--surface'),
+};
 
 // Build a color map from raw PDB text, storing BOTH the 4-char and 3-char key
 // so the callback works whichever format 3Dmol stores internally.
@@ -1521,13 +1935,13 @@ function _renderLegend() {
   const el = document.getElementById('lipidLegend');
   if (!el) return;
   const items = _resnLegend
-    .map(({ name, color }) => `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${name}</div>`)
+    .map(({ name, color }) => `<span><i style="background:${color}"></i>${name}</span>`)
     .join('');
-  const pepEntry = '<div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Peptide</div>';
-  const ionEntry = '<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Ion</div>';
-  const waterEntry = '<div class="legend-item"><div class="legend-dot" style="background:#93c5fd"></div>Water (OW)</div>';
-  const solNaEntry = '<div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Na⁺ (SOD)</div>';
-  const solClEntry = '<div class="legend-item"><div class="legend-dot" style="background:#fb923c"></div>Cl⁻ (CLA)</div>';
+  const pepEntry = `<span><i style="background:${_MOL.peptide}"></i>Peptide</span>`;
+  const ionEntry = `<span><i style="background:${_MOL.ion}"></i>Ion</span>`;
+  const waterEntry = `<span><i style="background:${_MOL.water}"></i>Water (OW)</span>`;
+  const solNaEntry = `<span><i style="background:${_MOL.sodium}"></i>Na⁺ (SOD)</span>`;
+  const solClEntry = `<span><i style="background:${_MOL.chlorine}"></i>Cl⁻ (CLA)</span>`;
   el.innerHTML = items
     + (currentBuildData?.n_peptide_atoms > 0 ? pepEntry : '')
     + (currentBuildData?.n_ions > 0 ? ionEntry : '')
@@ -1556,7 +1970,7 @@ function initViewer(pdb) {
   _pdbData = pdb;
   _lipidColorMap = _parseLipidColors(pdb);
   _renderLegend();
-  viewer = $3Dmol.createViewer(el, { backgroundColor: '#FEF9F2' });
+  viewer = $3Dmol.createViewer(el, { backgroundColor: _MOL.surface });
   _loadModels();
   viewer.zoomTo();
   viewer.render();
@@ -1586,8 +2000,8 @@ function _applyLipidStyle(mode) {
   // Layer 1: color whole chain (always works, keeps atoms visible).
   // Use first species color for U, second for L when only one species exists;
   // otherwise use neutral colors as base that get overridden below.
-  const col0 = _resnLegend[0]?.color || '#4f83cc';
-  const col1 = _resnLegend[1]?.color || '#e07b39';
+  const col0 = _resnLegend[0]?.color || _PALETTE[0];
+  const col1 = _resnLegend[1]?.color || _PALETTE[1];
   viewer.setStyle({ chain: 'U', model: 0 }, _styleObj(mode, col0));
   viewer.setStyle({ chain: 'L', model: 0 }, _styleObj(mode, col1 !== col0 ? col1 : col0));
 
@@ -1608,41 +2022,41 @@ function _applyLipidStyle(mode) {
   // Peptide chains
   if (mode === 'cartoon') {
     _PEP_CHAINS.forEach(c => {
-      viewer.setStyle({ chain: c, model: 0 }, { cartoon: { color: '#10b981', thickness: 0.4 } });
-      viewer.addStyle({ chain: c, model: 0 }, { stick: { color: '#10b981', radius: 0.12, hidden: false } });
+      viewer.setStyle({ chain: c, model: 0 }, { cartoon: { color: _MOL.peptide, thickness: 0.4 } });
+      viewer.addStyle({ chain: c, model: 0 }, { stick: { color: _MOL.peptide, radius: 0.12, hidden: false } });
     });
   } else {
-    _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, '#10b981')));
+    _PEP_CHAINS.forEach(c => viewer.setStyle({ chain: c, model: 0 }, _styleObj(mode, _MOL.peptide)));
   }
 
   // Coordination ions: always spheres
-  viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: '#f59e0b', scale: 0.6 } });
+  viewer.setStyle({ chain: 'I', model: 0 }, { sphere: { color: _MOL.ion, scale: 0.6 } });
 
   // Bulk solvent ions (chain I, resname SOD/CLA)
-  viewer.setStyle({ chain: 'I', resn: 'SOD', model: 0 }, { sphere: { color: '#facc15', scale: 0.55 } });
-  viewer.setStyle({ chain: 'I', resn: 'CLA', model: 0 }, { sphere: { color: '#f87171', scale: 0.55 } });
+  viewer.setStyle({ chain: 'I', resn: 'SOD', model: 0 }, { sphere: { color: _MOL.sodium, scale: 0.55 } });
+  viewer.setStyle({ chain: 'I', resn: 'CLA', model: 0 }, { sphere: { color: _MOL.chlorine, scale: 0.55 } });
 
   // Water
   viewer.setStyle({ chain: 'W', model: 0 }, {});
   if (showWaterH) {
     viewer.setStyle({ chain: 'W', model: 0 },
-      { stick: { color: '#7dd3fc', radius: 0.07 } });
+      { stick: { color: _MOL.waterBond, radius: 0.07 } });
     viewer.setStyle({ chain: 'W', elem: 'O', model: 0 },
-      { stick: { color: '#7dd3fc', radius: 0.07 }, sphere: { color: '#93c5fd', scale: 0.22 } });
+      { stick: { color: _MOL.waterBond, radius: 0.07 }, sphere: { color: _MOL.water, scale: 0.22 } });
     viewer.setStyle({ chain: 'W', elem: 'H', model: 0 },
-      { stick: { color: '#7dd3fc', radius: 0.07 }, sphere: { color: '#e0f2fe', scale: 0.14 } });
+      { stick: { color: _MOL.waterBond, radius: 0.07 }, sphere: { color: _MOL.waterH, scale: 0.14 } });
   } else {
-    viewer.setStyle({ chain: 'W', elem: 'O', model: 0 }, { sphere: { color: '#93c5fd', scale: 0.18 } });
+    viewer.setStyle({ chain: 'W', elem: 'O', model: 0 }, { sphere: { color: _MOL.water, scale: 0.18 } });
   }
 
   const _activePepChains = [...new Set(_pdbData.split('\n').filter(l => l.startsWith('ATOM') || l.startsWith('HETATM')).map(l => l[21]).filter(c => _PEP_CHAINS.includes(c)))];
   if (mode === 'surface') {
     viewer.addSurface('VDW', { opacity: 0.35, color: col0 }, { chain: 'U', model: 0 });
     viewer.addSurface('VDW', { opacity: 0.35, color: col1 }, { chain: 'L', model: 0 });
-    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.82, color: '#10b981' }, { chain: c, model: 0 }));
+    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.82, color: _MOL.peptide }, { chain: c, model: 0 }));
   }
   if (mode === 'cartoon') {
-    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.18, color: '#10b981' }, { chain: c, model: 0 }));
+    _activePepChains.forEach(c => viewer.addSurface('VDW', { opacity: 0.18, color: _MOL.peptide }, { chain: c, model: 0 }));
   }
 }
 
@@ -1655,7 +2069,7 @@ function applyViewMode(mode) {
 
   ['stick', 'sphere', 'line', 'surface', 'cartoon'].forEach(m => {
     const b = document.getElementById('btn' + m.charAt(0).toUpperCase() + m.slice(1));
-    if (b) b.className = 'viewer-btn' + (m === mode ? ' active' : '');
+    if (b) b.className = 'viewer-btn pill pill-sm' + (m === mode ? ' glass-accent' : '');
   });
 }
 
@@ -1666,7 +2080,7 @@ function setViewMode(mode) {
 function toggleWaterH() {
   showWaterH = !showWaterH;
   const btn = document.getElementById('btnWaterH');
-  if (btn) btn.className = 'viewer-btn' + (showWaterH ? ' active' : '');
+  if (btn) btn.className = 'viewer-btn pill pill-sm' + (showWaterH ? ' glass-accent' : '');
   if (!viewer) return;
   _loadModels();
   viewer.render();
@@ -1767,7 +2181,7 @@ async function sendShareEmail() {
     return;
   }
   btn.disabled = true;
-  status.style.color = '#999';
+  status.className = 'share-form-status';
   status.textContent = 'Sending...';
   try {
     const fd = new FormData();
@@ -1776,7 +2190,7 @@ async function sendShareEmail() {
     const res = await fetch('/send_recommendation', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.ok) {
-      status.style.color = '#92400e';
+      status.className = 'share-form-status done';
       status.textContent = 'Recommendation sent to ' + email;
       document.getElementById('shareFriendEmail').value = '';
     } else {
@@ -1800,7 +2214,7 @@ async function sendBuildByEmail() {
     return;
   }
   btn.disabled = true;
-  status.style.color = '#999';
+  status.className = 'share-form-status';
   status.textContent = 'Sending...';
   try {
     const fd = new FormData();
@@ -1834,7 +2248,7 @@ async function sendBuildByEmail() {
     const res = await fetch('/send_results', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.ok) {
-      status.style.color = '#92400e';
+      status.className = 'share-form-status done';
       status.textContent = 'Build sent to ' + email;
     } else {
       status.innerHTML = '<span class="err">' + (data.error || 'Failed to send.') + '</span>';
@@ -1966,7 +2380,7 @@ addLipidEntry('upper');
 function openBugModal() {
   document.getElementById('bugMessage').value = '';
   document.getElementById('bugStatus').textContent = '';
-  document.getElementById('bugStatus').style.color = '';
+  document.getElementById('bugStatus').className = 'bug-status';
   document.getElementById('bugOverlay').classList.add('open');
 }
 
@@ -1978,7 +2392,7 @@ function submitBugReport() {
   const msg = document.getElementById('bugMessage').value.trim();
   const statusEl = document.getElementById('bugStatus');
   if (!msg) {
-    statusEl.style.color = '#dc2626';
+    statusEl.className = 'bug-status err';
     statusEl.textContent = 'Please describe the problem before sending.';
     return;
   }
@@ -2023,7 +2437,34 @@ async function loadUsageMap() {
     }).addTo(map);
   });
 
-  if (points.length === 0) return;
+  if (points.length === 0) {
+    if (sub) sub.textContent = 'No geolocated builds yet';
+    return;
+  }
+
+  // Glass bead: a radial gradient carries the specular highlight, the rim
+  // takes the amber ink. A flat fill cannot read as glass on a map tile.
+  const bead = L.svg();
+  bead.addTo(map);
+  const svg = map.getPanes().overlayPane.querySelector('svg');
+  if (svg) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const defs = document.createElementNS(ns, 'defs');
+    const grad = document.createElementNS(ns, 'radialGradient');
+    grad.setAttribute('id', 'bilbo-bead');
+    grad.setAttribute('cx', '32%');
+    grad.setAttribute('cy', '28%');
+    grad.setAttribute('r', '78%');
+    [[0, tok('--glass-specular')], [0.42, tok('--bilbo-amber-300')], [1, tok('--bilbo-amber-400')]]
+      .forEach(([offset, color]) => {
+        const stop = document.createElementNS(ns, 'stop');
+        stop.setAttribute('offset', offset);
+        stop.setAttribute('stop-color', color);
+        grad.appendChild(stop);
+      });
+    defs.appendChild(grad);
+    svg.insertBefore(defs, svg.firstChild);
+  }
 
   points.forEach(p => {
     if (p.lat == null || p.lon == null) return;
@@ -2031,7 +2472,13 @@ async function loadUsageMap() {
     const radius = Math.min(18, 4 + 2.2 * Math.sqrt(n));
     const place = [p.city, p.country].filter(Boolean).join(', ') || 'Unknown';
     L.circleMarker([p.lat, p.lon], {
-      radius, color: '#a85d3a', weight: 1.2, fillColor: '#F8C87D', fillOpacity: 0.7,
+      renderer: bead,
+      className: 'usage-bead',
+      radius,
+      color: tok('--accent'),
+      weight: 1,
+      fillColor: 'url(#bilbo-bead)',
+      fillOpacity: 0.88,
     }).addTo(map).bindPopup(`<strong>${place}</strong><br>${n} build${n === 1 ? '' : 's'}`);
   });
   if (sub) sub.textContent = `${points.length} location${points.length === 1 ? '' : 's'}`;
