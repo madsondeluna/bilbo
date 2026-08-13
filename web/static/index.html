@@ -77,14 +77,27 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .status-dot.online  { background: var(--status-good); animation: bilbo-dot-pulse 1.6s var(--ease-standard) infinite; }
 .status-dot.offline { background: var(--status-critical); }
 
+/* quatro frases de peso igual separadas por <br> liam como um bloco unico.
+   Agora sao tres partes: o que e, a ressalva, e para onde ir. A regra da
+   esquerda usa a cor de aviso porque o bloco e um aviso. */
 .notice {
+  max-width: var(--measure-wide);
   font-size: var(--text-13);
   color: var(--muted);
-  border-left: var(--stroke) solid var(--border);
-  padding: var(--space-8) var(--space-12);
+  border-left: var(--stroke) solid var(--status-warning);
+  padding: var(--space-10) var(--space-16);
   margin-bottom: var(--space-48);
-  line-height: var(--leading-relaxed);
+  line-height: var(--leading-normal);
 }
+.notice p + p { margin-top: var(--space-8); }
+.notice-lead {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-wide);
+  color: var(--status-warning);
+}
+.notice-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.notice-links .sep { color: var(--secondary); }
 .notice a { color: var(--accent); text-decoration: underline; }
 .notice a:hover { color: var(--text); }
 .notice code {
@@ -107,11 +120,15 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-stat-min), 1fr));
   gap: var(--space-20) var(--space-24);
 }
-/* um cartao por numero: a caixa separa o que dois fios so agrupavam */
+/* um cartao por numero: a caixa separa o que dois fios so agrupavam.
+   Dentro dela o par centraliza nos dois eixos, entao o numero fica no
+   meio do quadrado mesmo quando o rotulo vizinho quebra em duas linhas. */
 .stats-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: var(--space-6);
   min-width: 0;
   padding: var(--space-16) var(--space-20);
@@ -119,7 +136,8 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .stats-val {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--text-32);
+  /* 32 deixava o maior numero encostando na borda do cartao */
+  font-size: var(--text-24);
   font-weight: var(--weight-medium);
   color: var(--text);
   line-height: var(--leading-none);
@@ -820,12 +838,15 @@ label.has-tip:not(.check) { display: inline-block; }
     <h1><img src="/static/bilbo-logotype-amber.svg" alt="BILBO"></h1>
   </div>
 
-  <p class="notice">
-    This is a preview release under active development. Instabilities and breaking changes may occur. Results should be validated before use in production simulations.<br>
-    Found an issue? <button class="feedback-link" onclick="openBugModal()">Report a bug</button><br>
-    CLI version available at <a href="https://github.com/madsondeluna/bilbo" target="_blank">github.com/madsondeluna/bilbo</a><br>
-    Download MD package generates a self-contained GROMACS run directory (CHARMM36 force field included, no extra downloads required).
-  </p>
+  <div class="notice">
+    <p class="notice-lead">Preview release under active development</p>
+    <p>Instabilities and breaking changes may occur. Validate results before using them in production simulations.</p>
+    <p class="notice-links">
+      <a href="https://github.com/madsondeluna/bilbo" target="_blank">CLI on GitHub</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
+    </p>
+  </div>
 
   <div class="stats-section">
     <div class="stats-grid">
