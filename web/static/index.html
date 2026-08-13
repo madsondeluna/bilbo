@@ -719,11 +719,15 @@ footer .feedback-link:hover { color: var(--text); }
    ao lado, entao a fileira inteira fica numa tinta so */
 #statusLabel { color: var(--muted); }
 #statusLabel.status-critical { color: var(--status-critical); }
-/* uma corrida so, com o ponto separando cada item */
+/* uma corrida so, com o ponto separando cada item, aberta de borda a
+   borda da coluna: alinhada a esquerda ela deixava um rabo de espaco
+   vazio na direita. O vao cresce igual entre cada par, entao o ponto
+   continua no meio dos dois elos que ele separa. */
 .footer-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-8) var(--space-10);
 }
 .footer-meta .sep { color: var(--secondary); }
