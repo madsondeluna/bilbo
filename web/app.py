@@ -157,7 +157,7 @@ def _resend_send(payload: dict) -> tuple[bool, str]:
         headers={
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
-            'User-Agent': 'BILBO/0.1.0 (https://github.com/madsondeluna/bilbo)',
+            'User-Agent': 'BILBO/0.1.1 (https://github.com/madsondeluna/bilbo)',
             'Accept': 'application/json',
         },
         method='POST',
