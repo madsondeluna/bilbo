@@ -717,19 +717,14 @@ footer {
 }
 footer a { color: var(--muted); text-decoration: underline; }
 footer a:hover { color: var(--text); }
-/* seis itens numa corrida so liam como um bloco. Contato de um lado,
-   versao e estado do outro, e a largura da coluna faz a separacao. */
+/* uma corrida so, com o ponto separando cada item */
 .footer-meta {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-8) var(--space-24);
+  align-items: center;
+  gap: var(--space-8) var(--space-10);
   padding-bottom: var(--space-8);
 }
-.footer-links,
-.footer-state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8) var(--space-10); }
-.footer-state { gap: var(--space-12); }
 .footer-meta .sep { color: var(--secondary); }
 .footer-note {
   margin-top: var(--space-12);
@@ -1181,19 +1176,15 @@ label.has-tip:not(.check) { display: inline-block; }
   </div>
 
   <footer>
-    <div class="footer-meta">
-      <p class="footer-links">
-        <span>Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a></span>
-        <span class="sep" aria-hidden="true">·</span> <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
-        <span class="sep" aria-hidden="true">·</span> <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
-        <span class="sep" aria-hidden="true">·</span> <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
-      </p>
-      <p class="footer-state">
-        <span class="num">v0.1.0</span>
-        <span id="statusLabel">Checking</span>
-        <span class="status-dot has-tip" id="statusDot"></span>
-      </p>
-    </div>
+    <p class="footer-meta">
+      <span>Developer: <a href="mailto:madsondeluna@gmail.com">madsondeluna@gmail.com</a></span>
+      <span class="sep" aria-hidden="true">·</span> <a href="https://madsondeluna.com" target="_blank">madsondeluna.com</a>
+      <span class="sep" aria-hidden="true">·</span> <a href="https://delunalab.dev" target="_blank">delunalab.dev</a>
+      <span class="sep" aria-hidden="true">·</span> <button class="feedback-link" onclick="openBugModal()">Report a bug</button>
+      <span class="sep" aria-hidden="true">·</span> <span class="num">v0.1.1</span>
+      <span class="sep" aria-hidden="true">·</span> <span id="statusLabel">Checking</span>
+      <span class="status-dot has-tip" id="statusDot"></span>
+    </p>
     <div class="credits">
       <div class="credits-group">
         <span class="credits-title">Institutions</span>

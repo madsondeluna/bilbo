@@ -12,7 +12,7 @@ abstract: >-
   and a complete provenance manifest of input, parameters, and generated
   files.
 type: software
-version: "0.1.0"
+version: "0.1.1"
 date-released: "2026-05-10"
 license: "LicenseRef-INPI-BR"
 license-url: "https://github.com/madsondeluna/bilbo/blob/main/LICENSE"
@@ -51,7 +51,7 @@ authors:
 preferred-citation:
   type: software
   title: "BILBO: Bilayer Lipid Builder and Organizer for protein and peptide membrane systems"
-  version: "0.1.0"
+  version: "0.1.1"
   year: 2026
   url: "http://bilbo.delunalab.dev/"
   authors:
