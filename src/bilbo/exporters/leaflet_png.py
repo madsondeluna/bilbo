@@ -14,25 +14,29 @@ import numpy as np
 
 from bilbo.builders.leaflet_layout import LeafletLayout
 
-# ── Colour palette (10 distinct colours) ────────────────────────────────────
+# ── Colour palette ──────────────────────────────────────────────────────────
+# Same values the web viewer uses, so a species keeps its colour across the
+# 3D view, the legend and this plot. Slots 1 to 8 are the Pure Design
+# categorical palette; 9 and 10 are the BILBO extension, mirroring
+# web/static/pure/brand-bilbo.css. Assigned in sequence, never cycled.
 _PALETTE: list[tuple[int, int, int]] = [
-    (31, 119, 180),
-    (255, 127, 14),
-    (44, 160, 44),
-    (214, 39, 40),
-    (148, 103, 189),
-    (140, 86, 75),
-    (227, 119, 194),
-    (127, 127, 127),
-    (188, 189, 34),
-    (23, 190, 207),
+    (57, 115, 177),   # chart-1  blue
+    (159, 131, 34),   # chart-2  gold
+    (158, 82, 127),   # chart-3  magenta
+    (76, 152, 95),    # chart-4  green
+    (116, 91, 165),   # chart-5  violet
+    (186, 111, 62),   # chart-6  orange
+    (25, 144, 173),   # chart-7  teal
+    (172, 85, 81),    # chart-8  red
+    (103, 122, 34),   # mol-9    olive
+    (0, 133, 121),    # mol-10   teal-green
 ]
-_PROTEIN_COLOR: tuple[int, int, int] = (20, 20, 20)
-_BG: tuple[int, int, int] = (255, 255, 255)
-_PANEL_BG: tuple[int, int, int] = (240, 243, 252)
-_BORDER: tuple[int, int, int] = (90, 100, 130)
-_TEXT_COLOR: tuple[int, int, int] = (30, 30, 60)
-_LEGEND_TEXT: tuple[int, int, int] = (50, 50, 70)
+_PROTEIN_COLOR: tuple[int, int, int] = (26, 26, 26)     # --text
+_BG: tuple[int, int, int] = (254, 254, 252)             # --bg
+_PANEL_BG: tuple[int, int, int] = (254, 249, 242)       # --surface
+_BORDER: tuple[int, int, int] = (210, 191, 170)         # --border
+_TEXT_COLOR: tuple[int, int, int] = (26, 26, 26)        # --text
+_LEGEND_TEXT: tuple[int, int, int] = (107, 91, 71)      # --muted
 
 # ── 5×7 bitmap font ─────────────────────────────────────────────────────────
 # Row-major: each entry is 7 rows of 5 pixels.

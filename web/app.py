@@ -479,32 +479,57 @@ def _get_locations() -> list[dict]:
 _init_stats_db()
 
 _ADMIN_PAGE = """<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E0F13">
 <title>BILBO stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Pure Design 1.4.3, graphite dark. The brand layer is deliberately not
+     loaded: this is an internal page, not the product surface. -->
+<link rel="stylesheet" href="/static/pure/tokens.css">
+<link rel="stylesheet" href="/static/pure/patterns.css">
 <style>
-  body { font-family: monospace; background: #0f0f0f; color: #e0e0e0; padding: 40px; }
-  h1 { font-size: 1.1rem; color: #aaa; margin-bottom: 28px; letter-spacing: 0.08em; }
-  .grid { display: flex; gap: 16px; flex-wrap: wrap; }
-  .card { background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
-          padding: 20px 28px; min-width: 150px; text-align: center; }
-  .num { font-size: 2.4rem; color: #fff; }
-  .lbl { font-size: 0.72rem; color: #666; margin-top: 6px; letter-spacing: 0.05em; }
-  a { color: #555; font-size: 0.78rem; text-decoration: none; }
-  a:hover { color: #aaa; }
+  body { padding: var(--space-48) var(--space-24); }
+  .shell { max-width: var(--container-md); margin: 0 auto; }
+  h1 {
+    font-family: var(--font-mono);
+    font-size: var(--text-13);
+    font-weight: var(--weight-regular);
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--muted);
+    margin-bottom: var(--space-32);
+  }
+  /* grade de fio: as celulas nao tem borda, o vao de 1px desenha a grade */
+  .grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .card { background: var(--surface); padding: var(--space-24) var(--space-32); }
+  .card .num { display: block; font-size: var(--text-40); color: var(--text); line-height: var(--leading-none); }
+  .card .lbl {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-12);
+    letter-spacing: var(--tracking-wide);
+    color: var(--muted);
+    margin-top: var(--space-8);
+  }
+  .back { margin-top: var(--space-32); }
 </style>
 </head>
 <body>
+<div class="shell">
 <h1>BILBO / usage stats</h1>
-<div class="grid" id="cards">loading...</div>
-<p style="margin-top:32px"><a href="/">back to app</a></p>
+<div class="grid hairline-grid" id="cards"><div class="card"><span class="lbl">Loading</span></div></div>
+<p class="back"><a class="link-muted" href="/">Back to the app</a></p>
+</div>
 <script>
 fetch('/stats').then(r=>r.json()).then(d=>{
-  const labels = {total_builds:'builds',total_lipids:'lipids placed',unique_sessions:'unique sessions'};
+  const labels = {total_builds:'Builds', total_lipids:'Lipids placed', unique_sessions:'Unique sessions'};
   document.getElementById('cards').innerHTML = Object.entries(labels).map(
-    ([k,l]) => '<div class="card"><div class="num">'+(d[k]||0)+'</div><div class="lbl">'+l+'</div></div>'
+    ([k,l]) => '<div class="card"><span class="num">'+(d[k]||0).toLocaleString()+'</span><span class="lbl">'+l+'</span></div>'
   ).join('');
 });
 </script>
