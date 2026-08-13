@@ -101,19 +101,21 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 /* mesma diagramacao do resumo de build: numero em cima, rotulo embaixo,
    todos na mesma borda esquerda. Em fileira com rotulo ao lado, o quarto
    item cai de linha e o rotulo quebra no meio. */
-.stats-section {
-  margin-top: var(--space-24);
-  margin-bottom: var(--space-48);
-  padding: var(--space-20) 0;
-  border-top: var(--hairline) solid var(--border);
-  border-bottom: var(--hairline) solid var(--border);
-}
+.stats-section { margin: var(--space-24) 0 var(--space-48); }
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--bilbo-stat-min), 1fr));
   gap: var(--space-20) var(--space-24);
 }
-.stats-item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6); min-width: 0; }
+/* um cartao por numero: a caixa separa o que dois fios so agrupavam */
+.stats-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+  min-width: 0;
+  padding: var(--space-16) var(--space-20);
+}
 .stats-val {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -245,14 +247,17 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
 .toggle-row { display: flex; align-items: center; gap: var(--space-10); margin: var(--space-12) 0; }
 .toggle-label { font-size: var(--text-13); color: var(--muted); cursor: pointer; }
-.inline-row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; margin-bottom: var(--space-8); }
-/* os controles do contra-ion pendem do rotulo que os liga, alinhados
-   com o texto da caixa de marcacao acima */
-.inline-row-indent { margin-left: calc(var(--space-16) + var(--space-10)); }
+.inline-row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; }
+
+/* uma borda esquerda por coluna: o recuo de antes dava tres alinhamentos
+   diferentes no mesmo bloco. Os dois controles do contra-ion tem a mesma
+   largura, entao a fileira fecha reta. */
+.ion-row { margin: var(--space-8) 0 var(--space-12); }
+.ion-select,
+.ion-count { width: var(--bilbo-ion-w); min-width: 0; max-width: none; font-size: var(--text-13); }
 .inline-label { font-size: var(--text-13); color: var(--muted); white-space: nowrap; }
 .inline-note { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); white-space: nowrap; }
-.ion-select { min-width: var(--bilbo-ion-w); max-width: var(--bilbo-ion-w); font-size: var(--text-13); }
-.ion-count { width: var(--bilbo-ion-count-w); text-align: center; font-size: var(--text-13); background: var(--dim); }
+.ion-count { text-align: center; background: var(--dim); }
 
 /* ---------- parametros ---------- */
 
@@ -267,8 +272,18 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   margin-top: var(--space-4);
 }
 
+/* a linguagem alinha a caixa de marcacao pelo topo, porque o rotulo pode
+   quebrar em varias linhas. Aqui todo rotulo cabe numa linha, entao a
+   caixa centraliza e fica na mesma altura do controle vizinho. */
+.check { align-items: center; }
+
+/* as duas colunas do par abrem na mesma altura de linha, senao o primeiro
+   controle de uma fica acima do da outra */
+.section-pair .check,
+.section-pair .upload-row { min-height: var(--field-height); }
+.section-pair .toggle-row { margin: 0; }
 .peptide-options { margin-top: var(--space-16); }
-.upload-row { display: flex; align-items: center; gap: var(--space-10); margin-top: var(--space-4); }
+.upload-row { display: flex; align-items: center; gap: var(--space-12); }
 .upload-name { font-size: var(--text-13); color: var(--muted); }
 .upload-name.has-file { color: var(--text); }
 
@@ -744,7 +759,9 @@ footer a:hover { color: var(--text); }
    pseudo-elemento. Abre no foco tambem, nao so no ponteiro. */
 
 .has-tip { position: relative; cursor: help; }
-label.has-tip { display: inline-block; }
+/* a dica precisa de um bloco posicionado para pendurar o pseudo-elemento,
+   mas .check ja e flex e trocar o display quebrava o alinhamento da caixa */
+label.has-tip:not(.check) { display: inline-block; }
 .has-tip::after {
   content: attr(data-tip);
   position: absolute;
@@ -812,19 +829,19 @@ label.has-tip { display: inline-block; }
 
   <div class="stats-section">
     <div class="stats-grid">
-      <div class="stats-item">
+      <div class="stats-item glass glass-frost glass-sq">
         <span class="stats-val num" id="statBuilds">—</span>
         <span class="stats-lbl">Membrane builds</span>
       </div>
-      <div class="stats-item">
+      <div class="stats-item glass glass-frost glass-sq">
         <span class="stats-val num" id="statAtoms">—</span>
         <span class="stats-lbl">Atoms assembled</span>
       </div>
-      <div class="stats-item">
+      <div class="stats-item glass glass-frost glass-sq">
         <span class="stats-val num" id="statUsers">—</span>
         <span class="stats-lbl">Unique users</span>
       </div>
-      <div class="stats-item">
+      <div class="stats-item glass glass-frost glass-sq">
         <span class="stats-val num">12</span>
         <span class="stats-lbl">Lipid types supported</span>
       </div>
@@ -934,7 +951,7 @@ label.has-tip { display: inline-block; }
       <input type="checkbox" id="counterIonCheck" onchange="updateIonCount()" disabled>
       <span class="inline-label">Counter-ions at headgroup</span>
     </label>
-    <div class="inline-row inline-row-indent">
+    <div class="inline-row ion-row">
       <label class="sr-only" for="ionType">Counter-ion species</label>
       <span class="select-shell">
         <select id="ionType" class="select ion-select" onchange="updateIonCount()">
