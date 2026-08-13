@@ -28,6 +28,18 @@
    Espaco: tres degraus, 24 aproxima, 48 separa bloco, 96 separa secao.
    Raio por papel: superficie 12, campo 8, controle full.
    Sentence case em tudo.
+
+   UM TAMANHO POR PAPEL. Seis, e nada fora deles:
+     24 mono  numero grande (cartao de uso, resumo de build)
+     16       titulo de painel, e texto dentro de campo (abaixo disso o
+              iOS da zoom ao focar, entao todo campo fica em 16)
+     15       prosa
+     13       botao
+     12 mono  rotulo, metadado, letra miuda
+     11       botao dentro de cartao (.pill-sm) e anotacao sobre grafico
+   Uma caixa de campo nunca divide fileira com outra em tamanho diferente:
+   antes o rotulo de arquivo lia 13, o select 13 e o contador 16 na mesma
+   linha de lipidio.
    ========================================================= */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -82,7 +94,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
    esquerda usa a cor de aviso porque o bloco e um aviso. */
 .notice {
   max-width: var(--measure-wide);
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   color: var(--muted);
   border-left: var(--stroke) solid var(--status-warning);
   padding: var(--space-10) var(--space-16);
@@ -189,7 +201,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   display: flex;
   align-items: center;
   padding: var(--space-10) var(--space-12);
-  font-size: var(--text-13);
+  font-size: var(--text-field);
   color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
@@ -203,7 +215,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .lipid-entry input[type="file"] { display: none; }
 
 .count-input { width: var(--bilbo-count-w); text-align: center; }
-.lib-select { min-width: var(--bilbo-lib-w); max-width: var(--bilbo-lib-w); font-size: var(--text-13); }
+.lib-select { min-width: var(--bilbo-lib-w); max-width: var(--bilbo-lib-w); }
 .lib-select.has-selection { color: var(--text); }
 
 .remove-btn {
@@ -233,7 +245,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   border-radius: var(--radius-control);
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: var(--text-12);
+  font-size: var(--text-13);
   letter-spacing: var(--tracking-wide);
   padding: var(--space-10) var(--space-16);
   cursor: pointer;
@@ -264,7 +276,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 /* ---------- controles em linha ---------- */
 
 .toggle-row { display: flex; align-items: center; gap: var(--space-10); margin: var(--space-12) 0; }
-.toggle-label { font-size: var(--text-13); color: var(--muted); cursor: pointer; }
+.toggle-label { color: var(--muted); cursor: pointer; }
 .inline-row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; }
 
 /* uma borda esquerda por coluna: o recuo de antes dava tres alinhamentos
@@ -272,8 +284,8 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
    largura, entao a fileira fecha reta. */
 .ion-row { margin: var(--space-8) 0 var(--space-12); }
 .ion-select,
-.ion-count { width: var(--bilbo-ion-w); min-width: 0; max-width: none; font-size: var(--text-13); }
-.inline-label { font-size: var(--text-13); color: var(--muted); white-space: nowrap; }
+.ion-count { width: var(--bilbo-ion-w); min-width: 0; max-width: none; }
+.inline-label { color: var(--muted); white-space: nowrap; }
 .inline-note { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); white-space: nowrap; }
 .ion-count { text-align: center; background: var(--dim); }
 
@@ -302,7 +314,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .section-pair .toggle-row { margin: 0; }
 .peptide-options { margin-top: var(--space-16); }
 .upload-row { display: flex; align-items: center; gap: var(--space-12); }
-.upload-name { font-size: var(--text-13); color: var(--muted); }
+.upload-name { font-size: var(--text-15); color: var(--muted); }
 .upload-name.has-file { color: var(--text); }
 
 /* ---------- acao ---------- */
@@ -332,7 +344,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
 /* ---------- estado da execucao ---------- */
 
-#status { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-16); min-height: var(--space-20); }
+#status { font-size: var(--text-15); color: var(--muted); margin-top: var(--space-16); min-height: var(--space-20); }
 #status.error   { color: var(--status-critical); }
 #status.running { color: var(--status-warning); }
 #status.done    { color: var(--status-good); }
@@ -388,7 +400,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   color: var(--text);
   white-space: nowrap;
 }
-.pep-pos { margin-top: var(--space-10); font-size: var(--text-13); color: var(--muted); line-height: var(--leading-relaxed); }
+.pep-pos { margin-top: var(--space-10); font-size: var(--text-15); color: var(--muted); line-height: var(--leading-relaxed); }
 .pep-pos .head { font-family: var(--font-mono); font-size: var(--text-12); letter-spacing: var(--tracking-wide); }
 .pep-pos .box  { font-family: var(--font-mono); font-size: var(--text-12); }
 
@@ -452,7 +464,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
 .warn-list { margin-top: var(--space-12); }
 .warn-item {
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   color: var(--status-warning);
   border-left: var(--stroke) solid var(--status-warning);
   padding: var(--space-6) var(--space-10);
@@ -463,7 +475,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 }
 .md-note {
   margin-top: var(--space-12);
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   color: var(--muted);
   line-height: var(--leading-relaxed);
   border-left: var(--stroke) solid var(--border);
@@ -474,7 +486,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .ion-note {
   display: none;
   margin-top: var(--space-6);
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   color: var(--status-warning);
   border-left: var(--stroke) solid var(--status-warning);
   padding: var(--space-6) var(--space-10);
@@ -565,7 +577,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .asm-grid > .bleed { grid-column: 1 / -1; }
 .asm-card {
   padding: var(--space-12) var(--space-16);
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   line-height: var(--leading-relaxed);
   color: var(--muted);
 }
@@ -586,8 +598,8 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
 .share-section { margin: var(--space-24) 0; padding: var(--space-16) var(--space-20); }
 .share-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-16); }
-.share-heading { font-size: var(--text-15); font-weight: var(--weight-medium); color: var(--text); }
-.share-sub { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-2); }
+.share-heading { font-size: var(--text-16); font-weight: var(--weight-medium); color: var(--text); }
+.share-sub { font-size: var(--text-15); color: var(--muted); margin-top: var(--space-2); }
 .share-actions { display: flex; gap: var(--space-8); flex-wrap: wrap; }
 .share-url-box {
   margin-top: var(--space-10);
@@ -613,8 +625,8 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 .email-build-status.done { color: var(--status-good); }
 
 .email-build-section { padding: var(--space-16) var(--space-20); margin-top: var(--space-16); }
-.email-build-title { font-size: var(--text-15); font-weight: var(--weight-medium); color: var(--text); }
-.email-build-desc { font-size: var(--text-13); color: var(--muted); margin-top: var(--space-2); }
+.email-build-title { font-size: var(--text-16); font-weight: var(--weight-medium); color: var(--text); }
+.email-build-desc { font-size: var(--text-15); color: var(--muted); margin-top: var(--space-2); }
 .email-build-fields { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-10); align-items: end; margin-top: var(--space-16); }
 .email-build-status { font-family: var(--font-mono); font-size: var(--text-12); color: var(--muted); margin-top: var(--space-10); min-height: var(--space-16); }
 
@@ -645,7 +657,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   justify-content: center;
   height: 100%;
   color: var(--muted);
-  font-size: var(--text-13);
+  font-size: var(--text-15);
 }
 .leaflet-popup-content { font-family: var(--font-mono); font-size: var(--text-12); color: var(--text); }
 .leaflet-popup-content-wrapper,
@@ -680,6 +692,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   box-shadow: var(--shadow-glass-rest);
   color: var(--text);
   font-family: var(--font-sans);
+  font-size: var(--text-16);
 }
 .leaflet-bar a:first-child { border-radius: var(--radius-field) var(--radius-field) 0 0; }
 .leaflet-bar a:last-child  { border-radius: 0 0 var(--radius-field) var(--radius-field); }
@@ -745,7 +758,7 @@ footer a:hover { color: var(--text); }
 .credits-group { display: flex; flex-direction: column; align-items: center; gap: var(--space-10); }
 .credits-title {
   font-family: var(--font-mono);
-  font-size: var(--text-11);
+  font-size: var(--text-12);
   letter-spacing: var(--tracking-eyebrow);
   color: var(--muted);
 }
@@ -771,11 +784,11 @@ footer a:hover { color: var(--text); }
   padding: var(--space-24);
   width: var(--bilbo-modal-w);
   max-width: 95vw;
-  font-size: var(--text-13);
+  font-size: var(--text-15);
   color: var(--muted);
 }
 .bug-modal h3 { font-size: var(--text-16); font-weight: var(--weight-semibold); color: var(--text); margin-bottom: var(--space-4); }
-.bug-modal p { margin-bottom: var(--space-16); font-size: var(--text-13); color: var(--muted); }
+.bug-modal p { margin-bottom: var(--space-16); color: var(--muted); }
 .bug-modal-actions { justify-content: flex-end; margin-top: var(--space-16); }
 .bug-status { margin-top: var(--space-10); font-family: var(--font-mono); font-size: var(--text-12); min-height: var(--space-16); }
 .bug-status.err  { color: var(--status-critical); }

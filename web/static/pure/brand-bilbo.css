@@ -128,12 +128,12 @@
   --bilbo-stat-min:      148px;
   --bilbo-field-min:     280px;
   --bilbo-replica-min:   200px;
-  --bilbo-count-w:       80px;
-  --bilbo-lib-w:         110px;
-  --bilbo-ion-w:         96px;
+  --bilbo-count-w:       88px;
+  --bilbo-lib-w:         144px;
+  --bilbo-ion-w:         116px;
   --bilbo-ion-count-w:   72px;
   --bilbo-md-field-min:  148px;
-  --bilbo-lang-w:        120px;
+  --bilbo-lang-w:        136px;
   --bilbo-email-w:       160px;
 
   /* alturas do rodape, ajustadas a mao arquivo por arquivo. Enquanto os
