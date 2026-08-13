@@ -72,10 +72,6 @@ h1 { font-weight: var(--weight-regular); line-height: var(--leading-none); }
 h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
 
 /* ponto de estado do servico: cor com rotulo ao lado, nunca sozinha */
-@keyframes bilbo-dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-good) 55%, transparent); }
-  50%      { box-shadow: 0 0 0 var(--space-6) color-mix(in srgb, var(--status-good) 0%, transparent); }
-}
 .status-dot {
   width: var(--space-8);
   height: var(--space-8);
@@ -86,7 +82,7 @@ h1 img { height: var(--bilbo-logo); width: auto; vertical-align: middle; }
   position: relative;
   transition: background var(--duration-4) var(--ease-standard);
 }
-.status-dot.online  { background: var(--status-good); animation: bilbo-dot-pulse 1.6s var(--ease-standard) infinite; }
+.status-dot.online  { background: var(--status-good); }
 .status-dot.offline { background: var(--status-critical); }
 
 /* quatro frases de peso igual separadas por <br> liam como um bloco unico.
@@ -715,15 +711,20 @@ footer {
   color: var(--muted);
   line-height: var(--leading-relaxed);
 }
-footer a { color: var(--muted); text-decoration: underline; }
-footer a:hover { color: var(--text); }
+footer a,
+footer .feedback-link { color: var(--muted); text-decoration: underline; }
+footer a:hover,
+footer .feedback-link:hover { color: var(--text); }
+/* Online e Offline continuam legiveis como texto; a cor vive na marca
+   ao lado, entao a fileira inteira fica numa tinta so */
+#statusLabel { color: var(--muted); }
+#statusLabel.status-critical { color: var(--status-critical); }
 /* uma corrida so, com o ponto separando cada item */
 .footer-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-8) var(--space-10);
-  padding-bottom: var(--space-8);
 }
 .footer-meta .sep { color: var(--secondary); }
 .footer-note {
@@ -1263,7 +1264,7 @@ let libraryLipids = [];
     if (r.ok) {
       dot.className = 'status-dot has-tip online';
       lbl.textContent = 'Online';
-      lbl.className = 'status-good';
+      lbl.className = '';
     } else {
       dot.className = 'status-dot has-tip offline';
       lbl.textContent = 'Offline';
