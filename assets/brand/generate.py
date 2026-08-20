@@ -4,7 +4,8 @@ Source of truth: https://www.figma.com/design/9nhbTgYEPDlwRdMEj1VeHP/BILBO-logo-
 The base SVGs in _base/ carry exactly two colours: #BA7517 on every mark shape and
 #633806 on every word shape. Every file shipped here is a recolour of those.
 
-Requires rsvg-convert and ImageMagick. Run: python3 generate.py
+Every SVG has a matching PNG at 4x. Requires rsvg-convert and ImageMagick.
+Run: python3 generate.py
 """
 import os, re, shutil, subprocess
 
@@ -54,8 +55,6 @@ COMBOS = [
     ('spectrum-cool',           'spectrum', ['teal', 'cyan', 'blue', 'indigo', 'purple', 'green']),
 ]
 COMBO_FORMS = ['lockup', 'symbol']
-COMBO_PNG = {'spectrum', 'spectrum-warm', 'spectrum-cool', 'duo-amber-teal',
-             'duo-mustard-teal', 'trio-mustard-rust-olive', 'trio-amber-teal-coral'}
 GRAYS = ['#3F3B35', '#7A7168', '#A99F94']
 GRAYS_DARK = ['#D8D2C9', '#A99F94', '#7A7168']
 
@@ -151,7 +150,7 @@ for variant in VARIANTS:
                     w = CREAM if dark else PALETTE[name][0]
                     p = os.path.join(vdir, 'colors', 'bilbo-%s-%s-%s%s.svg'
                                      % (form, variant, name, '-dark' if dark else ''))
-                    made += write(svg, p, m, w, make_png=False)
+                    made += write(svg, p, m, w)
         if form in COMBO_FORMS:
             for cname, kind, names in COMBOS + [('grayscale-multi', 'species', None)]:
                 for dark in (False, True):
@@ -166,8 +165,7 @@ for variant in VARIANTS:
                                      % (form, variant, cname, '-dark' if dark else ''))
                     open(p, 'w', encoding='utf-8').write(per_lipid(svg, seq, group, word))
                     made.append(p)
-                    if cname in COMBO_PNG and not dark:
-                        made.append(png_of(p))
+                    made.append(png_of(p))
     lk = os.path.join(vdir, 'bilbo-lockup-%s-' % variant)
     sy = os.path.join(vdir, 'bilbo-symbol-%s-' % variant)
     amber = tone('amber', False)

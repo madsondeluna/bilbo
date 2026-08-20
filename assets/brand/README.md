@@ -43,7 +43,7 @@ Twelve colours. The first six come from the previous kit; mustard, gold, rust, o
 | `stacked` | mark above, BILBO below | 1116x1132 | 1116x1132 |
 | `symbol` | mark alone | 536x656 | 656x656 |
 
-PNG is exported at 4x with a transparent background. SVG carries no background either.
+Every SVG has a matching PNG at 4x with a transparent background. SVG carries no background either.
 
 ## Treatments
 
@@ -73,8 +73,8 @@ Every combination also exists with the `-dark` suffix, retoned for dark backgrou
 ```
 assets/brand/
   <variant>/                  amber and neutrals, svg and png, plus the cards with a background
-  <variant>/colors/           the five non-amber colours, svg
-  <variant>/combos/           per-lipid combinations, svg, png for spectrum and two others
+  <variant>/colors/           the eleven non-amber colours, svg and png
+  <variant>/combos/           per-lipid combinations, svg and png
   _base/                      the six exports from Figma, the only handwritten input
   generate.py                 rebuilds every file above from _base
   preview.py                  rebuilds the two contact sheets
