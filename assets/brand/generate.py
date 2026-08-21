@@ -13,6 +13,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(BASE, '_base')
 MARK, WORD = '#BA7517', '#633806'
 CREAM, INK = '#FAEEDA', '#1A1206'
+WORD_INK = '#12181C'   # the wordmark is neutral ink; only the mark carries colour
 GRAY_MARK, GRAY_WORD = '#7A7168', '#2E2A25'
 
 PALETTE = {
@@ -130,7 +131,7 @@ for variant in VARIANTS:
     for sub in ('', 'colors', 'combos'):
         os.makedirs(os.path.join(vdir, sub), exist_ok=True)
     dark_word_pairs = {
-        'color':      (tone('amber', False), PALETTE['amber'][0]),
+        'color':      (tone('amber', False), WORD_INK),
         'color-dark': (tone('amber', True), CREAM),
         'black':      (INK, INK),
         'white':      ('#FFFFFF', '#FFFFFF'),
@@ -147,7 +148,7 @@ for variant in VARIANTS:
                     continue
                 for dark in (False, True):
                     m = tone(name, dark)
-                    w = CREAM if dark else PALETTE[name][0]
+                    w = CREAM if dark else WORD_INK
                     p = os.path.join(vdir, 'colors', 'bilbo-%s-%s-%s%s.svg'
                                      % (form, variant, name, '-dark' if dark else ''))
                     made += write(svg, p, m, w)
@@ -159,7 +160,7 @@ for variant in VARIANTS:
                         word = CREAM if dark else GRAY_WORD
                     else:
                         cols = [tone(n, dark) for n in names]
-                        word = CREAM if dark else PALETTE[names[0]][0]
+                        word = CREAM if dark else WORD_INK
                     seq, group = assign(variant, kind, cols)
                     p = os.path.join(vdir, 'combos', 'bilbo-%s-%s-%s%s.svg'
                                      % (form, variant, cname, '-dark' if dark else ''))

@@ -9,7 +9,7 @@ Two marks, both built from the same lipid glyph: a round head and two tails.
 | `bilayer` | Three lipids per leaflet, tails meeting at the centre, seen edge-on | Default. Reads as a membrane at any size |
 | `grid` | Nine lipids seen from above, each at a different azimuthal angle | Alternate. Reads as the build step: lipids placed on a grid and rotated |
 
-Wordmark is Archivo SemiBold, letter-spacing 2%, exported as outlines. No font is needed to render these files.
+Wordmark is Archivo SemiBold, letter-spacing 2%, exported as outlines. No font is needed to render these files. It is always neutral ink `#12181C` on light backgrounds and cream `#FAEEDA` on dark ones: only the mark carries colour. The gap between mark and wordmark is 22 px at a wordmark size of 92, the same across every tool in the family.
 
 ## Colour
 
@@ -49,8 +49,8 @@ Every SVG has a matching PNG at 4x with a transparent background. SVG carries no
 
 | Treatment | Mark | Word | For |
 |---|---|---|---|
-| `color` | amber mid | amber dark | light backgrounds |
-| `color-dark` | amber bright | cream | dark backgrounds |
+| `color` | amber mid | ink `#12181C` | light backgrounds |
+| `color-dark` | amber bright | cream `#FAEEDA` | dark backgrounds |
 | `black` | ink | ink | single-colour print, stamps, engraving |
 | `white` | white | white | over photographs and solid colour |
 | `gray` | gray mark | gray word | documents where colour would compete |
